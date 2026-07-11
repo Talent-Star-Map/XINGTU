@@ -1,0 +1,42 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: xingtu-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: xingtu123
+      MYSQL_DATABASE: xingtu
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pxingtu123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    container_name: xingtu-api
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://root:xingtu123@mysql:3306/xingtu
+      JWT_SECRET: xingtu-secret-key-2026
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: xingtu-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
