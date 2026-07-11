@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/
+
+# Docker
+mysql_data/
+
+# TypeScript
+*.tsbuildinfo
