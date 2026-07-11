@@ -33,3 +33,6 @@ mysql_data/
 
 # TypeScript
 *.tsbuildinfo
+backend/*.db
+__pycache__/
+.vite/
