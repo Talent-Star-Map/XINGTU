@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 
 export type JSPage =
   | 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match'
-  | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph'
+  | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality'
 
 const NavContext = createContext<{
   setPage: (p: JSPage) => void
