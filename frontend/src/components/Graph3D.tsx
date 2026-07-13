@@ -38,14 +38,41 @@ const LINKS: [string,string][] = [
   ['s1','s4'],['s1','s7'],['s5','s6'],['s2','s3'],['s4','s14'],['s4','s9'],
 ]
 
-interface Props { className?: string }
+interface Props { className?: string; skills?: string[] }
 
-export default function Graph3D({ className = '' }: Props) {
+const palette = ['#00C8FF','#7C3AED','#00E599','#FF8C42','#FF4D6A','#38BDF8','#A78BFA','#C084FC','#2DD4BF','#FBBF24','#FCD34D','#34D399','#FB923C','#F472B6','#60A5FA','#A3E635','#FF6B6B','#4ECDC4']
+
+function buildDynamicGraph(skills: string[]) {
+  const nodes: GraphNode[] = skills.map((s, i) => ({
+    id: `s${i}`, name: s, type: 'skill' as const,
+    val: 3 + Math.random() * 4,
+    color: palette[i % palette.length],
+    group: s[0]?.toLowerCase(),
+  }))
+  const links: [string, string][] = []
+  for (let i = 0; i < nodes.length; i++) {
+    const topLinks = Math.min(2, nodes.length - 1)
+    for (let j = 0; j < topLinks; j++) {
+      const t = (i + j + 1) % nodes.length
+      if (t !== i) links.push([`s${i}`, `s${t}`])
+    }
+  }
+  return { nodes, links: links.slice(0, Math.max(nodes.length, nodes.length * 1.5)) }
+}
+
+export default function Graph3D({ className = '', skills }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+
+    let useNodes: GraphNode[] = NODES
+    let useLinks: [string, string][] = LINKS
+    if (skills && skills.length > 0) {
+      const dyn = buildDynamicGraph(skills)
+      useNodes = dyn.nodes; useLinks = dyn.links
+    }
 
     const w = container.clientWidth
     const h = container.clientHeight
@@ -97,8 +124,8 @@ export default function Graph3D({ className = '' }: Props) {
     const posMap = new Map<string, THREE.Vector3>()
     const nodeGroups: THREE.Group[] = []
 
-    NODES.forEach((n, i) => {
-      const angle = (i / NODES.length) * Math.PI * 2
+    useNodes.forEach((n, i) => {
+      const angle = (i / useNodes.length) * Math.PI * 2
       const r = n.type === 'job' ? 30 : 55
       const x = Math.cos(angle) * r + (Math.random() - 0.5) * 6
       const z = Math.sin(angle) * r + (Math.random() - 0.5) * 6
@@ -164,7 +191,7 @@ export default function Graph3D({ className = '' }: Props) {
     })
 
     // Links with gradient color
-    LINKS.forEach(([s, t]) => {
+    useLinks.forEach(([s, t]) => {
       const a = posMap.get(s); const b = posMap.get(t)
       if (!a || !b) return
       const points: THREE.Vector3[] = []

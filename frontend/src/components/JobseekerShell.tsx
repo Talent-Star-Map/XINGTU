@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Briefcase, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
+import { JSNav } from '../lib/NavContext'
 
-type Page = 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match' | 'learning-path' | 'trend' | 'profile-home' | 'profile-edit' | 'my-skill-graph'
+type Page = 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match' | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -22,20 +23,18 @@ import JSMatch from '../pages/jobseeker/Match'
 import JSLearning from '../pages/jobseeker/LearningPath'
 import JSTrend from '../pages/jobseeker/Trend'
 import JSProfileHome from '../pages/jobseeker/ProfileHome'
-import JSProfileEdit from '../pages/jobseeker/ProfileEdit'
 import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
 
 const pages: Record<Page, () => JSX.Element> = {
   dashboard: JSDashboard, jobs: JSJobs, 'skill-graph': JSSkillGraph,
   resume: JSResume, match: JSMatch, 'learning-path': JSLearning, trend: JSTrend,
-  'profile-home': JSProfileHome, 'profile-edit': JSProfileEdit, 'my-skill-graph': JSMySkillGraph,
+  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph,
 }
 
 interface Props { onLogout: () => void }
 
 const profileItems: { key: Page; icon: any; label: string }[] = [
   { key: 'profile-home', icon: User, label: '个人主页' },
-  { key: 'profile-edit', icon: FileText, label: '个人资料' },
   { key: 'resume', icon: Upload, label: '简历管理' },
   { key: 'my-skill-graph', icon: Activity, label: '我的能力图谱' },
 ]
@@ -135,7 +134,9 @@ export default function JobseekerShell({ onLogout }: Props) {
       </header>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
-          <PageComp />
+          <JSNav.Provider value={{ setPage, page }}>
+            <PageComp />
+          </JSNav.Provider>
         </div>
       </main>
     </div>
