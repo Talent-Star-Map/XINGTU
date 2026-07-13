@@ -1,0 +1,50 @@
+个人信息
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+姓名：李明
+手机：13812345678
+邮箱：liming@example.com
+性别：男
+年龄：26
+
+教育背景
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+学历：硕士
+毕业院校：北京大学
+专业：计算机科学与技术
+毕业时间：2024-06
+
+求职意向
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+期望岗位：Java后端开发工程师
+期望城市：北京
+期望薪资：20K-30K
+
+工作经历
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+2022.07 - 2024.06 | 字节跳动 | 后端开发实习生
+- 参与电商推荐系统后端开发，使用Java + Spring Boot + MySQL
+- 负责订单服务模块，优化SQL查询性能，QPS提升40%
+- 引入Redis缓存层，降低数据库负载30%
+
+2021.09 - 2022.06 | 实验室项目 | 智能问答系统
+- 基于大模型和RAG技术构建企业内部知识库问答系统
+- 使用Python + FastAPI + LangChain + Elasticsearch
+- 支持多轮对话，准确率达到92%
+
+技能标签
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Java, Python, Spring Boot, MyBatis, MySQL, Redis, Docker, Kubernetes, Git, Linux, Elasticsearch, RabbitMQ, Nginx, 微服务, 分布式, LangChain, RAG, FastAPI, AWS, CI/CD
+
+项目经历
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+电商微服务平台 | GitHub: https://github.com/liming/ecommerce
+担任角色：后端开发负责人
+项目简介：基于Spring Cloud的微服务电商系统，集成Redis缓存、RabbitMQ消息队列、Docker容器化部署，支持高并发秒杀场景
+
+AI知识库系统 | GitHub: https://github.com/liming/ai-kb
+担任角色：核心开发者
+项目简介：基于RAG架构的企业内部知识库，使用LangChain + FastAPI + Elasticsearch，支持PDF/DOCX文档上传和智能问答
+
+个人简介
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+热爱技术，2年后端开发经验，熟悉Java生态和微服务架构。对AI和大模型方向有浓厚兴趣，持续学习新技术。开源爱好者，GitHub活跃贡献者。善于团队协作，有较强的沟通和学习能力。

@@ -29,9 +29,8 @@ export default function App() {
   )
 
   const handleLogin = useCallback((role: 'jobseeker' | 'enterprise') => {
-    localStorage.setItem('xingtu_token', 'demo_token')
-    localStorage.setItem('xingtu_role', role)
-    setUser({ token: 'demo_token', role })
+    const token = localStorage.getItem('xingtu_token') || ''
+    setUser({ token, role })
   }, [])
 
   const handleLogout = useCallback(() => {

@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Star, Bell, Menu, X, Sun, Moon, User } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
+import { EPNav } from '../lib/NavContext'
 
-type Page = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry'
+type Page = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry' | 'company' | 'quality'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -11,6 +12,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'talent', icon: Users, label: '人才星' },
   { key: 'market', icon: TrendingUp, label: '市场洞察' },
   { key: 'industry', icon: FileText, label: '行业报告' },
+  { key: 'quality', icon: Star, label: '质检' },
 ]
 
 import EPDashboard from '../pages/enterprise/Dashboard'
@@ -18,9 +20,11 @@ import EPJobs from '../pages/enterprise/JobManage'
 import EPTalent from '../pages/enterprise/TalentSearch'
 import EPMarket from '../pages/enterprise/MarketInsight'
 import EPIndustry from '../pages/enterprise/IndustryReport'
+import EPCompany from '../pages/enterprise/CompanyProfile'
+import EPQuality from '../pages/enterprise/QualityDashboard'
 
 const pages: Record<Page, () => JSX.Element> = {
-  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, market: EPMarket, industry: EPIndustry,
+  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, market: EPMarket, industry: EPIndustry, company: EPCompany, quality: EPQuality,
 }
 
 interface Props { onLogout: () => void }
@@ -83,7 +87,8 @@ export default function EnterpriseShell({ onLogout }: Props) {
                   style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
                   onMouseLeave={() => setProfileOpen(false)}
                 >
-                  <button className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                  <button onClick={() => { setPage('company'); setProfileOpen(false) }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                     style={{ color: 'var(--color-on-surface-variant)' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container-low)'; e.currentTarget.style.color = 'var(--color-on-surface)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
@@ -124,7 +129,9 @@ export default function EnterpriseShell({ onLogout }: Props) {
       </header>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
-          <PageComp />
+          <EPNav.Provider value={{ setPage, page }}>
+            <PageComp />
+          </EPNav.Provider>
         </div>
       </main>
     </div>
