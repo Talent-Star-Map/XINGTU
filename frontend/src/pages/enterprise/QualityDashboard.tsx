@@ -9,12 +9,22 @@ export default function QualityDashboard() {
   const [matchResult, setMatchResult] = useState<any>(null)
   const [resumeResult, setResumeResult] = useState<any>(null)
 
+  const [panelLoading, setPanelLoading] = useState(false)
+
   const loadReport = () => {
     setLoading(true)
     fetch('/api/quality/report').then(r => r.json()).then(d => {
       if (d.success) setReport(d.data)
       setLoading(false)
     }).catch(() => setLoading(false))
+  }
+
+  const refreshPanels = async () => {
+    setPanelLoading(true)
+    const r = await fetch('/api/quality/report')
+    const d = await r.json()
+    if (d.success) setReport(d.data)
+    setPanelLoading(false)
   }
 
   useEffect(() => { loadReport() }, [])
@@ -136,7 +146,9 @@ export default function QualityDashboard() {
               <Zap className="h-4 w-4" style={{ color: 'var(--accent-green)' }} /> 多源交叉验证
             </h3>
             <div className="flex items-center gap-2">
-              <button onClick={loadReport} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>刷新检测</button>
+              <button onClick={refreshPanels} disabled={panelLoading} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
+                {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
+              </button>
               <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                 {cv?.total_unique_skills ?? 0} 项唯一技能
               </span>
@@ -179,7 +191,9 @@ export default function QualityDashboard() {
                 <Copy className="h-4 w-4" style={{ color: 'var(--accent-purple)' }} /> JD抄袭检测
               </h3>
               <div className="flex items-center gap-2">
-                <button onClick={loadReport} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>刷新检测</button>
+                <button onClick={refreshPanels} disabled={panelLoading} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
+                {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
+              </button>
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
                   style={{ background: (pl?.total_pairs ?? 0) > 0 ? 'rgba(220,38,38,0.1)' : 'rgba(0,229,153,0.1)', color: (pl?.total_pairs ?? 0) > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                   {pl?.total_pairs ?? 0} 对
@@ -204,7 +218,9 @@ export default function QualityDashboard() {
                 <TrendingUp className="h-4 w-4" style={{ color: 'var(--accent-orange)' }} /> 技能通胀检测
               </h3>
               <div className="flex items-center gap-2">
-                <button onClick={loadReport} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>刷新检测</button>
+                <button onClick={refreshPanels} disabled={panelLoading} className="text-xs px-2 py-1 rounded-lg font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
+                {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
+              </button>
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
                   style={{ background: (inf?.total_flagged ?? 0) > 0 ? 'rgba(255,140,66,0.1)' : 'rgba(0,229,153,0.1)', color: (inf?.total_flagged ?? 0) > 0 ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
                   {inf?.total_flagged ?? 0} 个异常
