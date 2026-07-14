@@ -18,7 +18,7 @@ class User(Base):
     password = Column(String(200), nullable=False)
     role = Column(String(20), nullable=False, default='jobseeker')
     avatar = Column(String(500), default='')
-    # ─── 个人信息字段 ───
+    # 个人信息字段
     real_name = Column(String(100), default='')
     gender = Column(String(10), default='')
     age = Column(Integer, nullable=True)
@@ -29,8 +29,18 @@ class User(Base):
     expected_salary = Column(String(50), default='')
     target_position = Column(String(200), default='')
     experience = Column(String(100), default='')
-    skills = Column(String(500), default='')  # 逗号分隔
+    skills = Column(String(500), default='')
     bio = Column(String(500), default='')
+    projects = Column(String(2000), default='[]')
+    # 企业字段
+    company_name = Column(String(200), default='')
+    industry = Column(String(100), default='')
+    company_size = Column(String(50), default='')
+    company_desc = Column(String(1000), default='')
+    company_website = Column(String(500), default='')
+    company_logo = Column(String(500), default='')
+    company_benefits = Column(String(500), default='')
+    verified = Column(Integer, default=0)  # 0-未认证 1-官网已验证 2-企查查认证
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

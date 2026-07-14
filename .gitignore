@@ -37,6 +37,11 @@ backend/*.db
 __pycache__/
 .vite/
 
+# Uploads & test data
+backend/uploads/
+backend/test_data/
+
 #AI
 .mimocode
 .trae
+.workbuddy
