@@ -1,7 +1,7 @@
 """公开企业名片接口 — 求职端可查看"""
 
 from fastapi import APIRouter, Query, HTTPException
-from database import get_session, User
+from database import get_session, Enterprise
 
 router = APIRouter(prefix='/api/company', tags=['company'])
 
@@ -9,7 +9,7 @@ router = APIRouter(prefix='/api/company', tags=['company'])
 def get_company_public(company_name: str):
     """根据公司名查询企业公开信息"""
     session = get_session()
-    user = session.query(User).filter(User.company_name == company_name, User.role == 'enterprise').first()
+    user = session.query(Enterprise).filter(Enterprise.company_name == company_name).first()
     session.close()
     if not user:
         raise HTTPException(404, '企业不存在')

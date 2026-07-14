@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
-from database import create_user, get_user_by_login, create_token, verify_token, get_session, User, VerifyCode
+from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
 import bcrypt, random, re, smtplib, uuid
 from email.mime.text import MIMEText
 
@@ -70,21 +70,29 @@ def get_profile(token: str = Query(...)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     session = get_session()
-    user = session.query(User).filter(User.id == payload['user_id']).first()
+    Model = get_user_model_by_role(payload['role'])
+    user = session.query(Model).filter(Model.id == payload['user_id']).first()
     session.close()
     if not user: raise HTTPException(404, '用户不存在')
     fields = ['id','email','phone','username','role','avatar','real_name','gender','age','education','school','city','target_city','expected_salary','target_position','experience','skills','bio','projects','company_name','industry','company_size','company_desc','company_website','company_logo','company_benefits','verified']
-    return {'success': True, 'data': {f: getattr(user, f) if getattr(user, f, None) is not None else '' for f in fields}}
+    data = {}
+    for f in fields:
+        val = getattr(user, f, None)
+        data[f] = val if val is not None else ''
+    data['role'] = payload['role']
+    return {'success': True, 'data': data}
 
 @router.put('/profile')
 def update_profile(req: ProfileUpdate, token: str = Query(...)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     session = get_session()
-    user = session.query(User).filter(User.id == payload['user_id']).first()
+    Model = get_user_model_by_role(payload['role'])
+    user = session.query(Model).filter(Model.id == payload['user_id']).first()
     if not user: raise HTTPException(404, '用户不存在')
     for k, v in req.model_dump().items():
-        setattr(user, k, v)
+        if hasattr(user, k):
+            setattr(user, k, v)
     session.commit(); session.close()
     return {'success': True, 'message': '保存成功'}
 
@@ -105,7 +113,8 @@ async def upload_avatar(file: UploadFile = File(...), token: str = Query(...)):
     with open(path, 'wb') as f: shutil.copyfileobj(file.file, f)
     url = f'/uploads/avatars/{name}'
     session = get_session()
-    user = session.query(User).filter(User.id == payload['user_id']).first()
+    Model = get_user_model_by_role(payload['role'])
+    user = session.query(Model).filter(Model.id == payload['user_id']).first()
     if user: user.avatar = url
     session.commit(); session.close()
     return {'success': True, 'data': {'url': url}}

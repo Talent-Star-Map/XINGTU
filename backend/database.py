@@ -9,15 +9,16 @@ engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=3600)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
-class User(Base):
-    __tablename__ = 'users'
+class Jobseeker(Base):
+    __tablename__ = 'jobseekers'
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(200), unique=True, nullable=True)
     phone = Column(String(50), unique=True, nullable=True)
     username = Column(String(100), default='')
     password = Column(String(200), nullable=False)
-    role = Column(String(20), nullable=False, default='jobseeker')
     avatar = Column(String(500), default='')
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     # 个人信息字段
     real_name = Column(String(100), default='')
     gender = Column(String(10), default='')
@@ -32,6 +33,17 @@ class User(Base):
     skills = Column(String(500), default='')
     bio = Column(String(500), default='')
     projects = Column(String(2000), default='[]')
+
+class Enterprise(Base):
+    __tablename__ = 'enterprises'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(200), unique=True, nullable=True)
+    phone = Column(String(50), unique=True, nullable=True)
+    username = Column(String(100), default='')
+    password = Column(String(200), nullable=False)
+    avatar = Column(String(500), default='')
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     # 企业字段
     company_name = Column(String(200), default='')
     industry = Column(String(100), default='')
@@ -40,9 +52,8 @@ class User(Base):
     company_website = Column(String(500), default='')
     company_logo = Column(String(500), default='')
     company_benefits = Column(String(500), default='')
-    verified = Column(Integer, default=0)  # 0-未认证 1-官网已验证 2-企查查认证
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    verified = Column(Integer, default=0)
+    city = Column(String(100), default='')
 
 class VerifyCode(Base):
     __tablename__ = 'verify_codes'
@@ -62,9 +73,21 @@ def create_user(email, phone, password, role, username=''):
     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     session = get_session()
     try:
-        user = User(email=email, phone=phone, username=username or (email or phone or '').split('@')[0], password=hashed, role=role)
+        if role == 'enterprise':
+            user = Enterprise(
+                email=email, phone=phone,
+                username=username or (email or phone or '').split('@')[0],
+                password=hashed
+            )
+        else:
+            user = Jobseeker(
+                email=email, phone=phone,
+                username=username or (email or phone or '').split('@')[0],
+                password=hashed
+            )
         session.add(user); session.commit()
-        return {'id': user.id, 'email': user.email, 'phone': user.phone, 'username': user.username, 'role': user.role}
+        return {'id': user.id, 'email': user.email, 'phone': user.phone,
+                'username': user.username, 'role': role}
     except Exception as e:
         session.rollback()
         if 'Duplicate' in str(e): raise ValueError('邮箱或手机号已注册')
@@ -74,17 +97,42 @@ def create_user(email, phone, password, role, username=''):
 
 def get_user_by_login(login):
     session = get_session()
-    user = session.query(User).filter((User.email == login) | (User.phone == login)).first()
+    user = session.query(Jobseeker).filter(
+        (Jobseeker.email == login) | (Jobseeker.phone == login)
+    ).first()
+    if user:
+        result = dict(id=user.id, email=user.email, phone=user.phone,
+                      username=user.username, password=user.password, role='jobseeker')
+        session.close()
+        return result
+    user = session.query(Enterprise).filter(
+        (Enterprise.email == login) | (Enterprise.phone == login)
+    ).first()
+    if user:
+        result = dict(id=user.id, email=user.email, phone=user.phone,
+                      username=user.username, password=user.password, role='enterprise')
+        session.close()
+        return result
     session.close()
-    if not user: return None
-    return dict(id=user.id, email=user.email, phone=user.phone, username=user.username, password=user.password, role=user.role)
+    return None
+
+def get_user_model_by_role(role):
+    """根据 role 返回对应的模型类"""
+    if role == 'enterprise':
+        return Enterprise
+    return Jobseeker
 
 import jwt
 JWT_SECRET = os.getenv('JWT_SECRET', 'xingtu-secret-key-2026')
 JWT_ALGO = 'HS256'
 
 def create_token(user_id, role):
-    return jwt.encode({'user_id': user_id, 'role': role, 'exp': datetime.now(timezone.utc) + timedelta(days=7), 'iat': datetime.now(timezone.utc), 'jti': str(uuid.uuid4())}, JWT_SECRET, algorithm=JWT_ALGO)
+    return jwt.encode({
+        'user_id': user_id, 'role': role,
+        'exp': datetime.now(timezone.utc) + timedelta(days=7),
+        'iat': datetime.now(timezone.utc),
+        'jti': str(uuid.uuid4())
+    }, JWT_SECRET, algorithm=JWT_ALGO)
 
 def verify_token(token):
     try: return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
