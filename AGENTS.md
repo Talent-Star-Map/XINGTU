@@ -41,7 +41,6 @@ npm run dev                   # Vite dev server on :5173, proxies /api → :8081
 - **No linter/formatter**: No ESLint or Prettier. Follow existing style.
 - **3D/animation heavy**: Uses Three.js (`@react-three/fiber`), GSAP, Framer Motion, d3-force, react-force-graph-3d, ogl, recharts.
 - **Auth token in localStorage**: Keys `xingtu_token`, `xingtu_role`, `xingtu_user`, plus `xingtu_theme` for theme. Read directly by pages (e.g., `ProfileEdit.tsx:11`, `ProfileHome.tsx:16`) and passed as `?token=` in API calls.
-- **⚠️ handleLogin bug**: `App.tsx:32` overwrites the real JWT with `'demo_token'` after login. This breaks profile API calls that read `xingtu_token` from localStorage. If debugging auth, account for this.
 - **Dev proxy**: Vite proxies `/api` → `http://localhost:8081` in dev mode.
 - **Production**: Docker build uses nginx. `nginx.conf` proxies `/api/` → `http://api:8081`.
 
