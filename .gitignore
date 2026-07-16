@@ -40,3 +40,7 @@ __pycache__/
 # Uploads & test data
 backend/uploads/
 backend/test_data/
+
+#AI
+.mimocode
+.trae
