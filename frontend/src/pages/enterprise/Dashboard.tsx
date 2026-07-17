@@ -1,40 +1,96 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Briefcase, Users, TrendingUp, MessageCircle, Search, ArrowRight, Sparkles, Target, Zap } from 'lucide-react'
+import { Briefcase, Users, TrendingUp, MessageCircle, Search, Target, Zap, Loader2 } from 'lucide-react'
 
-const metrics = [
-  { label: '待处理沟通', value: 8, icon: MessageCircle, color: '#0052D9', bg: 'var(--color-primary-fixed)', colSpan: 2 },
-  { label: '新匹配候选人', value: 24, icon: Users, color: '#7C3AED', bg: 'var(--color-surface-container-lowest)' },
-  { label: '在招职位', value: 12, icon: Briefcase, color: '#059669', bg: 'var(--color-surface-container-lowest)' },
-]
-
-const recentJobs = [
-  { title: 'AI 应用开发工程师', department: 'AI产品部', status: '招聘中', candidates: 23, views: 156 },
-  { title: 'Java 后端开发', department: '技术部', status: '招聘中', candidates: 45, views: 289 },
-  { title: '大模型算法工程师', department: '算法部', status: '草稿', candidates: 0, views: 0 },
-  { title: '前端开发工程师（Vue）', department: '技术部', status: '已关闭', candidates: 12, views: 98 },
-]
-
-const hotSkills = [
-  { name: 'LangChain', growth: '+320%', hot: true },
-  { name: 'MCP协议', growth: '新发', hot: true },
-  { name: 'Agent框架', growth: '+180%', hot: true },
-  { name: 'RAG', growth: '+210%', hot: true },
-  { name: 'Kubernetes', growth: '+89%', hot: false },
-  { name: 'Python', growth: '+45%', hot: false },
-]
-
-const statusColors: Record<string, string> = {
-  '招聘中': 'rgba(0,229,153,0.1)',
-  '草稿': 'rgba(255,140,66,0.1)',
-  '已关闭': 'rgba(100,100,100,0.1)',
+// 仪表盘数据类型
+interface DashboardData {
+  metrics: {
+    active_jobs: number        // 在招岗位数
+    total_candidates: number   // 匹配候选人总数（去重）
+    high_match: number         // 高匹配度候选人数 (>=85)
+    pending_count: number      // 待处理匹配记录数
+  }
+  recent_jobs: Array<{
+    id: number
+    title: string
+    status: string
+    candidates: number
+    created_at: string
+  }>
+  match_distribution: {
+    high: number
+    mid: number
+    low: number
+  }
 }
-const statusTextColors: Record<string, string> = {
-  '招聘中': 'var(--accent-green)',
-  '草稿': 'var(--accent-orange)',
-  '已关闭': 'var(--color-on-surface-variant)',
+
+// 状态文案与颜色映射（后端 status: active/closed/draft → 前端中文）
+const STATUS_MAP: Record<string, { label: string, bg: string, color: string }> = {
+  'active':  { label: '招聘中', bg: 'rgba(0,229,153,0.1)', color: 'var(--accent-green)' },
+  'draft':   { label: '草稿',   bg: 'rgba(255,140,66,0.1)', color: 'var(--accent-orange)' },
+  'closed':  { label: '已关闭', bg: 'rgba(100,100,100,0.1)', color: 'var(--color-on-surface-variant)' },
 }
 
 export default function Dashboard() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // 拉取仪表盘汇总数据
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const r = await fetch('/api/enterprise/dashboard')
+      const d = await r.json()
+      if (d.success) setData(d.data)
+      else setError(d.error?.message || '加载失败')
+    } catch {
+      setError('网络错误')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  // 热点技能（暂保留静态 — 后续可由匹配引擎统计技能出现频次得出）
+  const hotSkills = [
+    { name: 'LangChain', growth: '+320%', hot: true },
+    { name: 'MCP协议', growth: '新发', hot: true },
+    { name: 'Agent框架', growth: '+180%', hot: true },
+    { name: 'RAG', growth: '+210%', hot: true },
+    { name: 'Kubernetes', growth: '+89%', hot: false },
+    { name: 'Python', growth: '+45%', hot: false },
+  ]
+
+  // 指标卡配置（数据来自后端 metrics）
+  const metrics = data ? [
+    { label: '在招职位', value: data.metrics.active_jobs, icon: Briefcase, color: '#059669', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
+    { label: '匹配候选人', value: data.metrics.total_candidates, icon: Users, color: '#7C3AED', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
+    { label: '高匹配人才', value: data.metrics.high_match, icon: Target, color: '#0052D9', bg: 'var(--color-primary-fixed)', colSpan: 1 },
+    { label: '待处理沟通', value: data.metrics.pending_count, icon: MessageCircle, color: '#D97706', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
+  ] : []
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32 gap-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">加载中...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="px-6 py-8">
+        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'rgba(255,99,99,0.08)', color: '#E5484D' }}>
+          {error}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8 px-6 py-8 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -62,51 +118,63 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-3 gap-5">
-        {/* 近期岗位 */}
+        {/* 近期岗位 — 数据来自后端 recent_jobs */}
         <div className="col-span-2 rounded-xl border" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
             <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>近期岗位</h2>
             <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>查看全部 →</span>
           </div>
           <div className="divide-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            {recentJobs.map((job, i) => (
-              <div key={job.title} className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface)] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{i + 1}</div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>{job.department}</p>
+            {data && data.recent_jobs.length > 0 ? data.recent_jobs.map((job, i) => {
+              const st = STATUS_MAP[job.status] || STATUS_MAP['active']
+              return (
+                <div key={job.id} className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface)] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{i + 1}</div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>发布于 {job.created_at}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-5">
+                    <div className="text-right">
+                      <p className="text-xs font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.candidates} 人</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>候选人</p>
+                    </div>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-5">
-                  <div className="text-right">
-                    <p className="text-xs font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.candidates} 人</p>
-                    <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>候选人</p>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: statusColors[job.status] || 'transparent', color: statusTextColors[job.status] || 'var(--color-on-surface-variant)' }}>{job.status}</span>
-                </div>
-              </div>
-            ))}
+              )
+            }) : (
+              <div className="px-6 py-10 text-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>暂无岗位</div>
+            )}
           </div>
         </div>
 
-        {/* 热点技能 */}
+        {/* 匹配度分布 — 数据来自后端 match_distribution */}
         <div className="rounded-xl border" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>市场热点技能</h2>
-            <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>详情 →</span>
+            <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>匹配度分布</h2>
           </div>
-          <div className="p-5 space-y-1">
-            {hotSkills.map((s, i) => (
-              <motion.div key={s.name} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-[var(--color-surface)] transition-colors">
-                <div className="flex items-center gap-3">
-                  {s.hot && <Zap className="h-3.5 w-3.5" style={{ color: 'var(--accent-orange)' }} />}
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-on-surface)' }}>{s.name}</span>
+          <div className="p-5 space-y-4">
+            {[
+              { label: '高匹配 (≥85)', val: data?.match_distribution.high || 0, color: 'var(--accent-green)' },
+              { label: '中匹配 (60-84)', val: data?.match_distribution.mid || 0, color: 'var(--color-primary)' },
+              { label: '低匹配 (<60)', val: data?.match_distribution.low || 0, color: 'var(--accent-orange)' },
+            ].map(item => {
+              const total = (data?.match_distribution.high || 0) + (data?.match_distribution.mid || 0) + (data?.match_distribution.low || 0) || 1
+              return (
+                <div key={item.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
+                    <span className="text-xs font-bold" style={{ color: item.color }}>{item.val} 人</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${(item.val / total) * 100}%`, background: item.color }} />
+                  </div>
                 </div>
-                <span className="text-sm font-bold" style={{ color: s.growth === '新发' ? 'var(--color-primary)' : 'var(--accent-green)' }}>{s.growth}</span>
-              </motion.div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
