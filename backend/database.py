@@ -62,6 +62,39 @@ class VerifyCode(Base):
     code = Column(String(10), nullable=False)
     created_at = Column(DateTime, default=func.now())
 
+class Job(Base):
+    """企业发布的岗位表 — 支撑企业端岗位管理、人才星岗位下拉、仪表盘"""
+    __tablename__ = 'jobs'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    enterprise_id = Column(Integer, nullable=False)          # 关联 enterprises.id，谁发布的
+    title = Column(String(200), nullable=False)               # 岗位名称，如"AI应用开发工程师"
+    description = Column(String(2000), default='')           # 岗位描述
+    location = Column(String(100), default='')               # 工作城市
+    salary_min = Column(Integer, nullable=True)              # 薪资下限（K 为单位）
+    salary_max = Column(Integer, nullable=True)               # 薪资上限（K 为单位）
+    salary_range = Column(String(50), default='')            # 展示用字符串，如"30K-50K"
+    education = Column(String(50), default='')               # 学历要求
+    experience = Column(String(100), default='')             # 经验要求，如"3-5年"
+    skills_required = Column(String(500), default='')        # 要求技能（逗号分隔）
+    status = Column(String(20), default='active')            # active/closed/draft
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+class MatchRecord(Base):
+    """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果"""
+    __tablename__ = 'match_records'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(Integer, nullable=False)                  # 关联 jobs.id
+    jobseeker_id = Column(Integer, nullable=False)            # 关联 jobseekers.id
+    # 匹配度（0-100）。来源为匹配引擎；未计算时为 NULL，前端应标注"暂无匹配数据"
+    match_score = Column(Integer, nullable=True)
+    skill_match = Column(Integer, nullable=True)              # 技能匹配度（维度1）
+    exp_match = Column(Integer, nullable=True)                # 经验匹配度（维度2）
+    salary_match = Column(Integer, nullable=True)             # 薪资匹配度（维度3）
+    status = Column(String(20), default='pending')            # pending/accepted/rejected
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
