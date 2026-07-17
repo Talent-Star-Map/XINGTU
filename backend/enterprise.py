@@ -32,7 +32,10 @@ def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
     name = js.real_name or js.username or '匿名'
     av = name[0] if name else '?'
     return {
-        'id': js.id,
+        # 注意：id 用 match_record.id（唯一），不用 jobseeker.id
+        # 因为"全部岗位"模式下同一求职者会因匹配多个岗位出现多次，jobseeker.id 会重复导致前端 key 冲突
+        'id': mr.id,
+        'jobseeker_id': js.id,                    # 求职者原始 id（供前端按需使用）
         'name': name,
         'title': js.target_position or '',          # 当前求职意向岗位
         'skills': skills,
