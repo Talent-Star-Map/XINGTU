@@ -5,14 +5,15 @@ import Graph3D from '../../components/Graph3D'
 import ProfileSidebar from '../../components/ProfileSidebar'
 import CompanyCard from '../../components/CompanyCard'
 
+// 分类配色：使用在亮/暗两种主题下都可见的亮色（与 SkillGraph / Graph3D 色板一致）
 const skillCats: { name: string; icon: any; color: string; keywords: string[] }[] = [
-  { name: '编程语言', icon: Code, color: '#0052D9', keywords: ['java', 'python', 'go', 'rust', 'c++', 'typescript', 'javascript', 'c#', 'php', 'ruby', 'swift', 'kotlin', 'scala'] },
-  { name: '框架与工具', icon: Terminal, color: '#5B21B6', keywords: ['spring', 'django', 'flask', 'fastapi', 'react', 'vue', 'angular', 'node', 'express', 'mybatis', 'hibernate', 'jquery'] },
-  { name: '数据库', icon: Database, color: '#059669', keywords: ['mysql', 'postgresql', 'redis', 'mongodb', 'elasticsearch', 'oracle', 'sqlite', 'cassandra', 'neo4j'] },
-  { name: '云原生/DevOps', icon: Cloud, color: '#D97706', keywords: ['docker', 'kubernetes', 'k8s', 'jenkins', 'git', 'linux', 'aws', 'azure', 'gcp', 'nginx', 'ci/cd', 'devops', 'terraform'] },
-  { name: 'AI/ML', icon: Cpu, color: '#DC2626', keywords: ['机器学习', '深度学习', 'nlp', 'cv', '大模型', 'llm', 'rag', 'tensorflow', 'pytorch', 'langchain', 'agent', 'transformer', 'ai'] },
-  { name: '数据/流处理', icon: TrendingUp, color: '#7C3AED', keywords: ['spark', 'flink', 'hadoop', 'kafka', 'rabbitmq', 'pandas', 'numpy', 'hive', 'airflow'] },
-  { name: '其他工具', icon: Wrench, color: '#0891B2', keywords: ['git', 'restful', 'graphql', 'websocket', '微服务', '分布式', '高并发', '架构设计', 'html', 'css', 'sass', 'less'] },
+  { name: '编程语言', icon: Code, color: '#00C8FF', keywords: ['java', 'python', 'go', 'rust', 'c++', 'typescript', 'javascript', 'c#', 'php', 'ruby', 'swift', 'kotlin', 'scala'] },
+  { name: '框架与工具', icon: Terminal, color: '#7C3AED', keywords: ['spring', 'django', 'flask', 'fastapi', 'react', 'vue', 'angular', 'node', 'express', 'mybatis', 'hibernate', 'jquery'] },
+  { name: '数据库', icon: Database, color: '#00E599', keywords: ['mysql', 'postgresql', 'redis', 'mongodb', 'elasticsearch', 'oracle', 'sqlite', 'cassandra', 'neo4j'] },
+  { name: '云原生/DevOps', icon: Cloud, color: '#FF8C42', keywords: ['docker', 'kubernetes', 'k8s', 'jenkins', 'git', 'linux', 'aws', 'azure', 'gcp', 'nginx', 'ci/cd', 'devops', 'terraform'] },
+  { name: 'AI/ML', icon: Cpu, color: '#FF4D6A', keywords: ['机器学习', '深度学习', 'nlp', 'cv', '大模型', 'llm', 'rag', 'tensorflow', 'pytorch', 'langchain', 'agent', 'transformer', 'ai'] },
+  { name: '数据/流处理', icon: TrendingUp, color: '#A78BFA', keywords: ['spark', 'flink', 'hadoop', 'kafka', 'rabbitmq', 'pandas', 'numpy', 'hive', 'airflow'] },
+  { name: '其他工具', icon: Wrench, color: '#06B6D4', keywords: ['git', 'restful', 'graphql', 'websocket', '微服务', '分布式', '高并发', '架构设计', 'html', 'css', 'sass', 'less'] },
 ]
 
 interface JobItem {
@@ -136,7 +137,7 @@ export default function MySkillGraphPage() {
                             className="px-2.5 py-1 rounded-md text-xs font-medium transition-all hover:ring-2 cursor-pointer"
                             style={{
                               background: selectedSkill === s ? cat.color : `${cat.color}10`,
-                              color: selectedSkill === s ? '#fff' : cat.color,
+                              color: selectedSkill === s ? 'var(--color-on-primary)' : cat.color,
                               ringColor: cat.color,
                             }}>
                             {s}
@@ -148,8 +149,8 @@ export default function MySkillGraphPage() {
                   {uncategorized.length > 0 && (
                     <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(128,128,128,0.1)' }}>
-                          <Globe className="h-5 w-5" style={{ color: '#888' }} />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-neutral-dim)' }}>
+                          <Globe className="h-5 w-5" style={{ color: 'var(--color-neutral)' }} />
                         </div>
                         <h3 className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>其他技能</h3>
                       </div>
@@ -158,8 +159,8 @@ export default function MySkillGraphPage() {
                           <button key={s} onClick={() => handleSkillClick(s)}
                             className="px-2.5 py-1 rounded-md text-xs font-medium transition-all hover:ring-2 cursor-pointer"
                             style={{
-                              background: selectedSkill === s ? '#888' : 'rgba(128,128,128,0.08)',
-                              color: selectedSkill === s ? '#fff' : '#888',
+                              background: selectedSkill === s ? 'var(--color-neutral)' : 'var(--color-neutral-dim)',
+                              color: selectedSkill === s ? 'var(--color-on-primary)' : 'var(--color-neutral)',
                             }}>
                             {s}
                           </button>
@@ -232,7 +233,7 @@ export default function MySkillGraphPage() {
                                 <span key={s} className={`px-2.5 py-1 rounded-md text-xs font-medium ${isSelected ? 'ring-2' : ''}`}
                                   style={{
                                     background: isSelected ? 'var(--color-primary)' : 'var(--color-primary-fixed)',
-                                    color: isSelected ? '#fff' : 'var(--color-primary)',
+                                    color: isSelected ? 'var(--color-on-primary)' : 'var(--color-primary)',
                                     ...(isSelected ? { ringColor: 'var(--color-primary)' } : {}),
                                   }}>
                                   {s}
@@ -244,7 +245,7 @@ export default function MySkillGraphPage() {
                         <a href={`https://www.zhipin.com/web/geek/job?query=${encodeURIComponent(selectedJob.title)}&city=100010000`}
                           target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-1.5 mt-3 text-xs font-semibold px-3 py-2 rounded-lg w-fit"
-                          style={{ color: '#fff', background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+                          style={{ color: 'var(--color-on-primary)', background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
                           <ExternalLink className="h-3.5 w-3.5" /> 查看原招聘信息
                         </a>
                         <p className="text-[10px] mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>数据来源：{selectedJob.source} · {selectedJob.collected_at}</p>

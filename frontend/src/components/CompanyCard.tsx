@@ -6,10 +6,11 @@ interface Props {
   onClose: () => void
 }
 
+// 认证等级信息：使用主题变量，在亮/暗两种主题下自动适配
 const verifyInfo = [
-  { level: 0, icon: ShieldOff, label: '未认证', color: 'var(--color-on-surface-variant)', bg: 'rgba(128,128,128,0.08)' },
+  { level: 0, icon: ShieldOff, label: '未认证', color: 'var(--color-on-surface-variant)', bg: 'var(--color-neutral-dim)' },
   { level: 1, icon: ShieldCheck, label: '官网已验证', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
-  { level: 2, icon: Award, label: '三方认证', color: 'var(--accent-green)', bg: 'rgba(0,229,153,0.1)' },
+  { level: 2, icon: Award, label: '三方认证', color: 'var(--accent-green)', bg: 'var(--accent-green-dim)' },
 ]
 
 export default function CompanyCard({ companyName, onClose }: Props) {
@@ -24,7 +25,7 @@ export default function CompanyCard({ companyName, onClose }: Props) {
   }, [companyName])
 
   if (loading) return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'var(--color-scrim)' }} onClick={onClose}>
       <div className="rounded-2xl border p-10" style={{ background: 'var(--color-surface-container-lowest)', borderColor: 'var(--color-outline-variant)' }} onClick={e => e.stopPropagation()}>
         <Loader2 className="h-8 w-8 animate-spin mx-auto" style={{ color: 'var(--accent-purple)' }} />
       </div>
@@ -35,7 +36,7 @@ export default function CompanyCard({ companyName, onClose }: Props) {
   const VIcon = v.icon
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: 'var(--color-scrim)' }} onClick={onClose}>
       <div className="rounded-2xl border w-full max-w-lg max-h-[85vh] overflow-y-auto" style={{ background: 'var(--color-surface-container-lowest)', borderColor: 'var(--color-outline-variant)' }} onClick={e => e.stopPropagation()}>
         {/* 头部 */}
         <div className="relative p-6 pb-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
@@ -51,7 +52,7 @@ export default function CompanyCard({ companyName, onClose }: Props) {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg font-bold" style={{ color: 'var(--color-on-surface)' }}>{data?.company_name || companyName}</h3>
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-semibold border" style={{ background: v.bg, color: v.color, borderColor: v.color + '33' }}>
+                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-semibold border" style={{ background: v.bg, color: v.color, borderColor: v.color }}>
                   <VIcon className="h-3 w-3" /> {v.label}
                 </span>
               </div>

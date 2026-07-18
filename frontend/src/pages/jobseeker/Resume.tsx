@@ -180,11 +180,11 @@ export default function Resume() {
               className="rounded-xl border-2 p-16 text-center cursor-pointer transition-all"
               style={{
                 borderColor: dragOver ? 'var(--color-primary)' : 'var(--color-outline-variant)',
-                background: dragOver ? 'rgba(0,130,255,0.04)' : 'var(--color-surface-container-lowest)',
+                background: dragOver ? 'var(--accent-cyan-dim)' : 'var(--color-surface-container-lowest)',
                 borderStyle: 'dashed',
               }}>
               <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFile} hidden />
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4" style={{ background: 'rgba(0,200,255,0.1)' }}>
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4" style={{ background: 'var(--accent-cyan-dim)' }}>
                 <Upload className="h-8 w-8" style={{ color: 'var(--color-primary)' }} />
               </div>
               <h2 className="text-base font-semibold mb-2" style={{ color: 'var(--color-on-surface)' }}>
@@ -195,8 +195,8 @@ export default function Resume() {
               {file && (
                 <div className="mt-6">
                   <button onClick={e => { e.stopPropagation(); parse() }}
-                    className="inline-flex items-center gap-2 rounded-lg px-8 py-3 text-sm font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+                    className="inline-flex items-center gap-2 rounded-lg px-8 py-3 text-sm font-semibold"
+                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
                     <FileText className="h-4 w-4" /> 开始解析
                   </button>
                 </div>
@@ -205,7 +205,7 @@ export default function Resume() {
           )}
 
           {error && (
-            <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.06)' }}>
+            <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
               <AlertCircle className="h-5 w-5 shrink-0" style={{ color: 'var(--accent-red)' }} />
               <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>{error}</p>
             </div>
@@ -277,7 +277,7 @@ export default function Resume() {
 
           {/* ═══ 解析弹窗 ═══ */}
           {(parsing || parseDone) && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'var(--color-scrim)' }}>
               <div className="rounded-2xl border p-10 w-[420px] text-center" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                 {!parseDone ? (
                   <>
@@ -317,8 +317,8 @@ export default function Resume() {
                       </p>
                     </div>
                     <button onClick={confirmResult}
-                      className="mt-5 inline-flex items-center gap-2 rounded-lg px-8 py-3 text-sm font-semibold text-white"
-                      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+                      className="mt-5 inline-flex items-center gap-2 rounded-lg px-8 py-3 text-sm font-semibold"
+                      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
                       <CheckCircle className="h-4 w-4" /> 确认查看结果
                     </button>
                   </>
@@ -329,7 +329,7 @@ export default function Resume() {
 
           {/* 预览弹窗 */}
           {preview && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
               <div className="rounded-2xl border w-full max-w-xl max-h-[80vh] overflow-y-auto" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                 <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                   <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
@@ -377,7 +377,7 @@ export default function Resume() {
           {/* 解析结果详情 */}
           {result && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'rgba(0,229,153,0.3)', background: 'rgba(0,229,153,0.06)' }}>
+              <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-green)', background: 'var(--accent-green-dim)' }}>
                 <CheckCircle className="h-5 w-5 shrink-0" style={{ color: 'var(--accent-green)' }} />
                 <div>
                   <p className="text-sm font-semibold" style={{ color: 'var(--accent-green)' }}>解析成功</p>
@@ -415,9 +415,9 @@ export default function Resume() {
                       const status = scored?.status ?? 'unconfirmed'
                       const trace = result.quality?.traces?.find((t: any) => t.skill === s)
                       const evidence = trace?.evidence?.[0]
-                      const bg = status === 'verified' ? 'rgba(0,229,153,0.12)' : conf >= 0.7 ? 'var(--color-primary-fixed)' : 'rgba(255,140,66,0.12)'
+                      const bg = status === 'verified' ? 'var(--accent-green-dim)' : conf >= 0.7 ? 'var(--color-primary-fixed)' : 'var(--accent-orange-dim)'
                       const fg = status === 'verified' ? 'var(--accent-green)' : conf >= 0.7 ? 'var(--color-primary)' : 'var(--accent-orange)'
-                      const border = status === 'verified' ? '1px solid rgba(0,229,153,0.3)' : conf >= 0.7 ? 'none' : '1px solid rgba(255,140,66,0.3)'
+                      const border = status === 'verified' ? '1px solid var(--accent-green)' : conf >= 0.7 ? 'none' : '1px solid var(--accent-orange)'
                       return (
                         <span key={s} className="px-3 py-1.5 rounded-lg text-sm font-semibold relative group cursor-help"
                           style={{ background: bg, color: fg, border }}>
@@ -447,15 +447,15 @@ export default function Resume() {
               <div className="flex items-center gap-3">
                 {!filled ? (
                   <button onClick={fillProfile} disabled={filling}
-                    className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
-                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+                    className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
                     {filling ? <><Loader2 className="h-4 w-4 animate-spin" /> 保存中...</> : <><CheckCircle className="h-4 w-4" /> 确认并填充到个人资料</>}
                   </button>
                 ) : (
                   <>
                     <button onClick={() => setPage('profile-home')}
-                      className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white"
-                      style={{ background: 'var(--accent-green)' }}>
+                      className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold"
+                      style={{ background: 'var(--accent-green)', color: 'var(--color-on-primary)' }}>
                       <CheckCircle className="h-4 w-4" /> 已填充，查看个人主页
                     </button>
                     <button onClick={() => setPage('my-skill-graph')}

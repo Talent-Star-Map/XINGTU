@@ -166,6 +166,20 @@ def calc_total_score(skill: int, exp: int, salary: int) -> int:
     return int(skill * WEIGHTS['skill'] + exp * WEIGHTS['exp'] + salary * WEIGHTS['salary'])
 
 
+def has_skill_overlap(job_skills_str: str, seeker_skills_str: str) -> bool:
+    """
+    判断岗位要求技能与求职者技能是否有交集。
+    用作匹配引擎的门槛：无任何技能交集的岗位-求职者对不创建匹配记录。
+    例：岗位[Python,LangChain] vs 求职者[Java,MySQL] → False，跳过
+    """
+    job_set = set(parse_skills(job_skills_str))
+    seek_set = set(parse_skills(seeker_skills_str))
+    # 岗位无要求技能时视为有交集（无门槛岗位允许所有人匹配）
+    if not job_set:
+        return True
+    return len(job_set & seek_set) > 0
+
+
 def match_one(job: Job, seeker: Jobseeker) -> dict:
     """对单个 岗位-求职者 计算匹配，返回四分数"""
     skill = calc_skill_match(job.skills_required, seeker.skills)
@@ -183,7 +197,10 @@ def run_match_batch(job_id: Optional[int] = None) -> dict:
     - job_id 为 None: 遍历所有 active 岗位 × 所有求职者
     - job_id 指定: 仅算该岗位
 
-    返回: {total_jobs, total_seekers, total_matches, updated, sample}
+    匹配门槛：岗位要求技能与求职者技能必须有交集，否则跳过（不创建匹配记录）。
+    清理策略：每次重算前，删除 pending 状态的旧记录，保留已处理(accepted/rejected)的记录。
+
+    返回: {total_jobs, total_seekers, total_matches, updated, skipped, sample}
     """
     session = get_session()
     try:
@@ -196,14 +213,28 @@ def run_match_batch(job_id: Optional[int] = None) -> dict:
         # 拉取所有求职者
         seekers = session.query(Jobseeker).all()
 
+        # 清理旧的 pending 记录（保留已处理的 accepted/rejected，避免丢失 HR 的操作）
+        # 注：如果指定了 job_id，只清理该岗位的 pending 记录
+        del_q = session.query(MatchRecord).filter(MatchRecord.status == 'pending')
+        if job_id:
+            del_q = del_q.filter(MatchRecord.job_id == job_id)
+        deleted_count = del_q.delete(synchronize_session=False)
+
         updated = 0
+        skipped = 0  # 因技能无交集被跳过的数量
         sample = None  # 保留一份样本用于前端展示
 
         for job in jobs:
             for seeker in seekers:
+                # 门槛检查：技能无交集则跳过，不创建匹配记录
+                if not has_skill_overlap(job.skills_required, seeker.skills):
+                    skipped += 1
+                    continue
+
                 scores = match_one(job, seeker)
 
                 # upsert: 已有记录则更新分数，否则新增
+                # 注：上面已清理 pending 记录，这里查到的非 pending 记录会被更新分数
                 mr = session.query(MatchRecord).filter(
                     MatchRecord.job_id == job.id,
                     MatchRecord.jobseeker_id == seeker.id,
@@ -246,6 +277,8 @@ def run_match_batch(job_id: Optional[int] = None) -> dict:
             'total_seekers': len(seekers),
             'total_matches': updated,
             'updated': updated,
+            'skipped': skipped,            # 被门槛过滤掉的数量
+            'cleaned': deleted_count,      # 清理的旧 pending 记录数
             'sample': sample,
         }
     except Exception as e:
