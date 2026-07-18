@@ -26,10 +26,11 @@ interface DashboardData {
 }
 
 // 状态文案与颜色映射（后端 status: active/closed/draft → 前端中文）
+// 使用主题变量，在亮/暗两种主题下自动适配
 const STATUS_MAP: Record<string, { label: string, bg: string, color: string }> = {
-  'active':  { label: '招聘中', bg: 'rgba(0,229,153,0.1)', color: 'var(--accent-green)' },
-  'draft':   { label: '草稿',   bg: 'rgba(255,140,66,0.1)', color: 'var(--accent-orange)' },
-  'closed':  { label: '已关闭', bg: 'rgba(100,100,100,0.1)', color: 'var(--color-on-surface-variant)' },
+  'active':  { label: '招聘中', bg: 'var(--accent-green-dim)', color: 'var(--accent-green)' },
+  'draft':   { label: '草稿',   bg: 'var(--accent-orange-dim)', color: 'var(--accent-orange)' },
+  'closed':  { label: '已关闭', bg: 'var(--color-neutral-dim)', color: 'var(--color-on-surface-variant)' },
 }
 
 export default function Dashboard() {
@@ -67,11 +68,12 @@ export default function Dashboard() {
   ]
 
   // 指标卡配置（数据来自后端 metrics）
+  // 使用主题变量，color 用于文字/图标，bg 用于卡片底色，iconBg 用于图标圆形背景
   const metrics = data ? [
-    { label: '在招职位', value: data.metrics.active_jobs, icon: Briefcase, color: '#059669', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
-    { label: '匹配候选人', value: data.metrics.total_candidates, icon: Users, color: '#7C3AED', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
-    { label: '高匹配人才', value: data.metrics.high_match, icon: Target, color: '#0052D9', bg: 'var(--color-primary-fixed)', colSpan: 1 },
-    { label: '待处理沟通', value: data.metrics.pending_count, icon: MessageCircle, color: '#D97706', bg: 'var(--color-surface-container-lowest)', colSpan: 1 },
+    { label: '在招职位', value: data.metrics.active_jobs, icon: Briefcase, color: 'var(--accent-green)', bg: 'var(--color-surface-container-lowest)', iconBg: 'var(--accent-green-dim)', colSpan: 1 },
+    { label: '匹配候选人', value: data.metrics.total_candidates, icon: Users, color: 'var(--accent-purple)', bg: 'var(--color-surface-container-lowest)', iconBg: 'var(--accent-purple-dim)', colSpan: 1 },
+    { label: '高匹配人才', value: data.metrics.high_match, icon: Target, color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)', iconBg: 'var(--accent-cyan-dim)', colSpan: 1 },
+    { label: '待处理沟通', value: data.metrics.pending_count, icon: MessageCircle, color: 'var(--accent-orange)', bg: 'var(--color-surface-container-lowest)', iconBg: 'var(--accent-orange-dim)', colSpan: 1 },
   ] : []
 
   if (loading) {
@@ -86,7 +88,7 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="px-6 py-8">
-        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'rgba(255,99,99,0.08)', color: '#E5484D' }}>
+        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
           {error}
         </div>
       </div>
@@ -111,7 +113,7 @@ export default function Dashboard() {
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>{m.label}</p>
                 <p className="text-3xl font-extrabold mt-1" style={{ color: m.color }}>{m.value}</p>
               </div>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `${m.color}15` }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: m.iconBg }}>
                 <m.icon className="h-6 w-6" style={{ color: m.color }} />
               </div>
             </div>
@@ -194,9 +196,9 @@ export default function Dashboard() {
       {/* 快捷操作 — 点击跳转到对应页面 */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { icon: Search, label: '人才搜索', desc: '基于能力图谱精准匹配候选人', color: '#7C3AED', page: 'talent' as const },
-          { icon: TrendingUp, label: '市场洞察', desc: '实时追踪技能需求变化趋势', color: '#059669', page: 'market' as const },
-          { icon: Target, label: '行业报告', desc: '新一代信息技术领域薪酬调研', color: '#D97706', page: 'industry' as const },
+          { icon: Search, label: '人才搜索', desc: '基于能力图谱精准匹配候选人', color: 'var(--accent-purple)', iconBg: 'var(--accent-purple-dim)', page: 'talent' as const },
+          { icon: TrendingUp, label: '市场洞察', desc: '实时追踪技能需求变化趋势', color: 'var(--accent-green)', iconBg: 'var(--accent-green-dim)', page: 'market' as const },
+          { icon: Target, label: '行业报告', desc: '新一代信息技术领域薪酬调研', color: 'var(--accent-orange)', iconBg: 'var(--accent-orange-dim)', page: 'industry' as const },
         ].map((item, i) => (
           <motion.div
             key={item.label}
@@ -208,7 +210,7 @@ export default function Dashboard() {
             className="rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md"
             style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg mb-3" style={{ background: `${item.color}15` }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg mb-3" style={{ background: item.iconBg }}>
               <item.icon className="h-5 w-5" style={{ color: item.color }} />
             </div>
             <h3 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>{item.label}</h3>

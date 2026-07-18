@@ -25,10 +25,11 @@ interface JobDetail extends JobItem {
 }
 
 // 状态映射：后端 status → 前端中文 + 颜色
+// 使用主题变量，在亮/暗两种主题下自动适配
 const STATUS_MAP: Record<string, { label: string, bg: string, color: string }> = {
-  'active':  { label: '招聘中', bg: 'rgba(0,229,153,0.1)', color: 'var(--accent-green)' },
-  'draft':   { label: '草稿',   bg: 'rgba(255,140,66,0.1)', color: 'var(--accent-orange)' },
-  'closed':  { label: '已关闭', bg: 'rgba(100,100,100,0.1)', color: 'var(--color-on-surface-variant)' },
+  'active':  { label: '招聘中', bg: 'var(--accent-green-dim)', color: 'var(--accent-green)' },
+  'draft':   { label: '草稿',   bg: 'var(--accent-orange-dim)', color: 'var(--accent-orange)' },
+  'closed':  { label: '已关闭', bg: 'var(--color-neutral-dim)', color: 'var(--color-on-surface-variant)' },
 }
 
 // 状态过滤选项
@@ -227,8 +228,8 @@ export default function JobManage() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}
         >
           <Plus className="h-4 w-4" /> 发布新岗位
         </button>
@@ -243,7 +244,7 @@ export default function JobManage() {
             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
             style={{
               background: filter === f.key ? 'var(--color-primary)' : 'var(--color-surface-container-lowest)',
-              color: filter === f.key ? '#fff' : 'var(--color-on-surface-variant)',
+              color: filter === f.key ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)',
               border: `1px solid ${filter === f.key ? 'var(--color-primary)' : 'var(--color-outline-variant)'}`,
             }}
           >
@@ -254,7 +255,7 @@ export default function JobManage() {
 
       {/* 错误提示 */}
       {error && (
-        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'rgba(255,99,99,0.08)', color: '#E5484D' }}>
+        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
           {error}
         </div>
       )}
@@ -323,7 +324,7 @@ export default function JobManage() {
                         className="rounded-lg border p-1.5 transition-colors hover:bg-[var(--color-surface)]"
                         style={{ borderColor: 'var(--color-outline-variant)' }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" style={{ color: '#E5484D' }} />
+                        <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--accent-red-strong)' }} />
                       </button>
                     </div>
                   </div>
@@ -349,8 +350,8 @@ export default function JobManage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm text-white shadow-lg z-50"
-            style={{ background: 'var(--color-primary)' }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm shadow-lg z-50"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
           >
             {toast}
           </motion.div>
@@ -499,8 +500,8 @@ export default function JobManage() {
                 <button
                   onClick={submitForm}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60 flex items-center gap-2"
-                  style={{ background: 'var(--color-primary)' }}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center gap-2"
+                  style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {editingId ? '保存修改' : '发布岗位'}
@@ -531,8 +532,8 @@ export default function JobManage() {
               </button>
               <button
                 onClick={confirmDeleteJob}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
-                style={{ background: '#E5484D' }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold"
+                style={{ background: 'var(--accent-red-strong)', color: 'var(--color-on-primary)' }}
               >
                 确认删除
               </button>
@@ -571,7 +572,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       exit={{ opacity: 0 }}
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
+      style={{ background: 'var(--color-scrim)' }}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
@@ -610,7 +611,7 @@ function FormField({ label, required, children }: { label: string; required?: bo
   return (
     <div>
       <label className="block text-xs mb-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-        {label}{required && <span style={{ color: '#E5484D' }}> *</span>}
+        {label}{required && <span style={{ color: 'var(--accent-red-strong)' }}> *</span>}
       </label>
       {children}
     </div>

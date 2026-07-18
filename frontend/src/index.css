@@ -61,6 +61,16 @@
   --text-secondary: #434654;
   --text-dim: #8A8FA0;
   --glow-primary: 0 0 20px rgba(0, 82, 217, 0.08);
+  /* 遮罩层（弹窗、Loading 等）— 亮色用浅黑半透明 */
+  --color-scrim: rgba(0, 0, 0, 0.5);
+  /* 状态色半透明背景（成功/警告/危险/信息）— 与亮色 accent 配套 */
+  --accent-green-dim: rgba(5, 150, 105, 0.1);
+  --accent-orange-dim: rgba(217, 119, 6, 0.15);
+  --accent-red-dim: rgba(220, 38, 38, 0.08);
+  --accent-red-strong: #DC2626;
+  /* 中性灰（用于"其他/未分类"等场景）— 亮色用深灰 */
+  --color-neutral: #6B7280;
+  --color-neutral-dim: rgba(107, 114, 128, 0.1);
   --font-headline: 'Manrope', 'Noto Sans SC', system-ui, sans-serif;
   --font-body: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
@@ -113,6 +123,16 @@
   --text-secondary: #8899CC;
   --text-dim: #5A6A9A;
   --glow-primary: 0 0 20px rgba(107, 158, 255, 0.1);
+  /* 遮罩层 — 暗色用更深的黑色，保证弹窗前景对比度 */
+  --color-scrim: rgba(0, 0, 0, 0.7);
+  /* 状态色半透明背景 — 与暗色 accent 配套，透明度略增以适配深色背景 */
+  --accent-green-dim: rgba(52, 211, 153, 0.12);
+  --accent-orange-dim: rgba(251, 191, 36, 0.15);
+  --accent-red-dim: rgba(248, 113, 113, 0.12);
+  --accent-red-strong: #F87171;
+  /* 中性灰 — 暗色用浅灰，避免在深色背景上不可见 */
+  --color-neutral: #9CA3AF;
+  --color-neutral-dim: rgba(156, 163, 175, 0.12);
   --font-headline: 'Manrope', 'Noto Sans SC', system-ui, sans-serif;
   --font-body: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }

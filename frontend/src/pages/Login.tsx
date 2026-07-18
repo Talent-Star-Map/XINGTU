@@ -65,10 +65,10 @@ export default function Login({ onLogin }: Props) {
             <h2 className="text-base font-semibold" style={{color:'var(--color-on-surface)'}}>{mode==='login'?'登录':'注册'}星图</h2>
           </div>
           <div className="flex mb-4 rounded-lg border p-0.5" style={{borderColor:'var(--color-outline-variant)'}}>
-            <button onClick={()=>setMode('login')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='login'?'var(--color-primary)':'transparent',color:mode==='login'?'#fff':'var(--color-on-surface-variant)'}}>登录</button>
-            <button onClick={()=>setMode('register')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='register'?'var(--color-primary)':'transparent',color:mode==='register'?'#fff':'var(--color-on-surface-variant)'}}>注册</button>
+            <button onClick={()=>setMode('login')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='login'?'var(--color-primary)':'transparent',color:mode==='login'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>登录</button>
+            <button onClick={()=>setMode('register')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='register'?'var(--color-primary)':'transparent',color:mode==='register'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>注册</button>
           </div>
-          {error&&<div className="text-xs text-center mb-3 py-2 rounded-lg" style={{background:'rgba(220,38,38,0.08)',color:'var(--accent-red)'}}>{error}</div>}
+          {error&&<div className="text-xs text-center mb-3 py-2 rounded-lg" style={{background:'var(--accent-red-dim)',color:'var(--accent-red)'}}>{error}</div>}
           <div className="space-y-3.5">
             <div>
               <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>邮箱 / 手机号</label>
@@ -80,7 +80,7 @@ export default function Login({ onLogin }: Props) {
               <div className="flex gap-2">
                 <input value={code} onChange={e=>setCode(e.target.value)} placeholder="输入验证码"
                   className="flex-1 rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
-                <button onClick={sendCode} disabled={loading||cd>0} className="shrink-0 px-4 rounded-lg text-xs font-semibold text-white disabled:opacity-50" style={{background:'var(--color-primary)'}}>
+                <button onClick={sendCode} disabled={loading||cd>0} className="shrink-0 px-4 rounded-lg text-xs font-semibold disabled:opacity-50" style={{background:'var(--color-primary)',color:'var(--color-on-primary)'}}>
                   {cd>0?`${cd}s`:'获取'}
                 </button>
               </div>
@@ -96,8 +96,8 @@ export default function Login({ onLogin }: Props) {
               </div>
             </div>
             <button onClick={submit} disabled={loading}
-              className="w-full rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-              style={{background:'linear-gradient(135deg, var(--color-primary), var(--accent-purple))'}}>
+              className="w-full rounded-lg py-2.5 text-sm font-semibold disabled:opacity-60"
+              style={{background:'linear-gradient(135deg, var(--color-primary), var(--accent-purple))',color:'var(--color-on-primary)'}}>
               {loading?<Loader2 className="h-4 w-4 mx-auto animate-spin" />:(mode==='login'?'登 录':'注 册')}
             </button>
           </div>

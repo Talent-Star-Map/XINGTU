@@ -122,8 +122,8 @@ export default function QualityDashboard() {
           />
           {/* 综合 */}
           <div className="rounded-2xl border p-5 text-center" style={{
-            borderColor: allRun ? (allPass ? 'rgba(0,229,153,0.3)' : 'rgba(220,38,38,0.2)') : 'var(--color-outline-variant)',
-            background: allRun ? (allPass ? 'rgba(0,229,153,0.06)' : 'rgba(220,38,38,0.04)') : 'var(--color-surface-container-lowest)',
+            borderColor: allRun ? (allPass ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--color-outline-variant)',
+            background: allRun ? (allPass ? 'var(--accent-green-dim)' : 'var(--accent-red-dim)') : 'var(--color-surface-container-lowest)',
           }}>
             <CheckCircle className="h-5 w-5 mx-auto mb-2" style={{ color: allRun ? (allPass ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--color-on-surface-variant)' }} />
             <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>综合达标</p>
@@ -172,7 +172,7 @@ export default function QualityDashboard() {
                 <summary className="text-xs cursor-pointer" style={{ color: 'var(--color-on-surface-variant)' }}>查看已验证技能详情</summary>
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {Object.entries(cv.details).filter(([_, v]: [string, any]) => v.verified).map(([skill, info]: [string, any]) => (
-                    <div key={skill} className="flex items-center justify-between text-xs p-1.5 rounded" style={{ background: 'rgba(0,229,153,0.06)' }}>
+                    <div key={skill} className="flex items-center justify-between text-xs p-1.5 rounded" style={{ background: 'var(--accent-green-dim)' }}>
                       <span className="flex items-center gap-1.5"><CheckCircle className="h-3 w-3" style={{ color: 'var(--accent-green)' }} />{skill}</span>
                       <span style={{ color: 'var(--color-on-surface-variant)' }}>{info.sources.join(', ')}（{info.confidence}）</span>
                     </div>
@@ -195,7 +195,7 @@ export default function QualityDashboard() {
                 {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
               </button>
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
-                  style={{ background: (pl?.total_pairs ?? 0) > 0 ? 'rgba(220,38,38,0.1)' : 'rgba(0,229,153,0.1)', color: (pl?.total_pairs ?? 0) > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+                  style={{ background: (pl?.total_pairs ?? 0) > 0 ? 'var(--accent-red-dim)' : 'var(--accent-green-dim)', color: (pl?.total_pairs ?? 0) > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                   {pl?.total_pairs ?? 0} 对
                 </span>
               </div>
@@ -205,7 +205,7 @@ export default function QualityDashboard() {
               <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>对JD被标记为疑似抄袭（相似度 &gt; 90%）</span>
             </div>
             {pl?.pairs?.slice(0, 2).map((p: any, i: number) => (
-              <div key={i} className="text-xs p-2 rounded-lg mb-1" style={{ background: 'rgba(220,38,38,0.06)' }}>
+              <div key={i} className="text-xs p-2 rounded-lg mb-1" style={{ background: 'var(--accent-red-dim)' }}>
                 <span style={{ color: 'var(--accent-red)' }}>{p.title_a}</span> @{p.company_a} ↔ <span style={{ color: 'var(--accent-red)' }}>{p.title_b}</span> @{p.company_b} · 相似度 {(p.similarity * 100).toFixed(1)}%
               </div>
             ))}
@@ -222,7 +222,7 @@ export default function QualityDashboard() {
                 {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
               </button>
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
-                  style={{ background: (inf?.total_flagged ?? 0) > 0 ? 'rgba(255,140,66,0.1)' : 'rgba(0,229,153,0.1)', color: (inf?.total_flagged ?? 0) > 0 ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
+                  style={{ background: (inf?.total_flagged ?? 0) > 0 ? 'var(--accent-orange-dim)' : 'var(--accent-green-dim)', color: (inf?.total_flagged ?? 0) > 0 ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
                   {inf?.total_flagged ?? 0} 个异常
                 </span>
               </div>
@@ -232,7 +232,7 @@ export default function QualityDashboard() {
               <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>个岗位存在技能要求虚高（超均值 2σ）</span>
             </div>
             {inf?.jobs?.slice(0, 2).map((j: any, i: number) => (
-              <div key={i} className="text-xs p-2 rounded-lg mb-1" style={{ background: 'rgba(255,140,66,0.06)' }}>
+              <div key={i} className="text-xs p-2 rounded-lg mb-1" style={{ background: 'var(--accent-orange-dim)' }}>
                 <span style={{ color: 'var(--accent-orange)' }}>{j.title}</span> @{j.company} · 技能数 {j.skill_count}（组均值 {j.group_mean}）· z={j.z_score}
               </div>
             ))}
@@ -251,7 +251,7 @@ function TestCard({ icon: Icon, label, testType, result, testing, onTest, value,
   const isTesting = testing.has(testType)
   return (
     <div className="rounded-2xl border p-5 text-center" style={{
-      borderColor: result ? (pass ? 'rgba(0,229,153,0.3)' : 'rgba(220,38,38,0.3)') : 'var(--color-outline-variant)',
+      borderColor: result ? (pass ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--color-outline-variant)',
       background: 'var(--color-surface-container-lowest)',
     }}>
       <Icon className="h-5 w-5 mx-auto mb-2" style={{ color: result ? (pass ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--accent-purple)' }} />
@@ -267,8 +267,8 @@ function TestCard({ icon: Icon, label, testType, result, testing, onTest, value,
           <p className="text-3xl font-extrabold mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>--</p>
           <p className="text-[10px] mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{sub}</p>
           <button onClick={() => onTest(testType)} disabled={isTesting}
-            className="mt-3 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
-            style={{ background: 'var(--accent-purple)' }}>
+            className="mt-3 px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-60"
+            style={{ background: 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
             {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : slow ? '运行测试（较慢）' : '运行测试'}
           </button>
         </>

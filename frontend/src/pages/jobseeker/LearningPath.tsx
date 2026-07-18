@@ -57,7 +57,7 @@ export default function LearningPath() {
               </div>
               <motion.div className="absolute -top-1 -right-1 text-xs" animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 2, repeat: Infinity }}>✨</motion.div>
             </div>
-            <span className="text-xs font-bold mt-1" style={{ color: '#D97706' }}>星星</span>
+            <span className="text-xs font-bold mt-1" style={{ color: 'var(--accent-orange)' }}>星星</span>
             <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>路径规划师</span>
           </motion.div>
 
@@ -112,7 +112,7 @@ export default function LearningPath() {
                     }}
                     animate={current ? { scale: [1, 1.08, 1] } : {}}
                     transition={{ duration: 2, repeat: current ? Infinity : 0 }}>
-                    <p.icon className="h-5 w-5" style={{ color: active ? '#fff' : 'var(--color-on-surface-variant)' }} />
+                    <p.icon className="h-5 w-5" style={{ color: active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)' }} />
                   </motion.div>
                   <span className="text-[10px] font-semibold text-center leading-tight" style={{ color: active ? p.color : 'var(--color-on-surface-variant)', maxWidth: 64 }}>{p.title.replace('实战', '').replace('部署', '部署').replace('入门', '入门')}</span>
                   <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>{p.duration}</span>
@@ -198,7 +198,7 @@ export default function LearningPath() {
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${c.role === 'user' ? 'rounded-br-sm' : 'rounded-bl-sm'}`}
                     style={{
                       background: c.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
-                      color: c.role === 'user' ? '#fff' : 'var(--color-on-surface)',
+                      color: c.role === 'user' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
                       border: c.role === 'user' ? 'none' : '1px solid var(--color-outline-variant)',
                     }}>
                     {c.role === 'tutu' && <span className="text-xs font-bold mr-1" style={{ color: 'var(--color-primary)' }}>图图</span>}
@@ -212,7 +212,7 @@ export default function LearningPath() {
               <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMsg()}
                 placeholder="问问图图..." className="flex-1 rounded-xl border px-3 py-2 text-xs outline-none"
                 style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-              <button onClick={sendMsg} className="px-4 py-2 rounded-xl text-xs font-semibold text-white" style={{ background: 'var(--color-primary)' }}>发送</button>
+              <button onClick={sendMsg} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>发送</button>
             </div>
           </div>
         </div>

@@ -95,7 +95,9 @@ export default function TalentSearch() {
       const d = await r.json()
       if (d.success) {
         const info = d.data || {}
-        setMatchInfo(`匹配完成：${info.total_jobs || 0} 个岗位 × ${info.total_seekers || 0} 位候选人 → 更新 ${info.updated || 0} 条记录`)
+        setMatchInfo(
+          `匹配完成：${info.total_jobs || 0} 个岗位 × ${info.total_seekers || 0} 位候选人 → 新增/更新 ${info.updated || 0} 条，过滤无技能交集 ${info.skipped || 0} 对，清理旧记录 ${info.cleaned || 0} 条`
+        )
         // 跑完后刷新列表，立即看到真实分数
         await loadCandidates()
       } else {
@@ -136,8 +138,8 @@ export default function TalentSearch() {
         <button
           onClick={runMatch}
           disabled={matching}
-          className="flex items-center gap-2 h-10 px-4 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}
+          className="flex items-center gap-2 h-10 px-4 rounded-xl text-sm font-semibold disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}
         >
           {matching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {matching ? '匹配中...' : '重新匹配'}
@@ -146,7 +148,7 @@ export default function TalentSearch() {
 
       {/* 匹配结果提示 */}
       {matchInfo && (
-        <div className="rounded-xl border p-3 text-xs flex items-center gap-2" style={{ borderColor: 'var(--color-outline-variant)', background: 'rgba(0,229,153,0.06)', color: 'var(--accent-green)' }}>
+        <div className="rounded-xl border p-3 text-xs flex items-center gap-2" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
           <Sparkles className="h-3.5 w-3.5" />
           {matchInfo}
         </div>
@@ -216,7 +218,7 @@ export default function TalentSearch() {
 
       {/* 错误提示 */}
       {error && (
-        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'rgba(255,99,99,0.08)', color: '#E5484D' }}>
+        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
           {error}
         </div>
       )}
@@ -248,15 +250,21 @@ export default function TalentSearch() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-semibold" style={{ color: 'var(--color-on-surface)' }}>{c.name}</h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{c.title}</span>
+                      {/* 标签显示匹配的岗位名（而非求职意向），避免选了 A 岗位却看到 B 岗位标签的误解 */}
+                      {c.job_title && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{c.job_title}</span>
+                      )}
                     </div>
-                    <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{c.exp} · {c.salary}</p>
+                    {/* 副标题：求职者自己的意向 + 经验 + 期望薪资 */}
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>
+                      {c.title && <span>意向：{c.title} · </span>}{c.exp} · {c.salary}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   {/* 匹配度：null 时显示"暂无匹配数据" */}
                   {c.match === null || c.match === undefined ? (
-                    <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(150,150,150,0.1)', color: 'var(--color-on-surface-variant)' }}>暂无匹配数据</span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: 'var(--color-neutral-dim)', color: 'var(--color-on-surface-variant)' }}>暂无匹配数据</span>
                   ) : (
                     <p className="text-xl font-bold" style={{ color: c.match >= 85 ? 'var(--accent-green)' : 'var(--color-primary)' }}>{c.match}%</p>
                   )}
@@ -266,7 +274,7 @@ export default function TalentSearch() {
               {/* 技能标签 */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {c.skills.map(s => (
-                  <span key={s} className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#D5E4FA', color: 'var(--color-on-surface-variant)' }}>{s}</span>
+                  <span key={s} className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
                 ))}
               </div>
               {/* 三维度匹配分数条 — 匹配引擎产出，null 时隐藏 */}
