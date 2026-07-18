@@ -12,6 +12,8 @@
 """
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
+from typing import Optional
 
 from database import get_session, Job, Jobseeker, MatchRecord
 from match_engine import run_match_batch
@@ -198,9 +200,11 @@ def dashboard():
         # 高匹配度候选人数（match_score >= 85）
         high_match = (session.query(MatchRecord)
                       .filter(MatchRecord.match_score >= 85).count())
-        # 待处理匹配记录数（status=pending）
-        pending_count = (session.query(MatchRecord)
-                         .filter(MatchRecord.status == 'pending').count())
+        # 待处理沟通：独立候选人数（去重 jobseeker_id）
+        # 注：同一求职者匹配多个岗位会产生多条 pending 记录，但对 HR 而言"待联系的人"才是有意义的指标
+        pending_count = (session.query(MatchRecord.jobseeker_id)
+                         .filter(MatchRecord.status == 'pending')
+                         .distinct().count())
 
         # ── 近期岗位（按创建时间倒序，前 5 条）──
         recent_jobs_rows = (session.query(Job)
@@ -295,3 +299,219 @@ def list_enterprise_jobs(
         return _err('INTERNAL_ERROR', f'查询岗位列表失败: {e}')
     finally:
         session.close()
+
+
+# ─── 岗位 CRUD：支撑岗位管理页面的发布/编辑/查看/状态切换 ────────────────
+
+# 默认企业 ID（demo 阶段未接 JWT 用户上下文，统一归属 id=1 的企业）
+DEFAULT_ENTERPRISE_ID = 1
+
+
+class JobCreateReq(BaseModel):
+    """创建/更新岗位的请求体"""
+    title: str = Field(..., min_length=1, max_length=200, description='岗位名称')
+    description: str = Field('', max_length=2000, description='岗位描述')
+    location: str = Field('', max_length=100, description='工作城市')
+    salary_min: Optional[int] = Field(None, ge=0, description='薪资下限(K)')
+    salary_max: Optional[int] = Field(None, ge=0, description='薪资上限(K)')
+    salary_range: str = Field('', max_length=50, description='展示用薪资字符串，如 30K-50K')
+    education: str = Field('', max_length=50, description='学历要求')
+    experience: str = Field('', max_length=100, description='经验要求，如 3-5年')
+    skills_required: str = Field('', max_length=500, description='要求技能，逗号分隔')
+    status: str = Field('active', description='状态: active/draft/closed')
+
+
+class JobStatusReq(BaseModel):
+    """修改岗位状态的请求体"""
+    status: str = Field(..., description='目标状态: active/closed/draft')
+
+
+def _job_to_dict(j: Job, candidates: Optional[int] = None) -> dict:
+    """把 Job ORM 对象转成前端可用的字典"""
+    cnt = candidates if candidates is not None else 0
+    return {
+        'id': j.id,
+        'enterprise_id': j.enterprise_id,
+        'title': j.title,
+        'description': j.description or '',
+        'location': j.location or '',
+        'salary_min': j.salary_min,
+        'salary_max': j.salary_max,
+        'salary_range': j.salary_range or '',
+        'education': j.education or '',
+        'experience': j.experience or '',
+        'skills_required': j.skills_required or '',
+        'status': j.status or 'active',
+        'candidates': cnt,
+        'created_at': j.created_at.strftime('%Y-%m-%d') if j.created_at else '',
+        'updated_at': j.updated_at.strftime('%Y-%m-%d %H:%M') if j.updated_at else '',
+    }
+
+
+@router.post('/jobs')
+def create_job(req: JobCreateReq):
+    """
+    创建岗位 — 供"发布新岗位"按钮调用
+    成功返回新岗位详情（含 candidates=0）
+    """
+    # 状态白名单校验，防止前端传非法值
+    if req.status not in ('active', 'draft', 'closed'):
+        return _err('INVALID_STATUS', f'非法状态值: {req.status}')
+
+    session = get_session()
+    try:
+        job = Job(
+            enterprise_id=DEFAULT_ENTERPRISE_ID,
+            title=req.title,
+            description=req.description,
+            location=req.location,
+            salary_min=req.salary_min,
+            salary_max=req.salary_max,
+            salary_range=req.salary_range,
+            education=req.education,
+            experience=req.experience,
+            skills_required=req.skills_required,
+            status=req.status,
+        )
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+        return {
+            'success': True,
+            'data': _job_to_dict(job, candidates=0),
+            'message': f'岗位「{job.title}」发布成功',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('CREATE_JOB_ERROR', f'创建岗位失败: {e}')
+    finally:
+        session.close()
+
+
+@router.get('/jobs/{job_id}')
+def get_job(job_id: int):
+    """
+    岗位详情 — 供"查看"按钮调用
+    返回完整字段 + 候选人数
+    """
+    session = get_session()
+    try:
+        job = session.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+        cnt = session.query(MatchRecord).filter(MatchRecord.job_id == job_id).count()
+        return {
+            'success': True,
+            'data': _job_to_dict(job, candidates=cnt),
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('INTERNAL_ERROR', f'查询岗位详情失败: {e}')
+    finally:
+        session.close()
+
+
+@router.put('/jobs/{job_id}')
+def update_job(job_id: int, req: JobCreateReq):
+    """
+    更新岗位 — 供"编辑"按钮调用
+    所有字段全量更新
+    """
+    if req.status not in ('active', 'draft', 'closed'):
+        return _err('INVALID_STATUS', f'非法状态值: {req.status}')
+
+    session = get_session()
+    try:
+        job = session.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+
+        job.title = req.title
+        job.description = req.description
+        job.location = req.location
+        job.salary_min = req.salary_min
+        job.salary_max = req.salary_max
+        job.salary_range = req.salary_range
+        job.education = req.education
+        job.experience = req.experience
+        job.skills_required = req.skills_required
+        job.status = req.status
+
+        session.commit()
+        session.refresh(job)
+        cnt = session.query(MatchRecord).filter(MatchRecord.job_id == job_id).count()
+        return {
+            'success': True,
+            'data': _job_to_dict(job, candidates=cnt),
+            'message': f'岗位「{job.title}」已更新',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('UPDATE_JOB_ERROR', f'更新岗位失败: {e}')
+    finally:
+        session.close()
+
+
+@router.patch('/jobs/{job_id}/status')
+def update_job_status(job_id: int, req: JobStatusReq):
+    """
+    修改岗位状态 — 供"关闭岗位/重新开放"按钮调用
+    仅修改 status 字段
+    """
+    if req.status not in ('active', 'draft', 'closed'):
+        return _err('INVALID_STATUS', f'非法状态值: {req.status}')
+
+    session = get_session()
+    try:
+        job = session.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+
+        job.status = req.status
+        session.commit()
+        session.refresh(job)
+        cnt = session.query(MatchRecord).filter(MatchRecord.job_id == job_id).count()
+        return {
+            'success': True,
+            'data': _job_to_dict(job, candidates=cnt),
+            'message': f'岗位状态已更新为「{_status_label(req.status)}」',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('UPDATE_STATUS_ERROR', f'更新状态失败: {e}')
+    finally:
+        session.close()
+
+
+@router.delete('/jobs/{job_id}')
+def delete_job(job_id: int):
+    """
+    删除岗位 — 同时清理关联的匹配记录
+    供"删除"按钮调用
+    """
+    session = get_session()
+    try:
+        job = session.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+
+        title = job.title
+        # 先删除关联的匹配记录（外键约束）
+        session.query(MatchRecord).filter(MatchRecord.job_id == job_id).delete()
+        session.delete(job)
+        session.commit()
+        return {
+            'success': True,
+            'data': {'id': job_id},
+            'message': f'岗位「{title}」已删除',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('DELETE_JOB_ERROR', f'删除岗位失败: {e}')
+    finally:
+        session.close()
+
+
+def _status_label(status: str) -> str:
+    """状态码转中文，供消息展示"""
+    return {'active': '招聘中', 'draft': '草稿', 'closed': '已关闭'}.get(status, status)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Briefcase, Users, TrendingUp, MessageCircle, Search, Target, Zap, Loader2 } from 'lucide-react'
+import { EPNav } from '../../lib/NavContext'
 
 // 仪表盘数据类型
 interface DashboardData {
@@ -32,6 +33,7 @@ const STATUS_MAP: Record<string, { label: string, bg: string, color: string }> =
 }
 
 export default function Dashboard() {
+  const { setPage } = EPNav.use()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -122,13 +124,23 @@ export default function Dashboard() {
         <div className="col-span-2 rounded-xl border" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
             <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>近期岗位</h2>
-            <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>查看全部 →</span>
+            <button
+              onClick={() => setPage('jobs')}
+              className="text-xs font-medium hover:underline transition-all"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              查看全部 →
+            </button>
           </div>
           <div className="divide-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
             {data && data.recent_jobs.length > 0 ? data.recent_jobs.map((job, i) => {
               const st = STATUS_MAP[job.status] || STATUS_MAP['active']
               return (
-                <div key={job.id} className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface)] transition-colors">
+                <div
+                  key={job.id}
+                  onClick={() => setPage('jobs')}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface)] transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{i + 1}</div>
                     <div>
@@ -179,15 +191,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 快捷操作 */}
+      {/* 快捷操作 — 点击跳转到对应页面 */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { icon: Search, label: '人才搜索', desc: '基于能力图谱精准匹配候选人', color: '#7C3AED' },
-          { icon: TrendingUp, label: '市场洞察', desc: '实时追踪技能需求变化趋势', color: '#059669' },
-          { icon: Target, label: '行业报告', desc: '新一代信息技术领域薪酬调研', color: '#D97706' },
+          { icon: Search, label: '人才搜索', desc: '基于能力图谱精准匹配候选人', color: '#7C3AED', page: 'talent' as const },
+          { icon: TrendingUp, label: '市场洞察', desc: '实时追踪技能需求变化趋势', color: '#059669', page: 'market' as const },
+          { icon: Target, label: '行业报告', desc: '新一代信息技术领域薪酬调研', color: '#D97706', page: 'industry' as const },
         ].map((item, i) => (
-          <motion.div key={item.label} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-            className="rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <motion.div
+            key={item.label}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.06 }}
+            onClick={() => setPage(item.page)}
+            className="rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md"
+            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
+          >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg mb-3" style={{ background: `${item.color}15` }}>
               <item.icon className="h-5 w-5" style={{ color: item.color }} />
             </div>
