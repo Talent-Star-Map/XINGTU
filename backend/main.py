@@ -9,6 +9,7 @@ from auth import router as auth_router
 from jobs import router as jobs_router
 from company import router as company_router
 from quality_api import router as quality_router
+from enterprise import router as enterprise_router  # 企业端：人才星
 import os
 
 app = FastAPI(title='星图 API', version='1.0.0')
@@ -28,6 +29,7 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(company_router)
 app.include_router(quality_router)
+app.include_router(enterprise_router)
 
 @app.on_event('startup')
 def startup():

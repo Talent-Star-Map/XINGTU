@@ -18,9 +18,9 @@ const statsData = [
 ]
 
 const hotJobs = [
-  { title: 'AI 应用开发工程师', growth: '+320%', tag: '火热', color: '#FF8C42' },
+  { title: 'AI 应用开发工程师', growth: '+320%', tag: '火热', color: 'var(--accent-orange)' },
   { title: 'MCP 协议开发工程师', growth: '新发', tag: '新兴', color: 'var(--color-primary)' },
-  { title: '大模型算法工程师', growth: '+180%', tag: '火热', color: '#FF8C42' },
+  { title: '大模型算法工程师', growth: '+180%', tag: '火热', color: 'var(--accent-orange)' },
   { title: 'AI Agent 开发工程师', growth: '+250%', tag: '新兴', color: 'var(--color-primary)' },
 ]
 
@@ -86,7 +86,7 @@ export default function Dashboard() {
                 style={{ background: i === 0 ? 'var(--color-primary-fixed)' : 'transparent' }}>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ background: job.tag === '新兴' ? 'var(--color-primary-fixed)' : 'rgba(255,140,66,0.15)', color: job.tag === '新兴' ? 'var(--color-primary)' : '#D97706' }}>{job.tag}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ background: job.tag === '新兴' ? 'var(--color-primary-fixed)' : 'var(--accent-orange-dim)', color: job.tag === '新兴' ? 'var(--color-primary)' : 'var(--accent-orange)' }}>{job.tag}</span>
                 </div>
                 <span className="text-sm font-bold" style={{ color: job.tag === '新兴' ? 'var(--color-primary)' : 'var(--accent-green)' }}>{job.growth}</span>
               </motion.div>

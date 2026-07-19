@@ -174,8 +174,8 @@ export default function ProfileHome() {
                       <input ref={resumeRef} type="file" accept=".pdf,.docx,.doc,.txt" onChange={uploadResume} hidden />
                     </label>
                     <button onClick={openModal}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
-                      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+                      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
                       <Edit3 className="h-4 w-4" /> 编辑资料
                     </button>
                   </div>
@@ -328,7 +328,7 @@ export default function ProfileHome() {
       {/* ═══════ 编辑弹窗 ═══════ */}
       {modal && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[5vh] pb-10 px-4 overflow-y-auto"
-          style={{ background: 'rgba(0,0,0,0.5)' }} onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
+          style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
           <div className="rounded-2xl border w-full max-w-3xl" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             {/* header */}
             <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
@@ -342,7 +342,7 @@ export default function ProfileHome() {
             {/* body */}
             <div className="px-8 py-6 space-y-6 max-h-[65vh] overflow-y-auto">
               {errors.length > 0 && (
-                <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.06)' }}>
+                <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
                   <AlertCircle className="h-5 w-5 shrink-0" style={{ color: 'var(--accent-red)' }} />
                   <div>
                     <p className="text-sm font-semibold" style={{ color: 'var(--accent-red)' }}>请填写以下必填项：</p>
@@ -480,8 +480,8 @@ export default function ProfileHome() {
             <div className="flex items-center justify-end gap-3 px-8 py-5 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
               <button onClick={() => setModal(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>取消</button>
               <button onClick={saveProfile} disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                style={{ background: saved ? 'var(--accent-green)' : 'var(--color-primary)' }}>
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
+                style={{ background: saved ? 'var(--accent-green)' : 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
                 {saved ? '已保存' : '保存'}
               </button>

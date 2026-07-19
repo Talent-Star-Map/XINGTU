@@ -13,7 +13,7 @@ export default function IndustryReport() {
         ].map(report => (
           <div key={report.title} className="rounded-xl border p-4 hover:scale-[1.01] transition-all cursor-pointer" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg shrink-0" style={{ background: 'rgba(124,58,237,0.1)' }}>
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg shrink-0" style={{ background: 'var(--accent-purple-dim)' }}>
                 <FileText className="h-6 w-6" style={{ color: 'var(--accent-purple)' }} />
               </div>
               <div className="flex-1">
@@ -26,7 +26,7 @@ export default function IndustryReport() {
                   <span>{report.date}</span>
                 </div>
               </div>
-              <button className="rounded-lg border p-2 shrink-0" style={{ borderColor: 'rgba(0,200,255,0.3)', color: 'var(--color-primary)' }}>
+              <button className="rounded-lg border p-2 shrink-0" style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
                 <Download className="h-4 w-4" />
               </button>
             </div>

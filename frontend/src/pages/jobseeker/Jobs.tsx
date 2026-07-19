@@ -53,7 +53,7 @@ export default function Jobs() {
               <div className="flex flex-wrap gap-2">
                 {allSkills.map(s => {
                   const a = selectedSkill === s
-                  return <button key={s} onClick={() => setSelectedSkill(a ? null : s)} className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: a ? 'var(--color-primary)' : 'var(--color-surface)', color: a ? '#fff' : 'var(--color-on-surface-variant)', border: a ? 'none' : '1px solid var(--color-outline-variant)' }}>{s}</button>
+                  return <button key={s} onClick={() => setSelectedSkill(a ? null : s)} className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: a ? 'var(--color-primary)' : 'var(--color-surface)', color: a ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)', border: a ? 'none' : '1px solid var(--color-outline-variant)' }}>{s}</button>
                 })}
               </div>
               <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
@@ -61,7 +61,7 @@ export default function Jobs() {
                 <div className="flex flex-wrap gap-2">
                   {cities.map(c => {
                     const a = selectedCity === c
-                    return <button key={c} onClick={() => setSelectedCity(a ? null : c)} className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: a ? 'var(--color-primary)' : 'var(--color-surface)', color: a ? '#fff' : 'var(--color-on-surface-variant)', border: a ? 'none' : '1px solid var(--color-outline-variant)' }}>{c}</button>
+                    return <button key={c} onClick={() => setSelectedCity(a ? null : c)} className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: a ? 'var(--color-primary)' : 'var(--color-surface)', color: a ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)', border: a ? 'none' : '1px solid var(--color-outline-variant)' }}>{c}</button>
                   })}
                 </div>
               </div>
@@ -88,7 +88,7 @@ export default function Jobs() {
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="font-headline text-lg font-bold group-hover:text-[var(--color-primary)] transition-colors" style={{ color: 'var(--color-on-surface)' }}>{job.title}</h3>
-                  <p className="text-sm mt-1 flex items-center gap-2" style={{ color: '#394851' }}>
+                  <p className="text-sm mt-1 flex items-center gap-2" style={{ color: 'var(--color-on-surface-variant)' }}>
                     <span>{job.company}</span>
                     <span className="w-1 h-1 rounded-full" style={{ background: 'var(--color-outline-variant)' }} />
                     <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
@@ -100,14 +100,14 @@ export default function Jobs() {
               </div>
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 {job.skills.slice(0, 5).map(s => (
-                  <span key={s} className="rounded-full px-3 py-1 text-xs font-medium" style={{ background: '#D5E4FA', color: '#434654' }}>{s}</span>
+                  <span key={s} className="rounded-full px-3 py-1 text-xs font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
                 ))}
                 {job.skills.length > 5 && <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>+{job.skills.length - 5}</span>}
-                {job.tag && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: job.tag === '新发' ? 'var(--color-primary-fixed)' : 'rgba(255,140,66,0.15)', color: job.tag === '新发' ? 'var(--color-primary)' : '#D97706' }}>{job.tag}</span>}
+                {job.tag && <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: job.tag === '新发' ? 'var(--color-primary-fixed)' : 'var(--accent-orange-dim)', color: job.tag === '新发' ? 'var(--color-primary)' : 'var(--accent-orange)' }}>{job.tag}</span>}
               </div>
               <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: '#D4E5F0', color: '#0D1D25' }}>HR</div>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>HR</div>
                   <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>招聘方 · 今日活跃</span>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>AI 匹配 {job.match}%</div>

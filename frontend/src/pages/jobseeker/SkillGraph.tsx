@@ -13,7 +13,7 @@ export default function SkillGraph() {
         <div className="absolute top-4 left-4 flex gap-2">
           {cats.map(c => (
             <button key={c} onClick={() => setActive(c)} className="px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md"
-              style={{ background: active === c ? 'var(--color-primary)' : 'rgba(0,0,0,0.35)', color: active === c ? '#fff' : 'rgba(255,255,255,0.7)' }}>{c}</button>
+              style={{ background: active === c ? 'var(--color-primary)' : 'rgba(0,0,0,0.35)', color: active === c ? 'var(--color-on-primary)' : 'rgba(255,255,255,0.7)' }}>{c}</button>
           ))}
         </div>
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-xs px-5 py-2 rounded-full backdrop-blur-md" style={{ background: 'rgba(0,0,0,0.45)', color: 'rgba(255,255,255,0.6)' }}>
