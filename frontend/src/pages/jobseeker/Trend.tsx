@@ -31,7 +31,7 @@ export default function Trend() {
         <div className="flex gap-2">
           {(['trend','discovery','update'] as const).map(t => (
             <button key={t} onClick={()=>setTab(t)} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold"
-              style={{background:tab===t?'var(--color-primary)':'var(--color-surface)', color:tab===t?'#fff':'var(--color-on-surface-variant)', border:tab===t?'none':'1px solid var(--color-outline-variant)'}}>
+              style={{background:tab===t?'var(--color-primary)':'var(--color-surface)', color:tab===t?'var(--color-on-primary)':'var(--color-on-surface-variant)', border:tab===t?'none':'1px solid var(--color-outline-variant)'}}>
               {t==='trend'?'趋势':t==='discovery'?'新岗位':'更新'}
             </button>
           ))}
@@ -93,25 +93,25 @@ export default function Trend() {
       {tab==='discovery' && (
         <div className="rounded-2xl border p-6" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface-container-lowest)'}}>
           <div className="flex items-start gap-4 mb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{background:'rgba(0,200,255,0.1)'}}>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{background:'var(--accent-cyan-dim)'}}>
               <Zap className="h-7 w-7" style={{color:'var(--color-primary)'}} />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-lg font-bold" style={{color:'var(--color-primary)'}}>MCP 协议开发工程师</h2>
-                <span className="text-xs px-2 py-0.5 rounded font-semibold" style={{background:'rgba(0,200,255,0.15)',color:'var(--color-primary)'}}>新发现</span>
+                <span className="text-xs px-2 py-0.5 rounded font-semibold" style={{background:'var(--accent-cyan-dim)',color:'var(--color-primary)'}}>新发现</span>
               </div>
               <p className="text-sm" style={{color:'var(--color-on-surface-variant)'}}>随着 AI Agent 普及，MCP 协议催生了这一新兴岗位。</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="rounded-xl p-4" style={{background:'rgba(0,229,153,0.05)'}}>
+            <div className="rounded-xl p-4" style={{background:'var(--accent-green-dim)'}}>
               <p className="text-xs font-semibold mb-2" style={{color:'var(--accent-green)'}}>必备技能</p>
-              <div className="flex flex-wrap gap-1.5">{['MCP协议','Python/Go','API设计','Agent框架'].map(s=><span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{background:'rgba(0,229,153,0.1)',color:'var(--accent-green)'}}>{s}</span>)}</div>
+              <div className="flex flex-wrap gap-1.5">{['MCP协议','Python/Go','API设计','Agent框架'].map(s=><span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--accent-green-dim)',color:'var(--accent-green)'}}>{s}</span>)}</div>
             </div>
-            <div className="rounded-xl p-4" style={{background:'rgba(0,200,255,0.05)'}}>
+            <div className="rounded-xl p-4" style={{background:'var(--accent-cyan-dim)'}}>
               <p className="text-xs font-semibold mb-2" style={{color:'var(--color-primary)'}}>加分技能</p>
-              <div className="flex flex-wrap gap-1.5">{['LangChain','协议缓冲','OAuth'].map(s=><span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{background:'rgba(0,200,255,0.1)',color:'var(--color-primary)'}}>{s}</span>)}</div>
+              <div className="flex flex-wrap gap-1.5">{['LangChain','协议缓冲','OAuth'].map(s=><span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--accent-cyan-dim)',color:'var(--color-primary)'}}>{s}</span>)}</div>
             </div>
           </div>
           <div className="flex gap-4 text-xs" style={{color:'var(--color-on-surface-variant)'}}><span>📅 2026年3月</span><span>✅ 多源交叉验证</span></div>
@@ -121,30 +121,30 @@ export default function Trend() {
       {tab==='update' && (
         <div className="rounded-2xl border p-6" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface-container-lowest)'}}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{background:'rgba(124,58,237,0.1)'}}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{background:'var(--accent-purple-dim)'}}>
               <Edit3 className="h-5 w-5" style={{color:'var(--accent-purple)'}} />
             </div>
             <div><h2 className="text-base font-bold" style={{color:'var(--color-on-surface)'}}>Java 后端开发工程师</h2><p className="text-xs mt-0.5" style={{color:'var(--color-on-surface-variant)'}}>2026 Q1-Q2 · 234 条 JD</p></div>
           </div>
           <div className="space-y-4">
-            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'rgba(0,229,153,0.05)'}}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'rgba(0,229,153,0.15)'}}>
+            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'var(--accent-green-dim)'}}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'var(--accent-green-dim)'}}>
                 <Plus className="h-4 w-4" style={{color:'var(--accent-green)'}} />
               </div>
               <div>
                 <p className="text-sm font-semibold mb-2" style={{color:'var(--accent-green)'}}>新增</p>
-                <div className="flex flex-wrap gap-2 mb-2">{['Spring Cloud','Kubernetes','Docker','Redis'].map(s=><span key={s} className="text-xs px-3 py-1 rounded-lg font-medium" style={{background:'rgba(0,229,153,0.1)',color:'var(--accent-green)'}}>{s}</span>)}</div>
+                <div className="flex flex-wrap gap-2 mb-2">{['Spring Cloud','Kubernetes','Docker','Redis'].map(s=><span key={s} className="text-xs px-3 py-1 rounded-lg font-medium" style={{background:'var(--accent-green-dim)',color:'var(--accent-green)'}}>{s}</span>)}</div>
                 <p className="text-xs" style={{color:'var(--color-on-surface-variant)'}}>63% 的 Java 岗位已要求 K8s</p>
               </div>
             </div>
-            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'rgba(255,77,106,0.05)'}}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'rgba(255,77,106,0.15)'}}>
+            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'var(--accent-red-dim)'}}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'var(--accent-red-dim)'}}>
                 <Minus className="h-4 w-4" style={{color:'var(--accent-red)'}} />
               </div>
-              <div><p className="text-sm font-semibold mb-2" style={{color:'var(--accent-red)'}}>移除</p><div className="flex flex-wrap gap-2">{['Struts','Hibernate'].map(s=><span key={s} className="text-xs px-3 py-1 rounded-lg font-medium" style={{background:'rgba(255,77,106,0.1)',color:'var(--accent-red)'}}>{s}</span>)}</div></div>
+              <div><p className="text-sm font-semibold mb-2" style={{color:'var(--accent-red)'}}>移除</p><div className="flex flex-wrap gap-2">{['Struts','Hibernate'].map(s=><span key={s} className="text-xs px-3 py-1 rounded-lg font-medium" style={{background:'var(--accent-red-dim)',color:'var(--accent-red)'}}>{s}</span>)}</div></div>
             </div>
-            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'rgba(124,58,237,0.05)'}}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'rgba(124,58,237,0.15)'}}>
+            <div className="flex items-start gap-4 rounded-xl p-4" style={{background:'var(--accent-purple-dim)'}}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{background:'var(--accent-purple-dim)'}}>
                 <Edit3 className="h-4 w-4" style={{color:'var(--accent-purple)'}} />
               </div>
               <div><p className="text-sm font-semibold mb-2" style={{color:'var(--accent-purple)'}}>修改</p><p className="text-sm">Spring Boot 2.x → 3.x</p></div>

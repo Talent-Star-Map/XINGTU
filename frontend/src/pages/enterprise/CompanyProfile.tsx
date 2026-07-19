@@ -12,10 +12,11 @@ function hasVal(val: any): boolean { return val != null && val !== '' && val.toS
 const requiredFields = ['company_name', 'industry', 'company_size', 'company_desc']
 const industryOpts = ['人工智能', '互联网/电商', '企业服务/SaaS', '金融科技', '教育培训', '医疗健康', '硬件/芯片', '游戏', '汽车/出行', '其他']
 
+// 认证等级信息：使用主题变量，在亮/暗两种主题下自动适配
 const verifyInfo = [
-  { level: 0, icon: ShieldOff, label: '未认证', desc: '完善企业信息后可申请官网认证', color: 'var(--color-on-surface-variant)', bg: 'rgba(128,128,128,0.08)' },
+  { level: 0, icon: ShieldOff, label: '未认证', desc: '完善企业信息后可申请官网认证', color: 'var(--color-on-surface-variant)', bg: 'var(--color-neutral-dim)' },
   { level: 1, icon: ShieldCheck, label: '官网已验证', desc: '已通过企业官网真实性核验', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
-  { level: 2, icon: Award, label: '三方认证', desc: '已通过企查查/天眼查工商数据认证', color: 'var(--accent-green)', bg: 'rgba(0,229,153,0.1)' },
+  { level: 2, icon: Award, label: '三方认证', desc: '已通过企查查/天眼查工商数据认证', color: 'var(--accent-green)', bg: 'var(--accent-green-dim)' },
 ]
 
 export default function CompanyProfile() {
@@ -122,12 +123,12 @@ export default function CompanyProfile() {
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
       {/* 空状态 */}
       {pct < 50 && (
-        <div className="rounded-2xl border p-5 flex items-center justify-between" style={{ borderColor: 'rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.04)' }}>
+        <div className="rounded-2xl border p-5 flex items-center justify-between" style={{ borderColor: 'var(--accent-purple)', background: 'var(--accent-purple-dim)' }}>
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--accent-purple)' }}>完善企业信息，提升企业可信度与曝光率</p>
             <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>完整的企业资料能让求职者更信赖你的公司，认证后获得专属标识</p>
           </div>
-          <button onClick={openModal} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white shrink-0" style={{ background: 'var(--accent-purple)' }}>
+          <button onClick={openModal} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold shrink-0" style={{ background: 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
             <Edit3 className="h-3.5 w-3.5" /> 完善资料
           </button>
         </div>
@@ -155,7 +156,7 @@ export default function CompanyProfile() {
                 <div className="flex items-center gap-3 flex-wrap">
                   <h2 className="text-2xl font-black" style={{ color: 'var(--color-on-surface)' }}>{df(p.company_name, '未命名企业')}</h2>
                   {/* 认证标识 */}
-                  <span className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-semibold border" style={{ background: currentVerify.bg, color: currentVerify.color, borderColor: currentVerify.color + '33' }}>
+                  <span className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-semibold border" style={{ background: currentVerify.bg, color: currentVerify.color, borderColor: currentVerify.color }}>
                     <VIcon className="h-3.5 w-3.5" /> {currentVerify.label}
                   </span>
                 </div>
@@ -165,7 +166,7 @@ export default function CompanyProfile() {
                 </div>
                 {p.company_website && <div className="flex items-center gap-1.5 mt-2 text-sm"><Globe className="h-4 w-4" style={{ color: 'var(--color-on-surface-variant)' }} /><a href={p.company_website} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--color-primary)' }}>{p.company_website}</a></div>}
               </div>
-              <button onClick={openModal} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))' }}>
+              <button onClick={openModal} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
                 <Edit3 className="h-4 w-4" /> 编辑企业信息
               </button>
             </div>
@@ -238,7 +239,7 @@ export default function CompanyProfile() {
             <div className="rounded-xl p-4 mb-4 text-center" style={{ background: currentVerify.bg }}>
               <VIcon className="h-8 w-8 mx-auto mb-2" style={{ color: currentVerify.color }} />
               <p className="text-sm font-bold" style={{ color: currentVerify.color }}>{currentVerify.label}</p>
-              <p className="text-xs mt-1" style={{ color: currentVerify.color + '99' }}>{currentVerify.desc}</p>
+              <p className="text-xs mt-1" style={{ color: currentVerify.color, opacity: 0.7 }}>{currentVerify.desc}</p>
             </div>
 
             {/* 认证操作 */}
@@ -249,7 +250,7 @@ export default function CompanyProfile() {
                 style={{
                   borderColor: p.verified >= 1 ? 'var(--accent-green)' : 'var(--color-outline-variant)',
                   color: p.verified >= 1 ? 'var(--accent-green)' : 'var(--color-on-surface)',
-                  background: p.verified >= 1 ? 'rgba(0,229,153,0.05)' : 'var(--color-surface)',
+                  background: p.verified >= 1 ? 'var(--accent-green-dim)' : 'var(--color-surface)',
                 }}>
                 <span className="flex items-center gap-2">
                   <Globe className="h-4 w-4" />
@@ -264,7 +265,7 @@ export default function CompanyProfile() {
                 style={{
                   borderColor: p.verified >= 2 ? 'var(--accent-green)' : 'var(--color-outline-variant)',
                   color: p.verified >= 2 ? 'var(--accent-green)' : 'var(--color-on-surface)',
-                  background: p.verified >= 2 ? 'rgba(0,229,153,0.05)' : 'var(--color-surface)',
+                  background: p.verified >= 2 ? 'var(--accent-green-dim)' : 'var(--color-surface)',
                 }}>
                 <span className="flex items-center gap-2">
                   <Award className="h-4 w-4" />
@@ -323,7 +324,7 @@ export default function CompanyProfile() {
 
       {/* ═══ 编辑弹窗 ═══ */}
       {modal && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[5vh] pb-10 px-4 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[5vh] pb-10 px-4 overflow-y-auto" style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
           <div className="rounded-2xl border w-full max-w-2xl" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
               <div>
@@ -334,7 +335,7 @@ export default function CompanyProfile() {
             </div>
             <div className="px-8 py-6 space-y-5 max-h-[65vh] overflow-y-auto">
               {errors.length > 0 && (
-                <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.06)' }}>
+                <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
                   <AlertCircle className="h-5 w-5 shrink-0" style={{ color: 'var(--accent-red)' }} />
                   <div>
                     <p className="text-sm font-semibold" style={{ color: 'var(--accent-red)' }}>请填写以下必填项：</p>
@@ -396,7 +397,7 @@ export default function CompanyProfile() {
             </div>
             <div className="flex items-center justify-end gap-3 px-8 py-5 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
               <button onClick={() => setModal(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>取消</button>
-              <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60" style={{ background: saved ? 'var(--accent-green)' : 'var(--accent-purple)' }}>
+              <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60" style={{ background: saved ? 'var(--accent-green)' : 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}{saved ? '已保存' : '保存'}
               </button>
             </div>

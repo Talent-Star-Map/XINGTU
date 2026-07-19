@@ -86,13 +86,13 @@ export default function ProfileEdit() {
                 <span style={{ color: 'var(--accent-red)' }}>*</span> 为必填项
               </p>
             </div>
-            <button onClick={save} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-60" style={{ background: saved ? 'var(--accent-green)' : 'var(--color-primary)' }}>
+            <button onClick={save} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity disabled:opacity-60" style={{ background: saved ? 'var(--accent-green)' : 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}{saved ? '已保存' : '保存'}
             </button>
           </div>
 
           {errors.length > 0 && (
-            <div className="flex items-start gap-3 rounded-xl border p-4" style={{ borderColor: 'rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.06)' }}>
+            <div className="flex items-start gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" style={{ color: 'var(--accent-red)' }} />
               <div>
                 <p className="text-sm font-semibold" style={{ color: 'var(--accent-red)' }}>请填写以下必填项：</p>
