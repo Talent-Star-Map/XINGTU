@@ -29,6 +29,10 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8081 --reload
 # 3. 启动前端
 cd frontend && npm install
 npm run dev
+
+# 4.（可选）初始化演示数据与管理员账号
+cd backend && python -m mock_data.seed         # 10 个测试求职者 + 10 个测试岗位
+python -m mock_data.seed_admin                  # 默认管理员账号 admin@xingtu.com / Admin1234
 ```
 
 浏览器打开 http://localhost:5173
@@ -41,6 +45,9 @@ npm run dev
 |---|---|---|
 | 求职者 | TUTU@qiuzhi.com | TuTu666 |
 | 企业 | XINGXINGHR@zhaopin.com | XingXing666 |
+| 管理员 | admin@xingtu.com | Admin1234 |
+
+> 管理员端入口在角色选择页底部"管理员入口"按钮。质检功能（数据质量报告、准确率测试等）已集中到管理员端，求职端/企业端不再展示。
 
 ---
 

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Star, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Star, ArrowLeft, Loader2, Eye, EyeOff, Shield } from 'lucide-react'
 
-interface Props { onLogin: (role: 'jobseeker' | 'enterprise') => void }
+interface Props { onLogin: (role: 'jobseeker' | 'enterprise' | 'admin') => void }
 
 export default function Login({ onLogin }: Props) {
   const { role } = useParams()
-  const userRole = (role || 'jobseeker') as 'jobseeker' | 'enterprise'
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const userRole = (role || 'jobseeker') as 'jobseeker' | 'enterprise' | 'admin'
+  // 管理员：只支持登录，不支持注册（管理员账号由 seed_admin 脚本预设）
+  const [mode, setMode] = useState<'login' | 'register'>(userRole === 'admin' ? 'login' : 'login')
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -33,8 +34,13 @@ export default function Login({ onLogin }: Props) {
     if (mode==='register'&&!code) return setError('请输入验证码')
     setLoading(true); setError('')
     try {
-      const url = mode==='login' ? `/api/auth/login` : `/api/auth/register`
-      const body = mode==='login' ? {account,password,role:userRole} : {account,password,code,role:userRole}
+      // 管理员走独立登录接口（无验证码、无注册流程，且只校验 admins 表）
+      const url = userRole === 'admin'
+        ? `/api/auth/admin/login`
+        : (mode==='login' ? `/api/auth/login` : `/api/auth/register`)
+      const body = userRole === 'admin'
+        ? {account, password}
+        : (mode==='login' ? {account,password,role:userRole} : {account,password,code,role:userRole})
       const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
       const d = await r.json()
       if (!d.success) { setError(d.detail||d.message||'操作失败'); return }
@@ -50,6 +56,10 @@ export default function Login({ onLogin }: Props) {
     finally { setLoading(false) }
   }
 
+  // 管理员端主题色：绿色（区别于求职者青色、企业紫色）
+  const accentColor = userRole === 'admin' ? 'var(--accent-green)' : (userRole === 'jobseeker' ? 'var(--color-primary)' : 'var(--accent-purple)')
+  const accentDim = userRole === 'admin' ? 'var(--accent-green-dim)' : (userRole === 'jobseeker' ? 'var(--color-primary-fixed)' : 'var(--accent-purple-dim)')
+
   return (
     <div className="flex h-full w-full items-center justify-center">
       <div className="star-field" />
@@ -59,23 +69,26 @@ export default function Login({ onLogin }: Props) {
         </a>
         <div className="rounded-xl border p-6" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface-container-lowest)'}}>
           <div className="text-center mb-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3" style={{background:userRole==='jobseeker'?'var(--color-primary-fixed)':'var(--accent-purple-dim)'}}>
-              <Star className="h-6 w-6" style={{color:userRole==='jobseeker'?'var(--color-primary)':'var(--accent-purple)'}} />
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3" style={{background:accentDim}}>
+              {userRole === 'admin' ? <Shield className="h-6 w-6" style={{color:accentColor}} /> : <Star className="h-6 w-6" style={{color:accentColor}} />}
             </div>
-            <h2 className="text-base font-semibold" style={{color:'var(--color-on-surface)'}}>{mode==='login'?'登录':'注册'}星图</h2>
+            <h2 className="text-base font-semibold" style={{color:'var(--color-on-surface)'}}>{mode==='login'?'登录':'注册'}星图{userRole==='admin'?' · 管理员':''}</h2>
           </div>
-          <div className="flex mb-4 rounded-lg border p-0.5" style={{borderColor:'var(--color-outline-variant)'}}>
-            <button onClick={()=>setMode('login')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='login'?'var(--color-primary)':'transparent',color:mode==='login'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>登录</button>
-            <button onClick={()=>setMode('register')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='register'?'var(--color-primary)':'transparent',color:mode==='register'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>注册</button>
-          </div>
+          {/* 管理员端只显示登录 Tab，不显示注册 Tab */}
+          {userRole !== 'admin' && (
+            <div className="flex mb-4 rounded-lg border p-0.5" style={{borderColor:'var(--color-outline-variant)'}}>
+              <button onClick={()=>setMode('login')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='login'?'var(--color-primary)':'transparent',color:mode==='login'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>登录</button>
+              <button onClick={()=>setMode('register')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='register'?'var(--color-primary)':'transparent',color:mode==='register'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>注册</button>
+            </div>
+          )}
           {error&&<div className="text-xs text-center mb-3 py-2 rounded-lg" style={{background:'var(--accent-red-dim)',color:'var(--accent-red)'}}>{error}</div>}
           <div className="space-y-3.5">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>邮箱 / 手机号</label>
-              <input value={account} onChange={e=>setAccount(e.target.value)} placeholder="请输入邮箱或手机号"
+              <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>邮箱 {userRole !== 'admin' && '/ 手机号'}</label>
+              <input value={account} onChange={e=>setAccount(e.target.value)} placeholder={userRole==='admin'?'请输入管理员邮箱':'请输入邮箱或手机号'}
                 className="w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
             </div>
-            {mode==='register'&&<div>
+            {mode==='register'&&userRole!=='admin'&&<div>
               <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>验证码</label>
               <div className="flex gap-2">
                 <input value={code} onChange={e=>setCode(e.target.value)} placeholder="输入验证码"
@@ -97,8 +110,8 @@ export default function Login({ onLogin }: Props) {
             </div>
             <button onClick={submit} disabled={loading}
               className="w-full rounded-lg py-2.5 text-sm font-semibold disabled:opacity-60"
-              style={{background:'linear-gradient(135deg, var(--color-primary), var(--accent-purple))',color:'var(--color-on-primary)'}}>
-              {loading?<Loader2 className="h-4 w-4 mx-auto animate-spin" />:(mode==='login'?'登 录':'注 册')}
+              style={{background:`linear-gradient(135deg, ${accentColor}, var(--accent-purple))`,color:'var(--color-on-primary)'}}>
+              {loading?<Loader2 className="h-4 w-4 mx-auto animate-spin" />:'登 录'}
             </button>
           </div>
         </div>
