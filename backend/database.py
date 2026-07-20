@@ -55,6 +55,16 @@ class Enterprise(Base):
     verified = Column(Integer, default=0)
     city = Column(String(100), default='')
 
+class Admin(Base):
+    """管理员账号表 — 支撑管理员端登录与质检 API 鉴权"""
+    __tablename__ = 'admins'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(200), unique=True, nullable=False)         # 登录用邮箱
+    username = Column(String(100), default='')                       # 显示名
+    password = Column(String(200), nullable=False)                   # bcrypt 加密
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
 class VerifyCode(Base):
     __tablename__ = 'verify_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -144,6 +154,13 @@ def get_user_by_login(login):
     if user:
         result = dict(id=user.id, email=user.email, phone=user.phone,
                       username=user.username, password=user.password, role='enterprise')
+        session.close()
+        return result
+    # 管理员只允许邮箱登录，无手机号字段
+    user = session.query(Admin).filter(Admin.email == login).first()
+    if user:
+        result = dict(id=user.id, email=user.email, phone=None,
+                      username=user.username or '管理员', password=user.password, role='admin')
         session.close()
         return result
     session.close()

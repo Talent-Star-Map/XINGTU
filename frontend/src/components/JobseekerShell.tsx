@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, Activity } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav } from '../lib/NavContext'
 
-type Page = 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match' | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality'
+type Page = 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match' | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -13,7 +13,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'match', icon: LineChart, label: '匹配' },
   { key: 'learning-path', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
-  { key: 'quality', icon: Shield, label: '质检' },
+  // 质检已移至管理员端，求职端不再展示
 ]
 
 import JSDashboard from '../pages/jobseeker/Dashboard'
@@ -25,12 +25,11 @@ import JSLearning from '../pages/jobseeker/LearningPath'
 import JSTrend from '../pages/jobseeker/Trend'
 import JSProfileHome from '../pages/jobseeker/ProfileHome'
 import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
-import QualityDashboard from '../pages/enterprise/QualityDashboard'
 
 const pages: Record<Page, () => JSX.Element> = {
   dashboard: JSDashboard, jobs: JSJobs, 'skill-graph': JSSkillGraph,
   resume: JSResume, match: JSMatch, 'learning-path': JSLearning, trend: JSTrend,
-  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph, quality: QualityDashboard,
+  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph,
 }
 
 interface Props { onLogout: () => void }
