@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Shield, CheckCircle, AlertTriangle, TrendingUp, Loader2, Crosshair, Copy, Zap, Users, FileText } from 'lucide-react'
 
+// 拼接管理员 token 到质检接口 URL（质检 API 已加管理员鉴权，必须携带 token）
+const getToken = () => localStorage.getItem('xingtu_token') || ''
+const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
+
 export default function QualityDashboard() {
   const [report, setReport] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -13,7 +17,7 @@ export default function QualityDashboard() {
 
   const loadReport = () => {
     setLoading(true)
-    fetch('/api/quality/report').then(r => r.json()).then(d => {
+    fetch(withToken('/api/quality/report')).then(r => r.json()).then(d => {
       if (d.success) setReport(d.data)
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -21,7 +25,7 @@ export default function QualityDashboard() {
 
   const refreshPanels = async () => {
     setPanelLoading(true)
-    const r = await fetch('/api/quality/report')
+    const r = await fetch(withToken('/api/quality/report'))
     const d = await r.json()
     if (d.success) setReport(d.data)
     setPanelLoading(false)
@@ -36,12 +40,11 @@ export default function QualityDashboard() {
     else if (type === 'match') url = '/api/quality/match-test'
     else if (type === 'resume') url = '/api/quality/resume-test'
 
-    const r = await fetch(url)
+    const r = await fetch(withToken(url))
     const d = await r.json()
     if (d.success) {
       if (type === 'jd') setJdResult(d.data)
       else if (type === 'match') setMatchResult(d.data)
-      else if (type === 'resume') setResumeResult(d.data)
       else if (type === 'resume') setResumeResult(d.data)
     }
     setTesting(prev => { const n = new Set(prev); n.delete(type); return n })

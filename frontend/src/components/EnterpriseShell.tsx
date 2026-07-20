@@ -4,7 +4,7 @@ import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Star, 
 import { useTheme } from './ThemeProvider'
 import { EPNav } from '../lib/NavContext'
 
-type Page = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry' | 'company' | 'quality'
+type Page = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry' | 'company'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -12,7 +12,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'talent', icon: Users, label: '人才星' },
   { key: 'market', icon: TrendingUp, label: '市场洞察' },
   { key: 'industry', icon: FileText, label: '行业报告' },
-  { key: 'quality', icon: Star, label: '质检' },
+  // 质检已移至管理员端，企业端不再展示
 ]
 
 import EPDashboard from '../pages/enterprise/Dashboard'
@@ -21,10 +21,9 @@ import EPTalent from '../pages/enterprise/TalentSearch'
 import EPMarket from '../pages/enterprise/MarketInsight'
 import EPIndustry from '../pages/enterprise/IndustryReport'
 import EPCompany from '../pages/enterprise/CompanyProfile'
-import EPQuality from '../pages/enterprise/QualityDashboard'
 
 const pages: Record<Page, () => JSX.Element> = {
-  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, market: EPMarket, industry: EPIndustry, company: EPCompany, quality: EPQuality,
+  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, market: EPMarket, industry: EPIndustry, company: EPCompany,
 }
 
 interface Props { onLogout: () => void }

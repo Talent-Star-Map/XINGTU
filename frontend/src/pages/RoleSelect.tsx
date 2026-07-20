@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Star, Briefcase, Building2, ArrowRight, Sun, Moon } from 'lucide-react'
+import { Star, Briefcase, Building2, ArrowRight, Sun, Moon, Shield } from 'lucide-react'
 import StarBorder from '../components/ui/StarBorder'
 import Aurora from '../components/ui/Aurora'
 import Magnet from '../components/ui/Magnet'
@@ -70,6 +70,16 @@ export default function RoleSelect() {
             </Magnet>
           </StarBorder>
         </div>
+        {/* 管理员入口 — 低调放在底部，质检功能归管理员监管 */}
+        <motion.div className="text-center mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+          <button onClick={() => navigate('/login/admin')}
+            className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg transition-all"
+            style={{ color: 'var(--color-on-surface-variant)', border: '1px solid var(--color-outline-variant)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-green)'; e.currentTarget.style.borderColor = 'var(--accent-green)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-on-surface-variant)'; e.currentTarget.style.borderColor = 'var(--color-outline-variant)' }}>
+            <Shield className="h-3.5 w-3.5" /> 管理员入口
+          </button>
+        </motion.div>
         <div className="h-8" />
       </div>
     </div>
