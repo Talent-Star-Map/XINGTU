@@ -65,6 +65,22 @@ def login(req: LoginReq):
     token = create_token(user['id'], user['role'])
     return {'success': True, 'data': {k: v for k, v in user.items() if k != 'password'} | {'token': token}}
 
+# ─── 管理员登录 — 仅校验邮箱+密码，无验证码、无注册流程 ──────────────────────
+class AdminLoginReq(BaseModel):
+    account: str; password: str
+
+@router.post('/admin/login')
+def admin_login(req: AdminLoginReq):
+    """管理员登录入口：仅允许 admins 表中的账号登录"""
+    user = get_user_by_login(req.account)
+    # 必须命中管理员账号，否则拒绝（防止求职者/企业账号通过此接口登录管理员端）
+    if not user or user['role'] != 'admin':
+        raise HTTPException(400, '管理员账号不存在或账号类型错误')
+    if not bcrypt.checkpw(req.password.encode(), user['password'].encode()):
+        raise HTTPException(400, '密码错误')
+    token = create_token(user['id'], 'admin')
+    return {'success': True, 'data': {k: v for k, v in user.items() if k != 'password'} | {'token': token}}
+
 @router.get('/profile')
 def get_profile(token: str = Query(...)):
     try: payload = verify_token(token)

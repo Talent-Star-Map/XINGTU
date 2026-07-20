@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends, HTTPException
 from quality_checker import full_quality_report, cross_validate, detect_plagiarism, detect_inflation
 from jobs import SEED_JOBS
+from database import verify_token
 import json, os, tempfile
 
 def _load_jobs():
@@ -11,7 +12,19 @@ def _load_jobs():
             return json.load(f)
     return SEED_JOBS
 
-router = APIRouter(prefix='/api/quality', tags=['quality'])
+# ─── 管理员鉴权依赖 — 所有质检接口必须携带管理员 token 才能访问 ──────────────
+def require_admin(token: str = Query(...)):
+    """校验 query 参数中的 token 是否为管理员身份"""
+    try:
+        payload = verify_token(token)
+    except ValueError as e:
+        raise HTTPException(401, str(e))
+    if payload.get('role') != 'admin':
+        raise HTTPException(403, '需要管理员权限')
+    return payload
+
+# 路由级依赖：注册到此 router 的所有接口都自动应用 require_admin 鉴权
+router = APIRouter(prefix='/api/quality', tags=['quality'], dependencies=[Depends(require_admin)])
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 os.makedirs(TEST_DATA_DIR, exist_ok=True)
