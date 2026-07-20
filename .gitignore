@@ -45,3 +45,5 @@ backend/test_data/
 .mimocode
 .trae
 .workbuddy
+.agents
+.codex

@@ -4,31 +4,19 @@ import RoleSelect from './pages/RoleSelect'
 import Login from './pages/Login'
 import JobseekerShell from './components/JobseekerShell'
 import EnterpriseShell from './components/EnterpriseShell'
-
-import JSDashboard from './pages/jobseeker/Dashboard'
-import JSJobs from './pages/jobseeker/Jobs'
-import JSSkillGraph from './pages/jobseeker/SkillGraph'
-import JSResume from './pages/jobseeker/Resume'
-import JSMatch from './pages/jobseeker/Match'
-import JSLearning from './pages/jobseeker/LearningPath'
-import JSTrend from './pages/jobseeker/Trend'
-
-import EPDashboard from './pages/enterprise/Dashboard'
-import EPJobs from './pages/enterprise/JobManage'
-import EPTalent from './pages/enterprise/TalentSearch'
-import EPMarket from './pages/enterprise/MarketInsight'
-import EPIndustry from './pages/enterprise/IndustryReport'
+import AdminShell from './components/AdminShell'
 
 export default function App() {
-  const [user, setUser] = useState<{ token: string; role: 'jobseeker' | 'enterprise' } | null>(
+  // 角色类型扩展为三态：求职者 / 企业 / 管理员
+  const [user, setUser] = useState<{ token: string; role: 'jobseeker' | 'enterprise' | 'admin' } | null>(
     () => {
       const t = localStorage.getItem('xingtu_token')
-      const r = localStorage.getItem('xingtu_role') as 'jobseeker' | 'enterprise' | null
+      const r = localStorage.getItem('xingtu_role') as 'jobseeker' | 'enterprise' | 'admin' | null
       return t && r ? { token: t, role: r } : null
     }
   )
 
-  const handleLogin = useCallback((role: 'jobseeker' | 'enterprise') => {
+  const handleLogin = useCallback((role: 'jobseeker' | 'enterprise' | 'admin') => {
     const token = localStorage.getItem('xingtu_token') || ''
     setUser({ token, role })
   }, [])
@@ -51,6 +39,8 @@ export default function App() {
           </Routes>
         ) : user.role === 'jobseeker' ? (
           <JobseekerShell onLogout={handleLogout} />
+        ) : user.role === 'admin' ? (
+          <AdminShell onLogout={handleLogout} />
         ) : (
           <EnterpriseShell onLogout={handleLogout} />
         )}
