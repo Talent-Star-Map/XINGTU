@@ -1,35 +1,36 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, Activity } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav } from '../lib/NavContext'
 
-type Page = 'dashboard' | 'jobs' | 'skill-graph' | 'resume' | 'match' | 'learning-path' | 'trend' | 'profile-home' | 'my-skill-graph'
+type Page = 'dashboard' | 'skill-graph' | 'resume' | 'match' | 'learning' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'diagnosis' | 'job-detail'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
-  { key: 'jobs', icon: Briefcase, label: '岗位' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
-  { key: 'match', icon: LineChart, label: '匹配' },
-  { key: 'learning-path', icon: BookOpen, label: '学习' },
+  { key: 'match', icon: LineChart, label: '岗位' },
+  { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
   // 质检已移至管理员端，求职端不再展示
 ]
 
 import JSDashboard from '../pages/jobseeker/Dashboard'
-import JSJobs from '../pages/jobseeker/Jobs'
 import JSSkillGraph from '../pages/jobseeker/SkillGraph'
 import JSResume from '../pages/jobseeker/Resume'
-import JSMatch from '../pages/jobseeker/Match'
+import JSMatch from '../pages/jobseeker/JobMatch'
+import JSDiagnosis from '../pages/jobseeker/Diagnosis'
+import JSJobDetail from '../pages/jobseeker/JobDetail'
 import JSLearning from '../pages/jobseeker/LearningPath'
 import JSTrend from '../pages/jobseeker/Trend'
 import JSProfileHome from '../pages/jobseeker/ProfileHome'
 import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
+import QualityDashboard from '../pages/enterprise/QualityDashboard'
 
 const pages: Record<Page, () => JSX.Element> = {
-  dashboard: JSDashboard, jobs: JSJobs, 'skill-graph': JSSkillGraph,
-  resume: JSResume, match: JSMatch, 'learning-path': JSLearning, trend: JSTrend,
-  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph,
+  dashboard: JSDashboard, 'skill-graph': JSSkillGraph,
+  resume: JSResume, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
+  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph, quality: QualityDashboard,
 }
 
 interface Props { onLogout: () => void }

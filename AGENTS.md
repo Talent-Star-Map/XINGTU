@@ -26,7 +26,7 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 ## Gotchas — read before changing code
 
-**Port mismatch in vite.config.ts proxy.** The Vite dev server proxies `/api` to `localhost:8083`, but the backend runs on `8081`. This is either a bug or a stale config — verify before assuming API calls will work in dev.
+**Vite proxy 配置.** `vite.config.ts` 中 `/api` 代理到 `127.0.0.1:8081`（必须用 127.0.0.1，不能用 localhost，防 IPv6 `::1` 连不上后端）。`server.host` 设为 `127.0.0.1`，确保浏览器通过 IPv4 访问。
 
 **Database URL differs by environment.** Docker: `mysql:3306`. Local dev: `localhost:3307`. The default in `database.py` is `localhost:3307` — this is correct for local dev, not Docker.
 
@@ -48,7 +48,9 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 **Resume parsing depends on external APIs.** `backend/resume_parser.py` and `backend/quality_checker.py` likely call external LLM services. They won't work without network access or proper API keys.
 
-**Env file.** `backend/.env.example` documents `DATABASE_URL` and `JWT_SECRET`. `database.py` reads these via `python-dotenv` (`load_dotenv()` called at top of `main.py`). Copy `.env.example` → `.env` for local dev; defaults in `database.py` already point to `localhost:3307`.
+**Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`LONGCAT_API_KEY` 等运行配置，已提交供团队共享。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
+
+**图图 AI 问答.** `chat_api.py` 调用 LongCat API（`https://api.longcat.chat/anthropic/v1/messages`，Anthropic Messages 格式）。需配置 `LONGCAT_API_KEY` / `LONGCAT_MODEL` / `LONGCAT_BASE_URL`。API 不可用时自动回退到本地关键词知识库。新增 `/api/chat/resources` 端点根据技能返回真实学习链接（`learning_path.py`）。
 
 ## Architecture
 
@@ -63,14 +65,19 @@ XINGTU/
 │   ├── match_engine.py # 3-dimensional matching engine (skill/exp/salary) → match_records
 │   ├── quality_api.py # /api/quality — data quality reports + accuracy tests (admin-only, require_admin dep)
 │   ├── database.py    # SQLAlchemy models: Jobseeker, Enterprise, Admin, VerifyCode, Job, MatchRecord + JWT helpers
-│   ├── resume_parser.py    # Resume text → structured extraction (external LLM dep)
+│   ├── match_api.py        # /api/match — 人岗匹配分析接口
+│   ├── match_analyzer.py   # 多维度匹配算法：技能50%/经验20%/学历15%/薪资15%
+│   ├── skill_synonyms.py   # 技能同义词映射表
+│   ├── chat_api.py         # /api/chat — 图图 AI 问答（LongCat API, Anthropic 格式）
+│   ├── learning_path.py    # 技能→学习资源链接映射
+│   ├── resume_parser.py    # 简历解析：PDF/Word → 技能提取 + 同义词归一化
 │   ├── quality_checker.py  # Data quality analysis (plagiarism, inflation, cross-validation)
 │   ├── jd_scraper.py       # JD scraping from Boss/拉勾 (requests-based CLI tool)
 │   ├── selenium_scraper.py # JD scraping via Selenium headless Chrome (alt to jd_scraper)
 │   ├── mock_data/          # Seed scripts (idempotent)
 │   │   ├── seed.py         # 10 test jobseekers + 10 test jobs + 10 preset match_records
 │   │   └── seed_admin.py   # Default admin account (admin@xingtu.com / Admin1234)
-│   ├── .env.example        # Documents DATABASE_URL + JWT_SECRET (copy to .env)
+│   ├── .env                # 运行配置（数据库+API Key），已提交供团队共享
 │   └── test_data/          # Seed test data for quality endpoints
 ├── frontend/          # React 19 + Vite 5 + TypeScript
 │   ├── src/

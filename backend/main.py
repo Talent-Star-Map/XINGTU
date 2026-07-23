@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,10 +10,17 @@ from auth import router as auth_router
 from jobs import router as jobs_router
 from company import router as company_router
 from quality_api import router as quality_router
-from enterprise import router as enterprise_router  # 企业端：人才星
+from enterprise import router as enterprise_router
+from match_api import router as match_router
+from chat_api import router as chat_router
 import os
 
-app = FastAPI(title='星图 API', version='1.0.0')
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(title='星图 API', version='1.0.0', lifespan=lifespan)
 
 os.makedirs(os.path.join(os.path.dirname(__file__), 'uploads', 'avatars'), exist_ok=True)
 app.mount('/uploads', StaticFiles(directory=os.path.join(os.path.dirname(__file__), 'uploads')), name='uploads')
@@ -30,11 +38,15 @@ app.include_router(jobs_router)
 app.include_router(company_router)
 app.include_router(quality_router)
 app.include_router(enterprise_router)
-
-@app.on_event('startup')
-def startup():
-    init_db()
+app.include_router(match_router)
+app.include_router(chat_router)
 
 @app.get('/api/health')
 def health():
     return {'status': 'ok', 'service': 'xingtu-api'}
+
+
+if __name__ == '__main__':
+    import uvicorn
+    port = int(os.getenv('BACKEND_PORT', 8000))
+    uvicorn.run('main:app', host='0.0.0.0', port=port, reload=True)

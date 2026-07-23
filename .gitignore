@@ -7,8 +7,9 @@ node_modules/
 dist/
 build/
 
-# Environment
-.env
+# Environment（.env 已提交供团队共享配置）
+.env.local
+.env.*.local
 
 # Database
 *.db
@@ -31,19 +32,35 @@ Thumbs.db
 # Docker
 mysql_data/
 
-# TypeScript
+# TypeScript/Vite
 *.tsbuildinfo
-backend/*.db
-__pycache__/
 .vite/
 
-# Uploads & test data
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Backend
+backend/*.db
 backend/uploads/
 backend/test_data/
+backend/match_cache/
 
-#AI
+# AI 工具
 .mimocode
 .trae
 .workbuddy
 .agents
 .codex
+.claude/
+
+# 个人开发配置（含密钥引用、个人规范）
+CLAUDE.md

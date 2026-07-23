@@ -20,7 +20,7 @@ docker compose up -d
 
 ```bash
 # 1. 启动数据库
-docker compose up -d mysql
+docker compose up -d mysql    # MySQL on localhost:3307
 
 # 2. 启动后端
 cd backend && pip install -r requirements.txt

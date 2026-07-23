@@ -173,8 +173,24 @@ def get_user_model_by_role(role):
     return Jobseeker
 
 import jwt
-JWT_SECRET = os.getenv('JWT_SECRET', 'xingtu-secret-key-2026')
+
+JWT_SECRET = os.getenv('JWT_SECRET', '')
 JWT_ALGO = 'HS256'
+
+def _validate_jwt_secret():
+    """生产环境强制要求 32+ 字节密钥
+
+    启动时检查：
+    - 如果 JWT_SECRET 为空或短于 32 字节，抛出 RuntimeError
+    - 确保 HS256 算法的最低安全强度（RFC 7518 §3.2）
+    """
+    if len(JWT_SECRET) < 32:
+        raise RuntimeError(
+            f'JWT_SECRET 必须至少 32 字节（当前 {len(JWT_SECRET)} 字节）。'
+            f'请设置环境变量：export JWT_SECRET=<至少32字符的随机字符串>'
+        )
+
+_validate_jwt_secret()
 
 def create_token(user_id, role):
     return jwt.encode({
