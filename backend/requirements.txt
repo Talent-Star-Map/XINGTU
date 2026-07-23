@@ -1,4 +1,4 @@
-fastapi>=0.115.0
+fastapi==0.115.2
 uvicorn[standard]>=0.34.0
 python-multipart>=0.0.31
 pyjwt>=2.13.0
@@ -10,3 +10,9 @@ cryptography>=41.0
 PyPDF2>=3.0.0
 python-docx>=1.1.0
 requests>=2.31.0
+python-dotenv>=1.0.0
+
+# 注意：不要升级到 fastapi 0.120+，存在路由注册 regression（include_router 不生效）
+# 2026-07-15 验证：0.139.0 路由仅保留 /api/health，其他全部 404
+
+httpx>=0.27

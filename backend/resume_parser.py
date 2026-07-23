@@ -67,19 +67,47 @@ def rule_based_extract(text: str) -> dict:
             result['name'] = m.group(1)
             break
 
-    # 技能关键词
+    # 技能关键词（与前端 ManualSkillInput 同步）
     skill_keywords = [
+        # 编程语言
         'Java', 'Python', 'Go', 'C++', 'Rust', 'TypeScript', 'JavaScript',
-        'React', 'Vue', 'Angular', 'Spring Boot', 'Django', 'Flask', 'FastAPI',
-        'MySQL', 'PostgreSQL', 'Redis', 'MongoDB', 'Elasticsearch',
-        'Docker', 'Kubernetes', 'K8s', 'Jenkins', 'Git', 'Linux',
-        'AWS', 'Azure', 'GCP', 'Nginx', 'CI/CD', 'DevOps',
-        '机器学习', '深度学习', 'NLP', 'CV', '大模型', 'LLM', 'RAG',
-        'Spark', 'Flink', 'Hadoop', 'Kafka', 'RabbitMQ',
-        '微服务', '分布式', '高并发', '架构设计',
-        'HTML', 'CSS', 'Node.js', 'GraphQL', 'RESTful',
-        'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
-        'AI', 'Agent', 'LangChain', 'Transformer',
+        'Scala', 'Kotlin', 'Swift', 'PHP', 'Ruby', 'Shell', 'SQL',
+        'Git', 'Maven', 'Gradle', 'CMake', 'Lua', 'Perl', 'MATLAB',
+        # 前端框架
+        'React', 'Vue', 'Angular', 'Svelte', 'Next.js', 'Nuxt', 'HTML', 'CSS',
+        'Node.js', 'jQuery', 'Webpack', 'Vite', 'Tailwind CSS', 'Ant Design',
+        'Element Plus', 'Taro', 'uni-app', 'Electron',
+        # 后端框架
+        'Spring Boot', 'Spring Cloud', 'Django', 'Flask', 'FastAPI', 'Express',
+        'MyBatis', 'Hibernate', 'Gin', 'gRPC', 'RESTful', 'Dubbo', 'Netty',
+        'Quarkus', 'Koa', 'NestJS', 'Thrift', 'GraphQL',
+        # 数据库
+        'MySQL', 'PostgreSQL', 'Redis', 'MongoDB', 'Elasticsearch', 'SQLite',
+        'Oracle', 'Memcached', 'ClickHouse', 'Neo4j', 'TiDB', 'HBase',
+        'Cassandra', 'DynamoDB', 'InfluxDB', 'DuckDB', 'MariaDB',
+        # AI/大模型
+        '大模型', 'LLM', 'LangChain', 'RAG', 'Agent', 'Prompt Engineering',
+        'NLP', 'CV', 'PyTorch', 'TensorFlow', 'Pandas', 'NumPy',
+        'MCP 协议', 'MCP', 'Transformer', 'Stable Diffusion', 'Ollama', 'vLLM',
+        'LangSmith', 'AutoGPT', 'Whisper', 'LoRA', 'PaddlePaddle', 'MindSpore',
+        'OpenCV',
+        # 大数据
+        'Spark', 'Flink', 'Hadoop', 'Kafka', 'Hive', 'HBase', 'DataX', 'Kettle',
+        'Airflow', 'Pulsar', 'Storm', 'Sqoop', 'Canal', 'Doris', 'StarRocks',
+        'Presto', 'Trino', 'Superset',
+        # 云原生/DevOps
+        'Docker', 'Kubernetes', 'K8s', 'CI/CD', 'Jenkins', 'Terraform', 'Nginx',
+        'Linux', 'AWS', '阿里云', '腾讯云', 'Serverless', 'GitLab', 'ArgoCD',
+        'Prometheus', 'Grafana', 'Istio', 'Consul', 'Vault', 'Ansible', 'Vagrant',
+        'Harbor', 'RabbitMQ', 'RocketMQ',
+        # 安全/测试
+        '渗透测试', 'Burp Suite', 'Metasploit', 'Selenium', 'JMeter', 'Postman',
+        'OWASP', 'Nessus', 'Wireshark', 'Appium', 'LoadRunner', 'SonarQube',
+        'ZAP',
+        # 架构/分布式
+        '微服务', '分布式', '高并发', '架构设计', '分布式事务', '分布式缓存',
+        '消息队列', '负载均衡', '服务网格', 'DDD', '链路追踪', 'SkyWalking',
+        'Seata', 'Nacos', 'Sentinel',
     ]
     found = [s for s in skill_keywords if s.lower() in text.lower()]
     result['skills'] = found

@@ -135,15 +135,30 @@ async def upload_avatar(file: UploadFile = File(...), token: str = Query(...)):
     session.commit(); session.close()
     return {'success': True, 'data': {'url': url}}
 
+# 文件大小限制（建议 #8 合规）
+MAX_FILE_SIZE = {
+    'pdf': 5 * 1024 * 1024,    # 5MB
+    'doc': 10 * 1024 * 1024,   # 10MB
+    'docx': 10 * 1024 * 1024,  # 10MB
+    'txt': 2 * 1024 * 1024,    # 2MB
+}
+
 @router.post('/resume-parse')
 async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     ext = file.filename.split('.')[-1].lower() if '.' in (file.filename or '') else ''
     if ext not in ('pdf', 'docx', 'doc', 'txt'): raise HTTPException(400, '仅支持 pdf/docx/doc/txt')
+
+    # 大小校验（建议 #8）
+    content = await file.read()
+    max_size = MAX_FILE_SIZE.get(ext, 5 * 1024 * 1024)
+    if len(content) > max_size:
+        raise HTTPException(400, f'文件过大，{ext.upper()} 最大 {max_size // 1024 // 1024}MB')
+
     name = f"{payload['user_id']}_{uuid.uuid4().hex[:8]}.{ext}"
     path = os.path.join(UPLOAD_DIR, 'resumes', name)
-    with open(path, 'wb') as f: shutil.copyfileobj(file.file, f)
+    with open(path, 'wb') as f: f.write(content)
 
     from resume_parser import parse_resume
     import json as _json
@@ -151,6 +166,9 @@ async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
     cache_path = path + '.json'
     with open(cache_path, 'w', encoding='utf-8') as f:
         _json.dump({**result.get('data', {}), 'filename': file.filename, 'parsed_at': __import__('datetime').datetime.now().isoformat()}, f, ensure_ascii=False)
+
+    # PII 脱敏日志：只打印 uid + 文件名，不打印手机号/邮箱（建议 #8）
+    print(f'[resume-parse] uid={payload["user_id"]} file={file.filename} size={len(content)} method={result.get("data",{}).get("method","")}')
     return result
 
 @router.get('/resume-history')
