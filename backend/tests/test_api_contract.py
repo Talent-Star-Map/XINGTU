@@ -6,11 +6,15 @@ API Contract Tests for /api/match/analyze
 2. 字段类型稳定性
 3. 边界值处理
 4. 错误码规范
+
+@owner: 阳总&洋总（人岗匹配）
 """
 
 import os, sys, json, uuid
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 测试文件在 backend/tests/ 下，需要把 sys.path 指向 backend/ 根才能 import main/database
+BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(BACKEND_ROOT)
+sys.path.insert(0, BACKEND_ROOT)
 
 JWT_SECRET = "test-secret-key-for-contract-32bytes!!"
 os.environ['JWT_SECRET'] = JWT_SECRET

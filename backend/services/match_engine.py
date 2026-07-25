@@ -14,6 +14,8 @@
 运行模式:
     - 批量计算: run_match_batch()  遍历所有 active 岗位 × 所有求职者，upsert match_records
     - 单岗位计算: calc_match_for_job(job_id)  只算某个岗位
+
+@owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 
 import re

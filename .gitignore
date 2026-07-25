@@ -7,13 +7,19 @@ node_modules/
 dist/
 build/
 
-# Environment（.env 已提交供团队共享配置）
+# Environment（.env 已提交供团队共享配置；生产密码请用 .env.production 并勿提交）
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.docker
 
 # Database
 *.db
 *.sqlite
+# SQL 备份文件（mysqldump 产物）
+*.sql
+!docs/*.sql
 
 # IDE
 .vscode/
@@ -28,6 +34,7 @@ Thumbs.db
 # Logs
 *.log
 /tmp/
+backend/logs/
 
 # Docker
 mysql_data/
@@ -48,7 +55,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Backend
+# Backend（子目录产物同样忽略 — __pycache__ 通配符已覆盖 routers/services/scripts/tests）
 backend/*.db
 backend/uploads/
 backend/test_data/

@@ -9,6 +9,8 @@
     experience  -> exp
     match_score -> match
     avatar_text -> av   (取 real_name 首字)
+
+@owner: 阳总&洋总（人岗匹配+企业端人才星界面）；实际由张东阳开发
 """
 
 from fastapi import APIRouter, Query
@@ -16,7 +18,8 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from database import get_session, Job, Jobseeker, MatchRecord
-from match_engine import run_match_batch
+# services 模块已迁移到 services/ 子目录
+from services.match_engine import run_match_batch
 
 router = APIRouter(prefix='/api/enterprise', tags=['enterprise'])
 
