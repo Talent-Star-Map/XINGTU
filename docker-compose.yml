@@ -5,8 +5,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: xingtu123
       MYSQL_DATABASE: xingtu
+    # 端口映射：宿主机 3308 → 容器 3306，让本地 Navicat 可以连接云服务器 MySQL
+    # （3307 被占用，改用 3308）
     ports:
-      - "3307:3306"
+      - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
