@@ -166,24 +166,24 @@ export default function TalentSearch() {
     <div className="h-full flex flex-col">
       {/* ── 顶部工具栏：标题 + 计数 + 重新匹配 ── */}
       <header className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-        <div className="max-w-[1400px] mx-auto px-8 py-5 flex items-center justify-between">
+        <div className="px-14 py-7 flex items-center justify-between">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>候选人</h1>
-            <span className="text-xs tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+            <h1 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>候选人</h1>
+            <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
               {candidates.length} / {totalCount || '—'}
             </span>
           </div>
           <button
             onClick={runMatch}
             disabled={matching}
-            className="flex items-center gap-2 h-8 px-3 rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
             style={{
               border: '1px solid var(--color-outline-variant)',
               background: 'var(--color-surface)',
               color: 'var(--color-on-surface)'
             }}
           >
-            {matching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {matching ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
             {matching ? '匹配中' : '重新匹配'}
           </button>
         </div>
@@ -191,16 +191,16 @@ export default function TalentSearch() {
 
       {/* ── 过滤栏：搜索 + 岗位筛选 + 已选条件 ── */}
       <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-        <div className="max-w-[1400px] mx-auto px-8 py-3 flex items-center gap-3">
+        <div className="px-14 py-5 flex items-center gap-4">
           {/* 搜索框 */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="搜索姓名 / 技能 / 岗位，按 Enter 查询"
-              className="w-full h-9 rounded-lg border pl-9 pr-9 text-sm outline-none focus:border-[color:var(--color-primary)]"
+              className="w-full h-12 rounded-lg border pl-12 pr-10 text-base outline-none focus:border-[color:var(--color-primary)]"
               style={{
                 borderColor: 'var(--color-outline-variant)',
                 background: 'var(--color-surface)',
@@ -210,10 +210,10 @@ export default function TalentSearch() {
             {search && (
               <button
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-4 top-1/2 -translate-y-1/2"
                 style={{ color: 'var(--color-on-surface-variant)' }}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -222,23 +222,23 @@ export default function TalentSearch() {
           <div className="relative" ref={jobDropdownRef}>
             <button
               onClick={() => setJobOpen(!jobOpen)}
-              className="flex items-center gap-2 h-9 px-3 rounded-lg border text-sm transition-colors"
+              className="flex items-center gap-2 h-12 px-5 rounded-lg border text-base transition-colors"
               style={{
                 borderColor: 'var(--color-outline-variant)',
                 background: 'var(--color-surface)',
                 color: 'var(--color-on-surface)'
               }}
             >
-              <span style={{ color: 'var(--color-on-surface-variant)' }} className="text-xs">岗位</span>
+              <span style={{ color: 'var(--color-on-surface-variant)' }} className="text-base">岗位</span>
               <span className="font-medium">{selectedJobTitle}</span>
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${jobOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--color-on-surface-variant)' }} />
+              <ChevronDown className={`h-5 w-5 transition-transform ${jobOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--color-on-surface-variant)' }} />
             </button>
             <AnimatePresence>
               {jobOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-1.5 w-72 rounded-lg border py-1 z-50 max-h-80 overflow-y-auto shadow-lg"
+                  className="absolute right-0 top-full mt-1.5 w-96 rounded-lg border py-2 z-50 max-h-96 overflow-y-auto shadow-lg"
                   style={{
                     borderColor: 'var(--color-outline-variant)',
                     background: 'var(--color-surface-container-lowest)'
@@ -247,27 +247,27 @@ export default function TalentSearch() {
                   {/* 全部岗位选项 */}
                   <button
                     onClick={() => pickJob(null)}
-                    className="flex items-center justify-between w-full px-3 py-2 text-sm transition-colors hover:bg-[var(--color-surface-container-high)]"
+                    className="flex items-center justify-between w-full px-5 py-3 text-base transition-colors hover:bg-[var(--color-surface-container-high)]"
                     style={{
                       color: selectedJob === null ? 'var(--color-primary)' : 'var(--color-on-surface)',
                       fontWeight: selectedJob === null ? 600 : 400
                     }}
                   >
                     <span>全部岗位</span>
-                    <span className="text-xs tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{totalCount}</span>
+                    <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{totalCount}</span>
                   </button>
                   {jobs.map(job => (
                     <button
                       key={job.id}
                       onClick={() => pickJob(job.id)}
-                      className="flex items-center justify-between w-full px-3 py-2 text-sm transition-colors hover:bg-[var(--color-surface-container-high)]"
+                      className="flex items-center justify-between w-full px-5 py-3 text-base transition-colors hover:bg-[var(--color-surface-container-high)]"
                       style={{
                         color: selectedJob === job.id ? 'var(--color-primary)' : 'var(--color-on-surface)',
                         fontWeight: selectedJob === job.id ? 600 : 400
                       }}
                     >
                       <span className="truncate">{job.title}</span>
-                      <span className="text-xs tabular-nums ml-2 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }}>{job.count}</span>
+                      <span className="text-base tabular-nums ml-3 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }}>{job.count}</span>
                     </button>
                   ))}
                 </motion.div>
@@ -278,22 +278,22 @@ export default function TalentSearch() {
 
         {/* 已选条件 chips + 匹配结果提示 */}
         {(keyword || selectedJob || matchInfo) && (
-          <div className="max-w-[1400px] mx-auto px-8 pb-3 flex items-center gap-2 flex-wrap text-xs">
+          <div className="px-14 pb-5 flex items-center gap-2.5 flex-wrap text-base">
             {keyword && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                 关键词: {keyword}
-                <button onClick={clearSearch}><X className="h-3 w-3" /></button>
+                <button onClick={clearSearch}><X className="h-4 w-4" /></button>
               </span>
             )}
             {selectedJob && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                 岗位: {selectedJobTitle}
-                <button onClick={() => pickJob(null)}><X className="h-3 w-3" /></button>
+                <button onClick={() => pickJob(null)}><X className="h-4 w-4" /></button>
               </span>
             )}
             {matchInfo && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
-                <TrendingUp className="h-3 w-3" /> {matchInfo}
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+                <TrendingUp className="h-4 w-4" /> {matchInfo}
               </span>
             )}
           </div>
@@ -302,8 +302,8 @@ export default function TalentSearch() {
 
       {/* ── 错误提示 ── */}
       {error && (
-        <div className="max-w-[1400px] mx-auto px-8 pt-4">
-          <div className="rounded-lg border px-3 py-2 text-xs" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
+        <div className="px-14 pt-6">
+          <div className="rounded-lg border px-5 py-4 text-base" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
             {error}
           </div>
         </div>
@@ -311,23 +311,23 @@ export default function TalentSearch() {
 
       {/* ── 候选人列表 — 行布局而非卡片 ── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[1400px] mx-auto px-8 py-4">
+        <div className="px-14 py-6">
           {loading ? (
-            <div className="flex items-center justify-center py-20 gap-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">加载中</span>
+            <div className="flex items-center justify-center py-28 gap-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-lg">加载中</span>
             </div>
           ) : sorted.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>暂无候选人</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.6 }}>
+            <div className="text-center py-28">
+              <p className="text-lg" style={{ color: 'var(--color-on-surface-variant)' }}>暂无候选人</p>
+              <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.6 }}>
                 {keyword || selectedJob ? '调整筛选条件或清除过滤' : '运行"重新匹配"以生成候选人列表'}
               </p>
             </div>
           ) : (
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
               {/* 列表头 — 极简、非粗体、灰色 */}
-              <div className="grid grid-cols-[1fr_2fr_2fr_1.5fr_80px_40px] gap-4 px-4 py-2 text-[11px] uppercase tracking-wider border-b"
+              <div className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-4 text-sm uppercase tracking-wider border-b"
                 style={{ color: 'var(--color-on-surface-variant)', borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
                 <span>匹配</span>
                 <span>候选人</span>
@@ -350,7 +350,7 @@ export default function TalentSearch() {
                   >
                     <div
                       onClick={() => setExpandedId(expanded ? null : c.id)}
-                      className="grid grid-cols-[1fr_2fr_2fr_1.5fr_80px_40px] gap-4 px-4 py-3 items-center cursor-pointer transition-colors border-b last:border-b-0"
+                      className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-5 items-center cursor-pointer transition-colors border-b last:border-b-0"
                       style={{
                         borderColor: 'var(--color-outline-variant)',
                         background: expanded ? 'var(--color-surface-container-low)' : 'var(--color-surface)'
@@ -363,32 +363,32 @@ export default function TalentSearch() {
                       }}
                     >
                       {/* 匹配度 — 用细竖条 + 数字，不用大卡片 */}
-                      <div className="flex items-center gap-2">
-                        <div className="w-1 h-8 rounded-full" style={{ background: matchColor(c.match) }} />
-                        <span className="text-sm font-semibold tabular-nums" style={{ color: matchColor(c.match) }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-12 rounded-full" style={{ background: matchColor(c.match) }} />
+                        <span className="text-2xl font-semibold tabular-nums" style={{ color: matchColor(c.match) }}>
                           {c.match ?? '—'}
-                          {c.match !== null && <span className="text-xs ml-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>%</span>}
+                          {c.match !== null && <span className="text-base ml-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>%</span>}
                         </span>
                       </div>
 
                       {/* 候选人 — 头像 + 姓名 + 岗位标签 */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold shrink-0"
                           style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                           {c.av}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
                             {c.job_title && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                              <span className="text-sm px-2 py-0.5 rounded font-medium shrink-0"
                                 style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                                 {c.job_title}
                               </span>
                             )}
                           </div>
                           {c.title && (
-                            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+                            <p className="text-sm truncate mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>
                               意向：{c.title}
                             </p>
                           )}
@@ -396,32 +396,32 @@ export default function TalentSearch() {
                       </div>
 
                       {/* 技能 — 前 3 个 + N */}
-                      <div className="flex flex-wrap gap-1 items-center">
+                      <div className="flex flex-wrap gap-1.5 items-center">
                         {visibleSkills.map(s => (
-                          <span key={s} className="text-[11px] px-1.5 py-0.5 rounded"
+                          <span key={s} className="text-sm px-2.5 py-1 rounded"
                             style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                             {s}
                           </span>
                         ))}
                         {hiddenCount > 0 && (
-                          <span className="text-[11px] tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+                          <span className="text-sm tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
                             +{hiddenCount}
                           </span>
                         )}
                         {c.skills.length === 0 && (
-                          <span className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.5 }}>—</span>
+                          <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.5 }}>—</span>
                         )}
                       </div>
 
                       {/* 经验 / 期望薪资 — 列对齐 */}
-                      <div className="text-xs space-y-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+                      <div className="text-base space-y-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>
                         <div className="tabular-nums">{c.exp || '—'}</div>
                         <div className="tabular-nums">{c.salary || '—'}</div>
                       </div>
 
                       {/* 综合分数 — 大数字右对齐 */}
                       <div className="text-right">
-                        <span className="text-sm font-bold tabular-nums" style={{ color: matchColor(c.match) }}>
+                        <span className="text-2xl font-bold tabular-nums" style={{ color: matchColor(c.match) }}>
                           {c.match ?? '—'}
                         </span>
                       </div>
@@ -429,7 +429,7 @@ export default function TalentSearch() {
                       {/* 展开指示 */}
                       <div className="flex justify-end">
                         <ChevronDown
-                          className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                          className={`h-6 w-6 transition-transform ${expanded ? 'rotate-180' : ''}`}
                           style={{ color: 'var(--color-on-surface-variant)' }}
                         />
                       </div>
@@ -446,29 +446,29 @@ export default function TalentSearch() {
                           className="overflow-hidden border-b"
                           style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
                         >
-                          <div className="px-4 py-4 grid grid-cols-3 gap-6">
+                          <div className="px-8 py-7 grid grid-cols-3 gap-10">
                             {/* 三维度匹配分数 — 紧凑横排 */}
                             <div>
-                              <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>匹配维度</p>
-                              <div className="space-y-2.5">
+                              <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>匹配维度</p>
+                              <div className="space-y-4">
                                 {[
                                   { label: '技能', val: c.match_breakdown.skill, color: 'var(--color-primary)' },
                                   { label: '经验', val: c.match_breakdown.exp, color: 'var(--accent-purple)' },
                                   { label: '薪资', val: c.match_breakdown.salary, color: 'var(--accent-green)' },
                                 ].map(item => (
                                   <div key={item.label} className="flex items-center gap-3">
-                                    <span className="text-xs w-8" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
-                                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+                                    <span className="text-base w-12" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
+                                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
                                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${item.val ?? 0}%`, background: item.color }} />
                                     </div>
-                                    <span className="text-xs font-semibold tabular-nums w-8 text-right" style={{ color: item.color }}>
+                                    <span className="text-base font-semibold tabular-nums w-12 text-right" style={{ color: item.color }}>
                                       {item.val ?? '—'}
                                     </span>
                                   </div>
                                 ))}
                               </div>
                               {c.match === null && (
-                                <p className="text-[11px] mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+                                <p className="text-sm mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>
                                   匹配引擎尚未计算，点击右上角"重新匹配"
                                 </p>
                               )}
@@ -476,33 +476,33 @@ export default function TalentSearch() {
 
                             {/* 全部技能 */}
                             <div>
-                              <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>
+                              <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>
                                 技能 ({c.skills.length})
                               </p>
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-2">
                                 {c.skills.map(s => (
-                                  <span key={s} className="text-xs px-2 py-1 rounded"
+                                  <span key={s} className="text-sm px-2.5 py-1 rounded"
                                     style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
                                     {s}
                                   </span>
                                 ))}
                                 {c.skills.length === 0 && (
-                                  <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>未提供</span>
+                                  <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>未提供</span>
                                 )}
                               </div>
                             </div>
 
                             {/* 操作 */}
                             <div>
-                              <p className="text-[11px] uppercase tracking-wider mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>操作</p>
-                              <div className="flex flex-col gap-2 items-start">
+                              <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>操作</p>
+                              <div className="flex flex-col gap-3 items-start">
                                 <button
-                                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-xs font-medium"
+                                  className="inline-flex items-center gap-2 h-11 px-5 rounded-lg text-base font-medium"
                                   style={{ border: '1px solid var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
                                 >
-                                  <Mail className="h-3.5 w-3.5" /> 发起沟通
+                                  <Mail className="h-5 w-5" /> 发起沟通
                                 </button>
-                                <p className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
+                                <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
                                   状态：{c.match_status === 'accepted' ? '已接受' : c.match_status === 'rejected' ? '已拒绝' : '待沟通'}
                                 </p>
                               </div>
