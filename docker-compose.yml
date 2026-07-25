@@ -3,14 +3,16 @@ services:
     image: mysql:8.0
     container_name: xingtu-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: xingtu123
+      # 生产环境强密码（本地 Navicat 连接用）
+      MYSQL_ROOT_PASSWORD: Xingtu123
       MYSQL_DATABASE: xingtu
+    # 端口映射：宿主机 3307 → 容器 3306，让本地 Navicat 可以连接云服务器 MySQL
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pxingtu123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pXingtu123"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -25,8 +27,9 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql+pymysql://root:xingtu123@mysql:3306/xingtu
-      JWT_SECRET: xingtu-secret-key-2026
+      # Docker 内部走容器名 mysql:3306（不是宿主机 3307）
+      DATABASE_URL: mysql+pymysql://root:Xingtu123@mysql:3306/xingtu
+      JWT_SECRET: xingtu-prod-secret-key-2026-very-long-and-random
     restart: unless-stopped
 
   frontend:

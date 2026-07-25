@@ -6,6 +6,8 @@
 第三层 calc_miss_priority():      缺失技能优先级 + reason（建议 #4）
 
 赛题硬指标：JD解析/简历提取/人岗匹配 ≥90%
+
+@owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 
 from __future__ import annotations

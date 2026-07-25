@@ -1,5 +1,7 @@
 """
 学习资源映射：技能 → 真实学习资源链接
+
+@owner: 佳豪（求职端"我的"）
 """
 
 SKILL_RESOURCES: dict[str, list[dict]] = {

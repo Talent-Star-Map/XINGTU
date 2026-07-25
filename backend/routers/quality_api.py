@@ -1,12 +1,18 @@
+"""数据质量 API — 管理员鉴权 + 质检报告 + 准确率测试
+
+@owner: 佳豪（幻觉防控质检）
+"""
 from fastapi import APIRouter, Query, Depends, HTTPException
-from quality_checker import full_quality_report, cross_validate, detect_plagiarism, detect_inflation
-from jobs import SEED_JOBS
+# services 跨目录引用
+from services.quality_checker import full_quality_report, cross_validate, detect_plagiarism, detect_inflation
+from routers.jobs import SEED_JOBS
 from database import verify_token
 import json, os, tempfile
 
 def _load_jobs():
     """加载扩展数据集（含抄袭/通胀样本），否则用种子数据"""
-    expanded = os.path.join(os.path.dirname(__file__), 'test_data', 'expanded_jobs.json')
+    # test_data 目录在 backend/ 根，需向上跳一层
+    expanded = os.path.join(os.path.dirname(__file__), '..', 'test_data', 'expanded_jobs.json')
     if os.path.exists(expanded):
         with open(expanded, 'r', encoding='utf-8') as f:
             return json.load(f)
