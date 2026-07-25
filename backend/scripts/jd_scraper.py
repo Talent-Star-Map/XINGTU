@@ -7,13 +7,16 @@ JD爬虫 — 从招聘网站采集真实岗位数据用于标注和测试
   python jd_scraper.py sample 100 # 用内置模板生成 100 条模拟 JD
 
 输出：test_data/scraped_jds.json
+
+@owner: 静怡、议桓（多源异构数据采集）
 """
 
 import requests
 import json, os, time, re, random
 from datetime import datetime
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+# test_data 目录在 backend/ 根，需向上跳一层
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'test_data')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 HEADERS = {
