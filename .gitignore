@@ -20,6 +20,7 @@ build/
 # SQL 备份文件（mysqldump 产物）
 *.sql
 !docs/*.sql
+!backend/sql/*.sql
 
 # IDE
 .vscode/
