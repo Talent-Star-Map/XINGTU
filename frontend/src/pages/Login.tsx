@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Star, ArrowLeft, Loader2, Eye, EyeOff, Shield } from 'lucide-react'
 
 interface Props { onLogin: (role: 'jobseeker' | 'enterprise' | 'admin') => void }
+
+// 记住登录凭据的 localStorage key（按角色分别存储，互不干扰）
+const STORAGE_KEY = 'xingtu_saved_login'
 
 export default function Login({ onLogin }: Props) {
   const { role } = useParams()
@@ -16,6 +19,22 @@ export default function Login({ onLogin }: Props) {
   const [error, setError] = useState('')
   const [cd, setCd] = useState(0)
   const [showPwd, setShowPwd] = useState(false)
+  // 默认勾选"记住我"：登录成功后把账号密码存 localStorage，下次访问自动填充
+  const [remember, setRemember] = useState(true)
+
+  // 初始化：从 localStorage 读取该角色上次保存的账号密码
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw)
+        if (saved.role === userRole && saved.account) {
+          setAccount(saved.account)
+          if (saved.password) setPassword(saved.password)
+        }
+      }
+    } catch {}
+  }, [userRole])
 
   const sendCode = async () => {
     if (!account) return setError('请输入邮箱或手机号')
@@ -48,12 +67,30 @@ export default function Login({ onLogin }: Props) {
         setError(''); setMode('login')
         return
       }
+      // 登录成功：根据"记住我"决定是否保存账号密码到 localStorage
+      // 保存后下次访问登录页会自动填充，不用重复输入
+      if (remember) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          role: userRole, account, password, savedAt: Date.now()
+        }))
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
       localStorage.setItem('xingtu_token', d.data.token)
       localStorage.setItem('xingtu_role', d.data.role)
       localStorage.setItem('xingtu_user', JSON.stringify(d.data))
       onLogin(d.data.role)
     } catch { setError('网络错误') }
     finally { setLoading(false) }
+  }
+
+  // 回车键提交：在任意输入框按 Enter 都触发 submit
+  // 注册模式下需额外校验验证码已填，登录模式直接提交
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      submit()
+    }
   }
 
   // 管理员端主题色：绿色（区别于求职者青色、企业紫色）
@@ -85,13 +122,13 @@ export default function Login({ onLogin }: Props) {
           <div className="space-y-3.5">
             <div>
               <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>邮箱 {userRole !== 'admin' && '/ 手机号'}</label>
-              <input value={account} onChange={e=>setAccount(e.target.value)} placeholder={userRole==='admin'?'请输入管理员邮箱':'请输入邮箱或手机号'}
+              <input value={account} onChange={e=>setAccount(e.target.value)} onKeyDown={handleKeyDown} placeholder={userRole==='admin'?'请输入管理员邮箱':'请输入邮箱或手机号'}
                 className="w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
             </div>
             {mode==='register'&&userRole!=='admin'&&<div>
               <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>验证码</label>
               <div className="flex gap-2">
-                <input value={code} onChange={e=>setCode(e.target.value)} placeholder="输入验证码"
+                <input value={code} onChange={e=>setCode(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入验证码"
                   className="flex-1 rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
                 <button onClick={sendCode} disabled={loading||cd>0} className="shrink-0 px-4 rounded-lg text-xs font-semibold disabled:opacity-50" style={{background:'var(--color-primary)',color:'var(--color-on-primary)'}}>
                   {cd>0?`${cd}s`:'获取'}
@@ -101,13 +138,21 @@ export default function Login({ onLogin }: Props) {
             <div>
               <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>密码</label>
               <div className="relative">
-                <input value={password} onChange={e=>setPassword(e.target.value)} type={showPwd?'text':'password'} placeholder="请输入密码"
+                <input value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={handleKeyDown} type={showPwd?'text':'password'} placeholder="请输入密码"
                   className="w-full rounded-lg border px-3.5 py-2.5 pr-10 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
                 <button type="button" onClick={()=>setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--color-on-surface-variant)'}}>
                   {showPwd ? <Eye className="h-4.5 w-4.5" /> : <EyeOff className="h-4.5 w-4.5" />}
                 </button>
               </div>
             </div>
+            {/* 记住我：勾选后登录成功会把账号密码存 localStorage，下次自动填充 */}
+            {mode==='login' && (
+              <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{color:'var(--color-on-surface-variant)'}}>
+                <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded" style={{accentColor:'var(--color-primary)'}} />
+                记住账号密码（下次自动填充）
+              </label>
+            )}
             <button onClick={submit} disabled={loading}
               className="w-full rounded-lg py-2.5 text-sm font-semibold disabled:opacity-60"
               style={{background:`linear-gradient(135deg, ${accentColor}, var(--accent-purple))`,color:'var(--color-on-primary)'}}>

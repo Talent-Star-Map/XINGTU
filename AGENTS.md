@@ -36,13 +36,24 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 **SMTP credentials are hardcoded.** `backend/auth.py:9` has QQ SMTP credentials in plaintext. Don't commit new secrets — follow this pattern only for dev, and flag it in reviews.
 
-**Jobs data is seeded in code.** `backend/jobs.py` has `SEED_JOBS` — a hardcoded list of 15 jobs (read-only seed for the quality/jobs endpoints). The quality API can optionally load from `backend/test_data/expanded_jobs.json` if it exists. Note: `SEED_JOBS` is **not** the same as the `jobs` DB table — the DB `jobs` table (see `database.py::Job`) holds enterprise-published positions for the enterprise-side TalentSearch/JobManage/Dashboard flows, seeded by `backend/mock_data/seed.py`.
+**Jobs data is seeded in code.** `backend/jobs.py` has `SEED_JOBS` — a hardcoded list of 15 jobs (read-only seed for the quality/jobs endpoints). The quality API can optionally load from `backend/test_data/expanded_jobs.json` if it exists. Note: `SEED_JOBS` is **not** the same as the `jobs` DB table — the DB `jobs` table (see `database.py::CrawledJob`) holds crawler-aggregated market jobs/articles (爬虫整合主表), and `enterprise_jobs` (see `database.py::Job`) holds enterprise-published positions for the enterprise-side TalentSearch/JobManage/Dashboard flows, seeded by `backend/sql/seed.sql`.
+
+**Two jobs tables — DO NOT confuse.** `database.py` has TWO job-related models:
+- `CrawledJob` (`__tablename__='jobs'`) — 爬虫整合主表，31 列，按 `docs/字段汇总.md` 设计。求职者端浏览市场岗位/文章用，由同事部署的爬虫服务写入，本地通过 `seed_jobs.sql` 灌 15 条种子数据。
+- `Job` (`__tablename__='enterprise_jobs'`) — 企业端发布岗位表，14 列。企业端 TalentSearch/JobManage/Dashboard 用，由 `seed.sql` 灌 10 条测试数据。
+- 命名上刻意区分（`jobs` vs `enterprise_jobs`）避免表名冲突，前端/后端引用时务必看准是哪个表。
 
 **DB models for enterprise talent search.** `database.py` defines `Job` (enterprise_id, title, salary_min/max, skills_required, status...) and `MatchRecord` (job_id, jobseeker_id, match_score, skill_match, exp_match, salary_match, status...). `match_score` and the three dimension scores are `nullable=True` — they are populated by `match_engine.run_match_batch()`; until then they stay NULL and the frontend must render "暂无匹配数据". Do NOT mock fake scores in seed data.
 
 **Matching engine.** `backend/match_engine.py` computes 3-dimensional scores (skill coverage 0.6 / experience range 0.25 / salary overlap 0.15) and upserts to `match_records`. Triggered by `POST /api/enterprise/run-match` (button on TalentSearch top-right). **Skill-gate filter**: pairs with no skill overlap are skipped (no match_records row created). Each batch run deletes `status='pending'` records first (preserving accepted/rejected), then recomputes — so re-running is safe.
 
-**Admin model & quality API auth.** `database.py` defines `Admin` (email, username, password). Seed a default admin via `cd backend && python -m mock_data.seed_admin` (default `admin@xingtu.com / Admin1234`, idempotent). Admin login is `POST /api/auth/admin/login` — separate from jobseeker/enterprise login, no verification code, no registration. **All `/api/quality/*` endpoints require admin JWT** (`?token=...` with role=admin); frontend `QualityDashboard.tsx` injects token via `withToken()` helper. Quality feature lives in admin端 only — removed from JobseekerShell and EnterpriseShell.
+**Admin model & quality API auth.** `database.py` defines `Admin` (email, username, password). Seed a default admin by running `backend/sql/seed_admin.sql` in Navicat (default `admin@xingtu.com / Admin1234`, idempotent via `ON DUPLICATE KEY UPDATE`). Admin login is `POST /api/auth/admin/login` — separate from jobseeker/enterprise login, no verification code, no registration. **All `/api/quality/*` endpoints require admin JWT** (`?token=...` with role=admin); frontend `QualityDashboard.tsx` injects token via `withToken()` helper. Quality feature lives in admin端 only — removed from JobseekerShell and EnterpriseShell.
+
+**Test users (jobseeker + enterprise).** Seed test users by running `backend/sql/seed_users.sql` in Navicat (idempotent):
+- 求职者：`xing@test.com / Xing123`（用户名 `Xing`）
+- 企业端：`tu@test.com / Tu123`（用户名 `Tu`，关联"星图科技有限公司"）
+- 密码用 bcrypt(salt_rounds=12) 预计算后写入 SQL，后端 `auth.py` 用 `bcrypt.checkpw` 校验，完全兼容
+- 重置密码命令：`python -c "import bcrypt; print(bcrypt.hashpw('新密码'.encode(), bcrypt.gensalt()).decode())"`
 
 **AdminShell frontend.** `components/AdminShell.tsx` mirrors the EnterpriseShell/JobseekerShell state-driven pattern (not react-router Route). Login entry is a low-key button at the bottom of `RoleSelect.tsx`. Admin theme color is green (vs jobseeker cyan / enterprise purple).
 
@@ -80,9 +91,11 @@ XINGTU/
 │   ├── tests/                 # 测试文件
 │   │   ├── test_api_contract.py # API Contract Tests for /api/match/analyze
 │   │   └── test_match.py      # 人岗匹配准确率测试（train/dev/test split）
-│   ├── mock_data/             # Seed scripts (idempotent)
-│   │   ├── seed.py            # 10 test jobseekers + 10 test jobs + 10 preset match_records
-│   │   └── seed_admin.py      # Default admin account (admin@xingtu.com / Admin1234)
+│   ├── sql/                   # SQL 种子脚本（在 Navicat 中执行，幂等）
+│   │   ├── seed_users.sql     # 测试用户：求职者 Xing/Xing123 + 企业端 Tu/Tu123
+│   │   ├── seed_admin.sql     # 默认管理员 admin@xingtu.com / Admin1234
+│   │   ├── seed.sql           # 企业端测试数据：10 求职者 + 10 岗位(enterprise_jobs) + 10 匹配记录
+│   │   └── seed_jobs.sql      # 爬虫主表(jobs) 15 条种子岗位数据
 │   ├── .env                   # 运行配置（数据库+API Key），已提交供团队共享
 │   ├── test_data/             # Seed test data for quality endpoints
 │   └── uploads/               # 用户上传文件（运行时生成，.gitignore 已忽略）
@@ -129,8 +142,10 @@ XINGTU/
 | Start backend (dev) | `cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8081 --reload` |
 | Start frontend (dev) | `cd frontend && npm run dev` |
 | Build frontend | `cd frontend && npm run build` |
-| Seed test data (jobs/jobseekers/matches) | `cd backend && python -m mock_data.seed` |
-| Seed default admin account | `cd backend && python -m mock_data.seed_admin` |
+| Seed test users (Xing/Tu) | 在 Navicat 运行 `backend/sql/seed_users.sql` |
+| Seed default admin account | 在 Navicat 运行 `backend/sql/seed_admin.sql` |
+| Seed enterprise test data (jobseekers/jobs/matches) | 在 Navicat 运行 `backend/sql/seed.sql` |
+| Seed crawled jobs (15 条爬虫主表数据) | 在 Navicat 运行 `backend/sql/seed_jobs.sql` |
 | Run JD scraper (requests) | `cd backend && python -m scripts.jd_scraper boss` |
 | Run JD scraper (Selenium) | `cd backend && python -m scripts.selenium_scraper` |
 

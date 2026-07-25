@@ -1,7 +1,8 @@
 import os, uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, func, Text, DECIMAL
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:xingtu123@localhost:3307/xingtu')
 
@@ -73,8 +74,13 @@ class VerifyCode(Base):
     created_at = Column(DateTime, default=func.now())
 
 class Job(Base):
-    """企业发布的岗位表 — 支撑企业端岗位管理、人才星岗位下拉、仪表盘"""
-    __tablename__ = 'jobs'
+    """企业发布的岗位表 — 支撑企业端岗位管理、人才星岗位下拉、仪表盘
+
+    注意：表名用 enterprise_jobs（不是 jobs），避免和同事部署的
+    爬虫整合表 `jobs`（含 data_type/source/crawl_time 等字段）冲突。
+    求职者端浏览市场岗位走 jobs 表（爬虫数据），企业端发布岗位走本表。
+    """
+    __tablename__ = 'enterprise_jobs'
     id = Column(Integer, primary_key=True, autoincrement=True)
     enterprise_id = Column(Integer, nullable=False)          # 关联 enterprises.id，谁发布的
     title = Column(String(200), nullable=False)               # 岗位名称，如"AI应用开发工程师"
@@ -90,11 +96,53 @@ class Job(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+class CrawledJob(Base):
+    """爬虫整合主表 — 求职者端浏览市场岗位/文章的核心数据源
+
+    表结构按 docs/字段汇总.md 设计，由同事部署的爬虫服务写入。
+    data_type=1 表示岗位，data_type=2 表示文章。
+    与 enterprise_jobs 区别：
+      - jobs（本表）= 爬虫采集的真实市场岗位/文章，求职者端浏览用
+      - enterprise_jobs = 企业端自己发布的岗位，企业端管理用
+    """
+    __tablename__ = 'jobs'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    data_type = Column(TINYINT, nullable=False, default=1)    # 1=岗位, 2=文章
+    source = Column(String(50))                               # 数据来源（Boss/拉勾/CSDN 等）
+    source_url = Column(String(500))                          # 原始数据链接
+    title = Column(String(300), index=True)                   # 标题（岗位名/文章标题）
+    skill_tags = Column(JSON)                                 # 技能标签（JSON 数组）
+    technology_field = Column(String(100))                    # 技术领域
+    company_name = Column(String(200), index=True)            # 公司名称（文章为 NULL）
+    city = Column(String(100), index=True)                    # 工作城市
+    area = Column(String(100))                                # 工作地区
+    salary_min = Column(Integer)                              # 最低月薪（元）
+    salary_max = Column(Integer)                              # 最高月薪（元）
+    salary_months = Column(Integer)                           # 薪资发放月数
+    education = Column(String(50))                            # 学历要求
+    experience = Column(String(50))                           # 工作经验要求
+    job_type = Column(String(50))                             # 工作类型（全职/实习等）
+    company_type = Column(String(100))                        # 企业性质
+    job_description = Column(LONGTEXT)                        # 岗位描述
+    author = Column(String(100))                              # 作者（文章用）
+    summary = Column(Text)                                    # 文章摘要
+    article_type = Column(String(50))                         # 文章类型
+    quality_score = Column(DECIMAL(5, 2))                     # 内容质量评分
+    hot_score = Column(DECIMAL(8, 2))                         # 综合热度评分
+    trend_score = Column(DECIMAL(8, 2))                       # 趋势评分
+    view_count = Column(Integer, default=0)                   # 阅读量
+    like_count = Column(Integer, default=0)                   # 点赞量
+    collect_count = Column(Integer, default=0)                # 收藏量
+    comment_count = Column(Integer, default=0)                # 评论量
+    publish_time = Column(DateTime)                           # 信息发布时间
+    crawl_time = Column(DateTime)                             # 数据采集时间
+    update_time = Column(DateTime)                            # 数据更新时间
+
 class MatchRecord(Base):
     """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果"""
     __tablename__ = 'match_records'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(Integer, nullable=False)                  # 关联 jobs.id
+    job_id = Column(Integer, nullable=False)                  # 关联 enterprise_jobs.id
     jobseeker_id = Column(Integer, nullable=False)            # 关联 jobseekers.id
     # 匹配度（0-100）。来源为匹配引擎；未计算时为 NULL，前端应标注"暂无匹配数据"
     match_score = Column(Integer, nullable=True)
