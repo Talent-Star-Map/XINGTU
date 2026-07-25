@@ -19,12 +19,17 @@
 用法：
   python test_match.py                # 跑完整测试
   python test_match.py --verbose      # 输出 test split 明细
+
+@owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 
 import json, os, sys, random, math
 from collections import defaultdict
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+# 测试文件在 backend/tests/ 下，test_data 在 backend/ 根，需向上跳一层
+BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BACKEND_ROOT)
+TEST_DATA_DIR = os.path.join(BACKEND_ROOT, 'test_data')
 TRAIN_DEV_TEST_SPLIT = {"train": 0.7, "dev": 0.1, "test": 0.2}
 RANDOM_SEED = 42
 
@@ -36,7 +41,8 @@ def load_test_data():
 
     if not os.path.exists(jd_path) or not os.path.exists(ans_path):
         print('未找到测试数据，正在用内置模板生成 100 条 JD...')
-        from jd_scraper import generate_sample_jds
+        # jd_scraper 已迁移到 scripts/ 子目录
+        from scripts.jd_scraper import generate_sample_jds
         jds = generate_sample_jds(100)
         answers = [{'id': j['id'], 'title': j['title'], 'skills': j['skills']} for j in jds]
         os.makedirs(TEST_DATA_DIR, exist_ok=True)

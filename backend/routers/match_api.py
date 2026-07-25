@@ -7,6 +7,8 @@ GET  /api/match/recommend    ←→ 推荐岗位（同步版，≤20 岗位）
 DELETE /api/match/cache      ←→ 删除用户所有匹配缓存 + 简历缓存（建议 #8）
 
 建议 #5：异步版 endpoint 预留 task_id / 轮询接口（TODO）
+
+@owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 
 from fastapi import APIRouter, Query, HTTPException
@@ -16,14 +18,17 @@ import os, json, glob, hashlib
 from collections import defaultdict
 
 from database import get_session, get_user_model_by_role
-from jobs import SEED_JOBS
-from match_analyzer import compute_match_score, extract_profile_features, SCORE_VERSION
-from quality_checker import cross_validate
+# 跨模块引用：routers/services 已分目录
+from routers.jobs import SEED_JOBS
+from services.match_analyzer import compute_match_score, extract_profile_features, SCORE_VERSION
+from services.quality_checker import cross_validate
 
 router = APIRouter(prefix='/api/match', tags=['match'])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
-MATCH_CACHE_DIR = os.path.join(os.path.dirname(__file__), 'match_cache')
+# uploads 目录在 backend/ 根，不在 routers/，需向上跳一层
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+# match_cache 目录在 backend/ 根，需向上跳一层
+MATCH_CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'match_cache')
 os.makedirs(MATCH_CACHE_DIR, exist_ok=True)
 
 

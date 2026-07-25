@@ -6,12 +6,15 @@ Selenium 浏览器自动化 JD 采集
   pip install selenium
   下载 ChromeDriver 或用 webdriver-manager 自动管理
   python selenium_scraper.py
+
+@owner: 静怡、议桓（多源异构数据采集）
 """
 
 import json, os, time, random, re
 from datetime import datetime
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+# test_data 目录在 backend/ 根，需向上跳一层
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'test_data')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 try:
