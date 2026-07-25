@@ -1,4 +1,7 @@
-"""公开企业名片接口 — 求职端可查看"""
+"""公开企业名片接口 — 求职端可查看
+
+@owner: 佳豪（企业端企业信息）
+"""
 
 from fastapi import APIRouter, Query, HTTPException
 from database import get_session, Enterprise

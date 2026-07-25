@@ -6,13 +6,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import init_db
-from auth import router as auth_router
-from jobs import router as jobs_router
-from company import router as company_router
-from quality_api import router as quality_router
-from enterprise import router as enterprise_router
-from match_api import router as match_router
-from chat_api import router as chat_router
+# 路由模块已迁移到 routers/ 子目录，import 路径需带前缀
+from routers.auth import router as auth_router
+from routers.jobs import router as jobs_router
+from routers.company import router as company_router
+from routers.quality_api import router as quality_router
+from routers.enterprise import router as enterprise_router
+from routers.match_api import router as match_router
+from routers.chat_api import router as chat_router
 import os
 
 @asynccontextmanager

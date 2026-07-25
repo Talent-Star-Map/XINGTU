@@ -1,4 +1,7 @@
-"""岗位数据 + 按技能查询 + 企业统计"""
+"""岗位数据 + 按技能查询 + 企业统计
+
+@owner: 静怡、议桓（多源异构数据采集+求职端岗位界面+企业端行业报告）
+"""
 
 from fastapi import APIRouter, Query, HTTPException
 

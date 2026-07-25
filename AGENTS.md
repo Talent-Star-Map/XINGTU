@@ -56,29 +56,36 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 ```
 XINGTU/
-├── backend/           # FastAPI app (Python 3.12)
-│   ├── main.py        # App entrypoint, mounts routers + /uploads static mount
-│   ├── auth.py        # /api/auth — register, login, profile, resume CRUD; /api/auth/admin/login
-│   ├── jobs.py        # /api/jobs — seeded job data + stats (SEED_JOBS, 15 hardcoded)
-│   ├── company.py     # /api/company — public enterprise profiles
-│   ├── enterprise.py  # /api/enterprise — talent search, job CRUD, dashboard, run-match
-│   ├── match_engine.py # 3-dimensional matching engine (skill/exp/salary) → match_records
-│   ├── quality_api.py # /api/quality — data quality reports + accuracy tests (admin-only, require_admin dep)
-│   ├── database.py    # SQLAlchemy models: Jobseeker, Enterprise, Admin, VerifyCode, Job, MatchRecord + JWT helpers
-│   ├── match_api.py        # /api/match — 人岗匹配分析接口
-│   ├── match_analyzer.py   # 多维度匹配算法：技能50%/经验20%/学历15%/薪资15%
-│   ├── skill_synonyms.py   # 技能同义词映射表
-│   ├── chat_api.py         # /api/chat — 图图 AI 问答（LongCat API, Anthropic 格式）
-│   ├── learning_path.py    # 技能→学习资源链接映射
-│   ├── resume_parser.py    # 简历解析：PDF/Word → 技能提取 + 同义词归一化
-│   ├── quality_checker.py  # Data quality analysis (plagiarism, inflation, cross-validation)
-│   ├── jd_scraper.py       # JD scraping from Boss/拉勾 (requests-based CLI tool)
-│   ├── selenium_scraper.py # JD scraping via Selenium headless Chrome (alt to jd_scraper)
-│   ├── mock_data/          # Seed scripts (idempotent)
-│   │   ├── seed.py         # 10 test jobseekers + 10 test jobs + 10 preset match_records
-│   │   └── seed_admin.py   # Default admin account (admin@xingtu.com / Admin1234)
-│   ├── .env                # 运行配置（数据库+API Key），已提交供团队共享
-│   └── test_data/          # Seed test data for quality endpoints
+├── backend/                   # FastAPI app (Python 3.12)
+│   ├── main.py                # App entrypoint, mounts routers + /uploads static mount
+│   ├── database.py            # SQLAlchemy models: Jobseeker, Enterprise, Admin, VerifyCode, Job, MatchRecord + JWT helpers
+│   ├── routers/               # FastAPI 路由层（7 个 router 模块）
+│   │   ├── auth.py            # /api/auth — register, login, profile, resume CRUD; /api/auth/admin/login
+│   │   ├── jobs.py            # /api/jobs — seeded job data + stats (SEED_JOBS, 15 hardcoded)
+│   │   ├── company.py         # /api/company — public enterprise profiles
+│   │   ├── enterprise.py      # /api/enterprise — talent search, job CRUD, dashboard, run-match
+│   │   ├── match_api.py       # /api/match — 人岗匹配分析接口
+│   │   ├── quality_api.py     # /api/quality — data quality reports + accuracy tests (admin-only, require_admin dep)
+│   │   └── chat_api.py        # /api/chat — 图图 AI 问答（LongCat API, Anthropic 格式）
+│   ├── services/              # 业务逻辑层（无 router，被 routers 调用）
+│   │   ├── match_engine.py    # 3-dimensional matching engine (skill/exp/salary) → match_records
+│   │   ├── match_analyzer.py  # 多维度匹配算法：技能50%/经验20%/学历15%/薪资15%
+│   │   ├── skill_synonyms.py  # 技能同义词映射表
+│   │   ├── resume_parser.py   # 简历解析：PDF/Word → 技能提取 + 同义词归一化
+│   │   ├── quality_checker.py # Data quality analysis (plagiarism, inflation, cross-validation)
+│   │   └── learning_path.py   # 技能→学习资源链接映射
+│   ├── scripts/               # 独立运行的 CLI 脚本（不被业务代码 import）
+│   │   ├── jd_scraper.py      # JD scraping from Boss/拉勾 (requests-based CLI tool)
+│   │   └── selenium_scraper.py # JD scraping via Selenium headless Chrome (alt to jd_scraper)
+│   ├── tests/                 # 测试文件
+│   │   ├── test_api_contract.py # API Contract Tests for /api/match/analyze
+│   │   └── test_match.py      # 人岗匹配准确率测试（train/dev/test split）
+│   ├── mock_data/             # Seed scripts (idempotent)
+│   │   ├── seed.py            # 10 test jobseekers + 10 test jobs + 10 preset match_records
+│   │   └── seed_admin.py      # Default admin account (admin@xingtu.com / Admin1234)
+│   ├── .env                   # 运行配置（数据库+API Key），已提交供团队共享
+│   ├── test_data/             # Seed test data for quality endpoints
+│   └── uploads/               # 用户上传文件（运行时生成，.gitignore 已忽略）
 ├── frontend/          # React 19 + Vite 5 + TypeScript
 │   ├── src/
 │   │   ├── App.tsx    # Router: role-based shell (JobseekerShell / EnterpriseShell / AdminShell)
@@ -103,6 +110,16 @@ XINGTU/
 └── docker-compose.yml # mysql + api + frontend services
 ```
 
+### backend 目录结构说明（2026-07-25 重构）
+
+- **routers/** — FastAPI 路由层，每个文件定义一个 `router = APIRouter(...)`，被 `main.py` 通过 `from routers.xxx import router` 引入
+- **services/** — 业务逻辑层，无 router，被 routers 跨目录引用（`from services.xxx import ...`）
+- **scripts/** — 独立 CLI 脚本（爬虫），不被业务代码 import，单独运行
+- **tests/** — 测试文件，`sys.path` 在文件内自动指向 `backend/` 根
+- **根目录只保留** `main.py` + `database.py`（被所有人 import）+ 配置文件
+
+每个 py 文件顶部 docstring 里有 `@owner` 注释标明负责人（基于 [docs/00-分工基本信息.md](docs/00-分工基本信息.md)）。
+
 ## Key commands
 
 | Task | Command |
@@ -114,8 +131,8 @@ XINGTU/
 | Build frontend | `cd frontend && npm run build` |
 | Seed test data (jobs/jobseekers/matches) | `cd backend && python -m mock_data.seed` |
 | Seed default admin account | `cd backend && python -m mock_data.seed_admin` |
-| Run JD scraper (requests) | `cd backend && python jd_scraper.py boss` |
-| Run JD scraper (Selenium) | `cd backend && python selenium_scraper.py` |
+| Run JD scraper (requests) | `cd backend && python -m scripts.jd_scraper boss` |
+| Run JD scraper (Selenium) | `cd backend && python -m scripts.selenium_scraper` |
 
 ## Conventions
 

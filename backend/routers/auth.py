@@ -1,3 +1,7 @@
+"""认证路由 — 注册/登录/简历 CRUD/管理员登录
+
+@owner: 佳豪（求职端"我的"+企业端企业信息+幻觉防控）
+"""
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode

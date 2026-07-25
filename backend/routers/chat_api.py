@@ -3,6 +3,8 @@
 
 POST /api/chat          ←→ 图图聊天接口（支持诊断上下文）
 POST /api/chat/resources ←→ 根据技能列表获取学习资源
+
+@owner: 佳豪（幻觉防控）
 """
 
 from fastapi import APIRouter, HTTPException
@@ -10,7 +12,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import os, json, httpx
-from learning_path import get_resources
+# services 模块已迁移到 services/ 子目录
+from services.learning_path import get_resources
 
 router = APIRouter(prefix='/api', tags=['chat'])
 
