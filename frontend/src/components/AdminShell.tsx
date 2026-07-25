@@ -1,24 +1,41 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Star, LogOut, Sun, Moon, Menu, X } from 'lucide-react'
+import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import QualityDashboard from '../pages/enterprise/QualityDashboard'
+import AdminUserManage from '../pages/admin/AdminUserManage'
+import AdminJobManage from '../pages/admin/AdminJobManage'
 
-// 管理员端目前只有"质检"一个功能模块（质检已从求职端/企业端移除，统一归管理员监管）
-type Page = 'quality'
+// 管理员端功能模块：
+//   quality    — 质检（已有，质检已从求职端/企业端移除，统一归管理员监管）
+//   jobseekers — 求职者管理（列表/创建/删除/重置密码）
+//   enterprises— 企业管理（列表/创建/删除/重置密码）
+//   jobs       — 职位管理（列表/删除）
+type Page = 'quality' | 'jobseekers' | 'enterprises' | 'jobs'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
+  { key: 'jobseekers', icon: Users, label: '求职者' },
+  { key: 'enterprises', icon: Building2, label: '企业' },
+  { key: 'jobs', icon: Briefcase, label: '职位' },
   { key: 'quality', icon: Shield, label: '质检' },
 ]
 
+// 用包装组件给 AdminUserManage 传 role prop（pages 表要求无参组件）
+const JobseekerManagePage = () => <AdminUserManage role="jobseeker" />
+const EnterpriseManagePage = () => <AdminUserManage role="enterprise" />
+
 const pages: Record<Page, () => JSX.Element> = {
+  jobseekers: JobseekerManagePage,
+  enterprises: EnterpriseManagePage,
+  jobs: AdminJobManage,
   quality: QualityDashboard,
 }
 
 interface Props { onLogout: () => void }
 
 export default function AdminShell({ onLogout }: Props) {
-  const [page, setPage] = useState<Page>('quality')
+  // 默认进入"求职者管理"，让管理员第一时间看到后台主功能
+  const [page, setPage] = useState<Page>('jobseekers')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()

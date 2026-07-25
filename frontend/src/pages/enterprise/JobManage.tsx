@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit3, Eye, Loader2, X, Trash2, Power } from 'lucide-react'
+import { Plus, Edit3, Eye, Loader2, X, Trash2, Power, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // 岗位类型 — 字段来自后端 /api/enterprise/jobs
@@ -218,129 +218,182 @@ export default function JobManage() {
     }
   }
 
-  return (
-    <div className="space-y-6 px-6 py-8 max-w-[1400px] mx-auto">
-      {/* 标题 + 发布按钮 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--color-on-surface)' }}>岗位管理</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>管理企业发布的岗位，查看候选人匹配情况</p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}
-        >
-          <Plus className="h-4 w-4" /> 发布新岗位
-        </button>
-      </div>
+  // 统计各状态岗位数 — 用于顶部过滤 tab 上的 badge
+  const counts = {
+    all: jobs.length,
+    active: jobs.filter(j => j.status === 'active').length,
+    draft: jobs.filter(j => j.status === 'draft').length,
+    closed: jobs.filter(j => j.status === 'closed').length,
+  }
 
-      {/* 状态过滤 */}
-      <div className="flex gap-2">
-        {FILTERS.map(f => (
+  return (
+    <div className="h-full flex flex-col">
+      {/* ── 顶部工具栏 ── */}
+      <header className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+        <div className="px-14 py-7 flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>岗位</h1>
+            <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{counts.all}</span>
+          </div>
           <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            onClick={openCreate}
+            className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium transition-colors"
             style={{
-              background: filter === f.key ? 'var(--color-primary)' : 'var(--color-surface-container-lowest)',
-              color: filter === f.key ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)',
-              border: `1px solid ${filter === f.key ? 'var(--color-primary)' : 'var(--color-outline-variant)'}`,
+              background: 'var(--color-primary)',
+              color: 'var(--color-on-primary)'
             }}
           >
-            {f.label}
+            <Plus className="h-5 w-5" /> 发布新岗位
           </button>
-        ))}
+        </div>
+      </header>
+
+      {/* ── 状态过滤 tab ── */}
+      <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+        <div className="px-14 py-5 flex items-center gap-1.5">
+          {FILTERS.map(f => {
+            const cnt = f.key === '' ? counts.all : (counts as any)[f.key]
+            const active = filter === f.key
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className="flex items-center gap-2 h-11 px-5 rounded-lg text-base font-medium transition-colors"
+                style={{
+                  background: active ? 'var(--color-surface-container-high)' : 'transparent',
+                  color: active ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'
+                }}
+              >
+                {f.label}
+                <span className="tabular-nums" style={{ opacity: 0.6 }}>{cnt}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* 错误提示 */}
+      {/* ── 错误提示 ── */}
       {error && (
-        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
-          {error}
+        <div className="px-14 pt-6">
+          <div className="rounded-lg border px-5 py-4 text-base" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
+            {error}
+          </div>
         </div>
       )}
 
-      {/* 岗位列表 */}
-      <div className="space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-16 gap-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">加载岗位中...</span>
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="text-center py-16 text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-            暂无岗位，点击右上角"发布新岗位"创建
-          </div>
-        ) : (
-          jobs.map(job => {
-            const st = STATUS_MAP[job.status] || STATUS_MAP['active']
-            const skills = job.skills_required.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5)
-            return (
-              <div key={job.id} className="rounded-xl border p-4" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</h3>
-                      <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                        {job.location} · {job.salary_range} · {job.experience}
-                      </p>
+      {/* ── 岗位列表 — 行布局 ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-14 py-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-28 gap-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-lg">加载中</span>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="text-center py-28">
+              <p className="text-lg" style={{ color: 'var(--color-on-surface-variant)' }}>暂无岗位</p>
+              <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.6 }}>
+                点击右上角"发布新岗位"创建
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
+              {/* 列表头 */}
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_140px_220px] gap-8 px-8 py-4 text-sm uppercase tracking-wider border-b"
+                style={{ color: 'var(--color-on-surface-variant)', borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
+                <span>岗位</span>
+                <span>城市</span>
+                <span>薪资</span>
+                <span>经验</span>
+                <span className="text-right">候选人</span>
+                <span className="text-right">操作</span>
+              </div>
+
+              {/* 行 */}
+              {jobs.map((job, i) => {
+                const st = STATUS_MAP[job.status] || STATUS_MAP['active']
+                const skills = job.skills_required.split(',').map(s => s.trim()).filter(Boolean).slice(0, 4)
+                const hiddenSkillCount = job.skills_required.split(',').map(s => s.trim()).filter(Boolean).length - skills.length
+                return (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: Math.min(i * 0.02, 0.2) }}
+                    className="grid grid-cols-[2fr_1fr_1fr_1fr_140px_220px] gap-8 px-8 py-5 items-center border-b last:border-b-0 transition-colors hover:bg-[var(--color-surface-container-low)]"
+                    style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}
+                  >
+                    {/* 岗位名 + 状态标签 + 技能 */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <span className="text-lg font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
+                        <span className="text-sm px-2 py-0.5 rounded shrink-0" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                      </div>
+                      {skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          {skills.map(s => (
+                            <span key={s} className="text-sm px-2.5 py-1 rounded"
+                              style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                              {s}
+                            </span>
+                          ))}
+                          {hiddenSkillCount > 0 && (
+                            <span className="text-sm tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>+{hiddenSkillCount}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{job.candidates} 位候选人</span>
-                    <div className="flex items-center gap-1">
-                      {/* 查看详情 */}
+
+                    {/* 城市 */}
+                    <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{job.location || '—'}</span>
+
+                    {/* 薪资 */}
+                    <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{job.salary_range || '—'}</span>
+
+                    {/* 经验 */}
+                    <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{job.experience || '—'}</span>
+
+                    {/* 候选人数 — 右对齐，数字 */}
+                    <div className="text-right">
+                      <span className="text-xl font-semibold tabular-nums" style={{ color: 'var(--color-on-surface)' }}>{job.candidates}</span>
+                    </div>
+
+                    {/* 操作 — 行内图标按钮，悬停高亮 */}
+                    <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => openView(job)}
                         title="查看详情"
-                        className="rounded-lg border p-1.5 transition-colors hover:bg-[var(--color-surface)]"
-                        style={{ borderColor: 'var(--color-outline-variant)' }}
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
                       >
-                        <Eye className="h-3.5 w-3.5" style={{ color: 'var(--color-on-surface-variant)' }} />
+                        <Eye className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
-                      {/* 编辑 */}
                       <button
                         onClick={() => openEdit(job)}
                         title="编辑"
-                        className="rounded-lg border p-1.5 transition-colors hover:bg-[var(--color-surface)]"
-                        style={{ borderColor: 'var(--color-outline-variant)' }}
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
                       >
-                        <Edit3 className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
+                        <Edit3 className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
-                      {/* 关闭/重新开放 */}
                       <button
                         onClick={() => toggleStatus(job)}
                         title={job.status === 'active' ? '关闭岗位' : '重新开放'}
-                        className="rounded-lg border p-1.5 transition-colors hover:bg-[var(--color-surface)]"
-                        style={{ borderColor: 'var(--color-outline-variant)' }}
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
                       >
-                        <Power className="h-3.5 w-3.5" style={{ color: job.status === 'active' ? 'var(--accent-orange)' : 'var(--accent-green)' }} />
+                        <Power className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
-                      {/* 删除 */}
                       <button
                         onClick={() => setConfirmDelete(job)}
                         title="删除"
-                        className="rounded-lg border p-1.5 transition-colors hover:bg-[var(--color-surface)]"
-                        style={{ borderColor: 'var(--color-outline-variant)' }}
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
                       >
-                        <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--accent-red-strong)' }} />
+                        <Trash2 className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                     </div>
-                  </div>
-                </div>
-                {/* 技能要求标签 */}
-                {skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {skills.map(s => (
-                      <span key={s} className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })
-        )}
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Toast 消息提示 ── */}
@@ -350,8 +403,8 @@ export default function JobManage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm shadow-lg z-50"
-            style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 px-5 py-3 rounded-lg text-base shadow-lg z-50"
+            style={{ background: 'var(--color-on-surface)', color: 'var(--color-surface)' }}
           >
             {toast}
           </motion.div>
@@ -362,7 +415,7 @@ export default function JobManage() {
       <AnimatePresence>
         {viewing && (
           <Modal onClose={() => setViewing(null)} title="岗位详情">
-            <div className="space-y-4">
+            <div className="space-y-5">
               <Field label="岗位名称" value={viewing.title} />
               <Field label="工作城市" value={viewing.location || '—'} />
               <Field label="薪资范围" value={viewing.salary_range || `${viewing.salary_min || '?'}K-${viewing.salary_max || '?'}K`} />
@@ -373,17 +426,17 @@ export default function JobManage() {
               <Field label="创建时间" value={viewing.created_at} />
               <Field label="更新时间" value={viewing.updated_at} />
               <div>
-                <p className="text-xs mb-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>技能要求</p>
-                <div className="flex flex-wrap gap-1.5">
+                <p className="text-sm mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>技能要求</p>
+                <div className="flex flex-wrap gap-2">
                   {viewing.skills_required.split(',').map(s => s.trim()).filter(Boolean).map(s => (
-                    <span key={s} className="text-xs px-2 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
+                    <span key={s} className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
                   ))}
                 </div>
               </div>
               {viewing.description && (
                 <div>
-                  <p className="text-xs mb-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>岗位描述</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--color-on-surface)' }}>{viewing.description}</p>
+                  <p className="text-sm mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>岗位描述</p>
+                  <p className="text-base leading-relaxed" style={{ color: 'var(--color-on-surface)' }}>{viewing.description}</p>
                 </div>
               )}
             </div>
@@ -395,7 +448,7 @@ export default function JobManage() {
       <AnimatePresence>
         {editorOpen && (
           <Modal onClose={() => setEditorOpen(false)} title={editingId ? '编辑岗位' : '发布新岗位'}>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <FormField label="岗位名称" required>
                 <input
                   value={form.title}
@@ -404,7 +457,7 @@ export default function JobManage() {
                   className="form-input"
                 />
               </FormField>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField label="工作城市">
                   <input
                     value={form.location}
@@ -422,7 +475,7 @@ export default function JobManage() {
                   />
                 </FormField>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 <FormField label="薪资下限(K)">
                   <input
                     type="number"
@@ -450,7 +503,7 @@ export default function JobManage() {
                   />
                 </FormField>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField label="经验要求">
                   <input
                     value={form.experience}
@@ -489,10 +542,10 @@ export default function JobManage() {
                 />
               </FormField>
               {/* 操作按钮 */}
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-3">
                 <button
                   onClick={() => setEditorOpen(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium border"
+                  className="px-5 py-2.5 rounded-lg text-base font-medium border"
                   style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}
                 >
                   取消
@@ -500,10 +553,10 @@ export default function JobManage() {
                 <button
                   onClick={submitForm}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-lg text-base font-semibold disabled:opacity-60 flex items-center gap-2"
                   style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
                 >
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingId ? '保存修改' : '发布岗位'}
                 </button>
               </div>
@@ -516,23 +569,23 @@ export default function JobManage() {
       <AnimatePresence>
         {confirmDelete && (
           <Modal onClose={() => setConfirmDelete(null)} title="确认删除">
-            <p className="text-sm" style={{ color: 'var(--color-on-surface)' }}>
+            <p className="text-base" style={{ color: 'var(--color-on-surface)' }}>
               确定要删除岗位「<span style={{ color: 'var(--accent-red)' }}>{confirmDelete.title}</span>」吗？
             </p>
-            <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+            <p className="text-sm mt-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
               删除后将同时清理该岗位的 {confirmDelete.candidates} 条匹配记录，操作不可撤销。
             </p>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-3 pt-5">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 rounded-lg text-sm font-medium border"
+                className="px-5 py-2.5 rounded-lg text-base font-medium border"
                 style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}
               >
                 取消
               </button>
               <button
                 onClick={confirmDeleteJob}
-                className="px-4 py-2 rounded-lg text-sm font-semibold"
+                className="px-5 py-2.5 rounded-lg text-base font-semibold"
                 style={{ background: 'var(--accent-red-strong)', color: 'var(--color-on-primary)' }}
               >
                 确认删除
@@ -542,16 +595,16 @@ export default function JobManage() {
         )}
       </AnimatePresence>
 
-      {/* ── 表单输入框统一样式（内联 style 不生效 textarea/select，靠 className） ── */}
+      {/* ── 表单输入框统一样式 ── */}
       <style>{`
         .form-input {
           width: 100%;
-          padding: 8px 12px;
+          padding: 10px 14px;
           border-radius: 8px;
           border: 1px solid var(--color-outline-variant);
           background: var(--color-surface);
           color: var(--color-on-surface);
-          font-size: 13px;
+          font-size: 14px;
           outline: none;
           transition: border-color 0.2s;
         }
@@ -579,18 +632,18 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="rounded-2xl border w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        className="rounded-2xl border w-full max-w-xl max-h-[85vh] overflow-y-auto"
         style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
       >
         {/* 弹窗头部 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-          <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--color-surface-container)]">
-            <X className="h-4 w-4" style={{ color: 'var(--color-on-surface-variant)' }} />
+        <div className="flex items-center justify-between px-6 py-5 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--color-on-surface)' }}>{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-container)]">
+            <X className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
           </button>
         </div>
         {/* 弹窗内容 */}
-        <div className="p-5">{children}</div>
+        <div className="p-6">{children}</div>
       </motion.div>
     </motion.div>
   )
@@ -600,8 +653,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</span>
-      <span className="text-sm font-medium" style={{ color: 'var(--color-on-surface)' }}>{value}</span>
+      <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</span>
+      <span className="text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>{value}</span>
     </div>
   )
 }
@@ -610,7 +663,7 @@ function Field({ label, value }: { label: string; value: string }) {
 function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs mb-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+      <label className="block text-sm mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>
         {label}{required && <span style={{ color: 'var(--accent-red-strong)' }}> *</span>}
       </label>
       {children}

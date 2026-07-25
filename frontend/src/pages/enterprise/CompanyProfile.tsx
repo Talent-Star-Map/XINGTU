@@ -1,22 +1,25 @@
 import { useEffect, useState, useRef } from 'react'
 import {
-  Building, Loader2, Edit3, Mail, Phone, Globe, Users, Tag, MapPin,
-  Save, CheckCircle, AlertCircle, X, Camera, Star, Award, Shield, ExternalLink, ShieldCheck, ShieldAlert, ShieldOff,
-  Briefcase,
+  Building, Loader2, Edit3, Mail, Globe, Users, Tag, MapPin,
+  Save, CheckCircle, AlertCircle, X, Camera, Award, ExternalLink, ShieldCheck, ShieldOff,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { EPNav } from '../../lib/NavContext'
 
+// ── 工具函数 ──
 function df(val: string | null | undefined, fb = '未填写'): string { return val?.trim() || fb }
 function hasVal(val: any): boolean { return val != null && val !== '' && val.toString().trim() ? true : false }
 
+// 必填字段校验
 const requiredFields = ['company_name', 'industry', 'company_size', 'company_desc']
 const industryOpts = ['人工智能', '互联网/电商', '企业服务/SaaS', '金融科技', '教育培训', '医疗健康', '硬件/芯片', '游戏', '汽车/出行', '其他']
+const sizeOpts = ['少于15人', '15-50人', '50-150人', '150-500人', '500-2000人', '2000人以上']
 
-// 认证等级信息：使用主题变量，在亮/暗两种主题下自动适配
+// 认证等级 — 单一 accent 色表达状态
 const verifyInfo = [
-  { level: 0, icon: ShieldOff, label: '未认证', desc: '完善企业信息后可申请官网认证', color: 'var(--color-on-surface-variant)', bg: 'var(--color-neutral-dim)' },
-  { level: 1, icon: ShieldCheck, label: '官网已验证', desc: '已通过企业官网真实性核验', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
-  { level: 2, icon: Award, label: '三方认证', desc: '已通过企查查/天眼查工商数据认证', color: 'var(--accent-green)', bg: 'var(--accent-green-dim)' },
+  { level: 0, icon: ShieldOff, label: '未认证', desc: '完善企业信息后可申请官网认证' },
+  { level: 1, icon: ShieldCheck, label: '官网已验证', desc: '已通过企业官网真实性核验' },
+  { level: 2, icon: Award, label: '三方认证', desc: '已通过企查查/天眼查工商数据认证' },
 ]
 
 export default function CompanyProfile() {
@@ -48,7 +51,7 @@ export default function CompanyProfile() {
     if (!name) return
     fetch(`/api/jobs/stats?company=${encodeURIComponent(name)}`).then(r => r.json()).then(d => {
       if (d.success) setStats(d.data)
-    }).catch(() => {})
+    }).catch(() => { })
   }
 
   const openModal = () => {
@@ -64,15 +67,19 @@ export default function CompanyProfile() {
 
   const handleVerify = async (level: number) => {
     if (level === 1) {
-      // 官网认证：检查网站是否填写
       const site = p.company_website?.trim()
       if (!site) { alert('请先在编辑企业信息中填写公司官网'); return }
-      // 简单的自动验证：检查网站是否可访问痕迹（前端层面标记）
-      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verified: 1 }) })
+      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified: 1 })
+      })
       fetchProfile()
     } else if (level === 2) {
       if (p.verified < 1) { alert('请先完成官网验证'); return }
-      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verified: 2 }) })
+      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified: 2 })
+      })
       fetchProfile()
     }
   }
@@ -83,7 +90,10 @@ export default function CompanyProfile() {
     const token = localStorage.getItem('xingtu_token')
     if (!token) return
     setSaving(true); setSaved(false); setErrors([])
-    const r = await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const r = await fetch(`/api/auth/profile?token=${token}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    })
     const d = await r.json()
     if (d.success) { setSaved(true); fetchProfile(); setTimeout(() => setModal(false), 800) }
     setSaving(false); setTimeout(() => setSaved(false), 3000)
@@ -97,14 +107,22 @@ export default function CompanyProfile() {
     const r = await fetch(`/api/auth/avatar?token=${token}`, { method: 'POST', body: fd })
     const d = await r.json()
     if (d.success) {
-      await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company_logo: d.data.url }) })
+      await fetch(`/api/auth/profile?token=${token}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_logo: d.data.url })
+      })
       fetchProfile()
     }
     setLogoUploading(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--accent-purple)' }} /></div>
-  if (!p) return <div className="text-center py-12" style={{ color: 'var(--color-on-surface-variant)' }}>请先登录</div>
+  if (loading) return (
+    <div className="flex items-center justify-center h-full gap-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-base">加载中</span>
+    </div>
+  )
+  if (!p) return <div className="text-center py-24 text-base" style={{ color: 'var(--color-on-surface-variant)' }}>请先登录</div>
 
   const currentVerify = verifyInfo.find(v => v.level === (p.verified || 0)) || verifyInfo[0]
   const VIcon = currentVerify.icon
@@ -113,319 +131,386 @@ export default function CompanyProfile() {
   const qichachaUrl = p.company_name ? `https://www.qcc.com/web/search?key=${encodeURIComponent(p.company_name)}` : '#'
   const tianyanchaUrl = p.company_name ? `https://www.tianyancha.com/search?key=${encodeURIComponent(p.company_name)}` : '#'
 
-  const editStyle = (k: string) => ({
-    borderColor: hasVal(form[k]) ? 'var(--color-outline-variant)' : 'var(--color-outline)',
-    background: hasVal(form[k]) ? 'var(--color-surface)' : 'var(--color-surface-container-low)',
-    color: hasVal(form[k]) ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-  })
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid var(--color-outline-variant)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-on-surface)',
+    fontSize: '14px',
+    outline: 'none',
+  }
+
+  // 岗位统计 — 行布局而非卡片
+  const statsList = stats && stats.total > 0 ? [
+    { label: '在招', val: stats.active, clickable: true },
+    { label: '已关闭', val: stats.closed },
+    { label: '草稿', val: stats.draft },
+    { label: '总计', val: stats.total, clickable: true },
+  ] : []
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-      {/* 空状态 */}
-      {pct < 50 && (
-        <div className="rounded-2xl border p-5 flex items-center justify-between" style={{ borderColor: 'var(--accent-purple)', background: 'var(--accent-purple-dim)' }}>
+    <div className="h-full overflow-y-auto">
+      <div className="px-14 py-12 space-y-12">
+        {/* ── 顶部工具栏 ── */}
+        <header className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--accent-purple)' }}>完善企业信息，提升企业可信度与曝光率</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>完整的企业资料能让求职者更信赖你的公司，认证后获得专属标识</p>
+            <h1 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>企业信息</h1>
+            <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+              资料完整度 {pct}% · {filledCount}/{requiredFields.length} 项必填
+            </p>
           </div>
-          <button onClick={openModal} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold shrink-0" style={{ background: 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
-            <Edit3 className="h-3.5 w-3.5" /> 完善资料
+          <button
+            onClick={openModal}
+            className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium transition-colors"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
+          >
+            <Edit3 className="h-5 w-5" /> 编辑信息
           </button>
-        </div>
-      )}
+        </header>
 
-      {/* 公司头部 */}
-      <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-        <div className="flex items-start gap-6 flex-wrap">
+        {/* ── 完整度提示条（仅 < 50% 时显示）── */}
+        {pct < 50 && (
+          <div className="rounded-lg border px-6 py-5 flex items-center justify-between" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
+            <p className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>
+              完善企业信息可提升可信度与曝光率
+            </p>
+            <button onClick={openModal} className="text-base font-medium" style={{ color: 'var(--color-primary)' }}>
+              立即完善 →
+            </button>
+          </div>
+        )}
+
+        {/* ── 公司头部 — 列布局，无大卡片 ── */}
+        <section className="flex items-start gap-10 pb-10 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+          {/* Logo + 上传 */}
           <div className="relative shrink-0 group">
-            <div className="w-28 h-28 rounded-xl overflow-hidden border-2 shadow-sm flex items-center justify-center" style={{ borderColor: p.verified >= 1 ? 'var(--color-primary)' : 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
+            <div className="w-28 h-28 rounded-lg overflow-hidden border flex items-center justify-center"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
               {p.company_logo ? (
                 <img src={p.company_logo.startsWith('http') ? p.company_logo : `http://localhost:8083${p.company_logo}`} alt="" className="w-full h-full object-cover" />
               ) : (
                 <Building className="h-12 w-12" style={{ color: 'var(--color-on-surface-variant)' }} />
               )}
             </div>
-            <button onClick={() => logoRef.current?.click()} disabled={logoUploading} className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => logoRef.current?.click()}
+              disabled={logoUploading}
+              className="absolute inset-0 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: 'rgba(0,0,0,0.4)' }}
+            >
               {logoUploading ? <Loader2 className="h-6 w-6 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
             </button>
             <input ref={logoRef} type="file" accept="image/*" onChange={uploadLogo} hidden />
           </div>
+
+          {/* 公司名称 + 认证 + 标签 */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between flex-wrap gap-3">
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-black" style={{ color: 'var(--color-on-surface)' }}>{df(p.company_name, '未命名企业')}</h2>
-                  {/* 认证标识 */}
-                  <span className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-semibold border" style={{ background: currentVerify.bg, color: currentVerify.color, borderColor: currentVerify.color }}>
-                    <VIcon className="h-3.5 w-3.5" /> {currentVerify.label}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {p.industry && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: 'var(--accent-purple-dim)', color: 'var(--accent-purple)' }}>{p.industry}</span>}
-                  {p.company_size && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{p.company_size}</span>}
-                </div>
-                {p.company_website && <div className="flex items-center gap-1.5 mt-2 text-sm"><Globe className="h-4 w-4" style={{ color: 'var(--color-on-surface-variant)' }} /><a href={p.company_website} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--color-primary)' }}>{p.company_website}</a></div>}
-              </div>
-              <button onClick={openModal} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--accent-purple))', color: 'var(--color-on-primary)' }}>
-                <Edit3 className="h-4 w-4" /> 编辑企业信息
-              </button>
+            <div className="flex items-center gap-3 flex-wrap mb-4">
+              <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>
+                {df(p.company_name, '未命名企业')}
+              </h2>
+              <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded font-medium"
+                style={{
+                  background: p.verified > 0 ? 'var(--color-primary-fixed)' : 'var(--color-surface-container-high)',
+                  color: p.verified > 0 ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
+                }}>
+                <VIcon className="h-4 w-4" /> {currentVerify.label}
+              </span>
             </div>
-            <div className="mt-5 max-w-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>资料完整度</span>
-                <span className="text-xs font-bold" style={{ color: pct >= 75 ? 'var(--accent-green)' : 'var(--accent-orange)' }}>{pct}%</span>
+            <div className="flex flex-wrap items-center gap-2.5 mb-4">
+              {p.industry && (
+                <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                  {p.industry}
+                </span>
+              )}
+              {p.company_size && (
+                <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                  {p.company_size}
+                </span>
+              )}
+            </div>
+            {p.company_website && (
+              <div className="flex items-center gap-2.5 text-base">
+                <Globe className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+                <a href={p.company_website} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--color-primary)' }}>
+                  {p.company_website}
+                </a>
               </div>
-              <div className="h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct >= 75 ? 'var(--accent-green)' : 'var(--accent-orange)' }} />
+            )}
+          </div>
+        </section>
+
+        {/* ── 岗位统计 — 行布局 ── */}
+        {statsList.length > 0 && (
+          <section>
+            <h3 className="text-base font-medium uppercase tracking-wider mb-6" style={{ color: 'var(--color-on-surface-variant)' }}>岗位统计</h3>
+            <div className="grid grid-cols-4 border-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
+              {statsList.map((s, i) => (
+                <div
+                  key={s.label}
+                  onClick={() => s.clickable && setPage('jobs')}
+                  className={`py-7 px-3 ${i < 3 ? 'border-r' : ''} ${s.clickable ? 'cursor-pointer hover:bg-[var(--color-surface-container-low)]' : ''} transition-colors`}
+                  style={{ borderColor: 'var(--color-outline-variant)' }}
+                >
+                  <p className="text-4xl font-semibold tabular-nums" style={{ color: 'var(--color-on-surface)' }}>{s.val}</p>
+                  <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── 双栏：基本信息 + 认证/福利 ── */}
+        <section className="grid grid-cols-3 gap-12">
+          {/* 左栏：公司简介 + 基本信息 */}
+          <div className="col-span-2 space-y-12">
+            {/* 公司简介 */}
+            <div>
+              <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>公司简介</h3>
+              {hasVal(p.company_desc) ? (
+                <p className="text-lg leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-on-surface)' }}>{p.company_desc}</p>
+              ) : (
+                <p className="text-base italic" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  点击右上角"编辑信息"添加公司简介
+                </p>
+              )}
+            </div>
+
+            {/* 基本信息 — 列对齐 */}
+            <div>
+              <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>基本信息</h3>
+              <div className="space-y-4">
+                <InfoRow icon={Building} label="公司名称" value={p.company_name} />
+                <InfoRow icon={Tag} label="所属行业" value={p.industry} />
+                <InfoRow icon={Users} label="公司规模" value={p.company_size} />
+                <InfoRow icon={Globe} label="公司官网" value={p.company_website} link />
+                <InfoRow icon={Mail} label="联系邮箱" value={p.email} />
+                <InfoRow icon={MapPin} label="所在城市" value={p.city || p.target_city} />
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* 岗位统计 */}
-      {stats && stats.total > 0 && (
-        <div className="grid grid-cols-4 gap-4">
-          <StatCard label="在招岗位" value={stats.active} color="var(--accent-green)" onClick={() => setPage('jobs')} />
-          <StatCard label="已关闭" value={stats.closed} color="var(--color-on-surface-variant)" />
-          <StatCard label="草稿" value={stats.draft} color="var(--accent-orange)" />
-          <StatCard label="总岗位数" value={stats.total} color="var(--accent-purple)" onClick={() => setPage('jobs')} />
-        </div>
-      )}
-
-      {/* 两栏布局 */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* 左栏：简介 + 基本信息 */}
-        <div className="col-span-2 space-y-6">
-          <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-black" style={{ color: 'var(--color-on-surface)' }}>公司简介</h3>
-              <button onClick={openModal} className="p-1.5 rounded-lg transition-colors" title="编辑"
-                style={{ color: 'var(--color-on-surface-variant)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--accent-purple)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
-                <Edit3 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {hasVal(p.company_desc) ? (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-on-surface)' }}>{p.company_desc}</p>
-            ) : (
-              <p className="text-sm italic" style={{ color: 'var(--color-on-surface-variant)' }}>点击 <button onClick={openModal} className="underline cursor-pointer" style={{ color: 'var(--accent-purple)' }}>编辑企业信息</button> 介绍公司业务</p>
-            )}
-          </section>
-
-          <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <h3 className="text-lg font-black mb-5" style={{ color: 'var(--color-on-surface)' }}>基本信息</h3>
-            <div className="space-y-3">
-              <InfoRow icon={Building} label="公司名称" value={p.company_name} />
-              <InfoRow icon={Tag} label="所属行业" value={p.industry} />
-              <InfoRow icon={Users} label="公司规模" value={p.company_size} />
-              <InfoRow icon={Globe} label="公司官网" value={p.company_website} link />
-              <InfoRow icon={Mail} label="联系邮箱" value={p.email} />
-              <InfoRow icon={MapPin} label="所在城市" value={p.city || p.target_city} />
-            </div>
-          </section>
-        </div>
-
-        {/* 右栏：认证 + 福利 */}
-        <div className="space-y-6">
-          {/* 企业认证 */}
-          <section className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <h3 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-              <Shield className="h-4 w-4" style={{ color: 'var(--accent-purple)' }} /> 企业认证
-            </h3>
-
-            {/* 当前状态 */}
-            <div className="rounded-xl p-4 mb-4 text-center" style={{ background: currentVerify.bg }}>
-              <VIcon className="h-8 w-8 mx-auto mb-2" style={{ color: currentVerify.color }} />
-              <p className="text-sm font-bold" style={{ color: currentVerify.color }}>{currentVerify.label}</p>
-              <p className="text-xs mt-1" style={{ color: currentVerify.color, opacity: 0.7 }}>{currentVerify.desc}</p>
-            </div>
-
-            {/* 认证操作 */}
-            <div className="space-y-2">
-              <button onClick={() => handleVerify(1)}
-                disabled={p.verified >= 1}
-                className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all border disabled:opacity-40"
-                style={{
-                  borderColor: p.verified >= 1 ? 'var(--accent-green)' : 'var(--color-outline-variant)',
-                  color: p.verified >= 1 ? 'var(--accent-green)' : 'var(--color-on-surface)',
-                  background: p.verified >= 1 ? 'var(--accent-green-dim)' : 'var(--color-surface)',
-                }}>
-                <span className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  官网认证
-                </span>
-                {p.verified >= 1 ? <CheckCircle className="h-4 w-4" /> : <span className="text-xs" style={{ color: 'var(--color-primary)' }}>去认证</span>}
-              </button>
-
-              <button onClick={() => handleVerify(2)}
-                disabled={p.verified >= 2}
-                className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all border disabled:opacity-40"
-                style={{
-                  borderColor: p.verified >= 2 ? 'var(--accent-green)' : 'var(--color-outline-variant)',
-                  color: p.verified >= 2 ? 'var(--accent-green)' : 'var(--color-on-surface)',
-                  background: p.verified >= 2 ? 'var(--accent-green-dim)' : 'var(--color-surface)',
-                }}>
-                <span className="flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  三方认证
-                </span>
-                {p.verified >= 2 ? <CheckCircle className="h-4 w-4" /> : <span className="text-xs" style={{ color: 'var(--color-primary)' }}>去认证</span>}
-              </button>
-            </div>
-
-            {/* 第三方查询入口 */}
-            {p.company_name && (
-              <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                <p className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>第三方工商信息查询</p>
-                <a href={qichachaUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-colors"
-                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)', background: 'var(--color-surface)' }}>
-                  <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> 企查查查询</span>
-                  <span style={{ color: 'var(--color-primary)' }}>{p.company_name}</span>
-                </a>
-                <a href={tianyanchaUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-colors"
-                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)', background: 'var(--color-surface)' }}>
-                  <span className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> 天眼查查询</span>
-                  <span style={{ color: 'var(--color-primary)' }}>{p.company_name}</span>
-                </a>
+          {/* 右栏：认证 + 福利 */}
+          <div className="space-y-12">
+            {/* 企业认证 */}
+            <div>
+              <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>企业认证</h3>
+              {/* 当前状态 — 极简展示 */}
+              <div className="flex items-center gap-3.5 mb-6 pb-5 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                <VIcon className="h-6 w-6" style={{ color: p.verified > 0 ? 'var(--color-primary)' : 'var(--color-on-surface-variant)' }} />
+                <div>
+                  <p className="text-lg font-medium" style={{ color: 'var(--color-on-surface)' }}>{currentVerify.label}</p>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>{currentVerify.desc}</p>
+                </div>
               </div>
-            )}
-          </section>
-
-          {/* 公司福利 */}
-          <section className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>公司福利</h3>
-              <button onClick={openModal} className="p-1 rounded-lg transition-colors" title="编辑"
-                style={{ color: 'var(--color-on-surface-variant)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--accent-purple)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
-                <Edit3 className="h-3 w-3" />
-              </button>
+              {/* 认证操作 */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleVerify(1)}
+                  disabled={p.verified >= 1}
+                  className="flex items-center justify-between w-full px-5 py-3 rounded-md text-base font-medium border disabled:opacity-50 transition-colors hover:bg-[var(--color-surface-container-low)]"
+                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}
+                >
+                  <span className="flex items-center gap-2.5"><Globe className="h-5 w-5" /> 官网认证</span>
+                  {p.verified >= 1
+                    ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                    : <span style={{ color: 'var(--color-primary)' }}>去认证</span>}
+                </button>
+                <button
+                  onClick={() => handleVerify(2)}
+                  disabled={p.verified >= 2}
+                  className="flex items-center justify-between w-full px-5 py-3 rounded-md text-base font-medium border disabled:opacity-50 transition-colors hover:bg-[var(--color-surface-container-low)]"
+                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}
+                >
+                  <span className="flex items-center gap-2.5"><Award className="h-5 w-5" /> 三方认证</span>
+                  {p.verified >= 2
+                    ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                    : <span style={{ color: 'var(--color-primary)' }}>去认证</span>}
+                </button>
+              </div>
+              {/* 第三方查询入口 */}
+              {p.company_name && (
+                <div className="mt-5 pt-5 border-t space-y-2" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                  <a href={qichachaUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-between w-full px-4 py-2.5 rounded-md text-sm transition-colors hover:bg-[var(--color-surface-container-low)]"
+                    style={{ color: 'var(--color-on-surface-variant)' }}>
+                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 企查查</span>
+                    <span>{p.company_name}</span>
+                  </a>
+                  <a href={tianyanchaUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-between w-full px-4 py-2.5 rounded-md text-sm transition-colors hover:bg-[var(--color-surface-container-low)]"
+                    style={{ color: 'var(--color-on-surface-variant)' }}>
+                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 天眼查</span>
+                    <span>{p.company_name}</span>
+                  </a>
+                </div>
+              )}
             </div>
-            {p.company_benefits?.trim() ? (
-              <div className="flex flex-wrap gap-2">
-                {p.company_benefits.split(/[,，、]/).filter(Boolean).map((b: string) => (
-                  <span key={b} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: 'var(--accent-purple-dim)', color: 'var(--accent-purple)' }}>{b.trim()}</span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <Star className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--color-on-surface-variant)' }} />
-                <p className="text-xs italic" style={{ color: 'var(--color-on-surface-variant)' }}>点击编辑添加五险一金、双休等福利</p>
-              </div>
-            )}
-          </section>
-        </div>
+
+            {/* 公司福利 */}
+            <div>
+              <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>公司福利</h3>
+              {p.company_benefits?.trim() ? (
+                <div className="flex flex-wrap gap-2.5">
+                  {p.company_benefits.split(/[,，、]/).filter(Boolean).map((b: string) => (
+                    <span key={b} className="px-3 py-1.5 rounded text-base font-medium"
+                      style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                      {b.trim()}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base italic" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  点击"编辑信息"添加福利标签
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* ═══ 编辑弹窗 ═══ */}
-      {modal && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[5vh] pb-10 px-4 overflow-y-auto" style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
-          <div className="rounded-2xl border w-full max-w-2xl" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-              <div>
-                <h2 className="text-lg font-bold" style={{ color: 'var(--color-on-surface)' }}>编辑企业信息</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}><span style={{ color: 'var(--accent-red)' }}>*</span> 为必填项</p>
-              </div>
-              <button onClick={() => setModal(false)} className="p-2 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }}><X className="h-5 w-5" /></button>
-            </div>
-            <div className="px-8 py-6 space-y-5 max-h-[65vh] overflow-y-auto">
+      <AnimatePresence>
+        {modal && (
+          <Modal onClose={() => setModal(false)} title="编辑企业信息">
+            <div className="space-y-5">
               {errors.length > 0 && (
-                <div className="flex items-center gap-3 rounded-xl border p-4" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
+                <div className="flex items-center gap-2.5 rounded-lg border px-4 py-3" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)' }}>
                   <AlertCircle className="h-5 w-5 shrink-0" style={{ color: 'var(--accent-red)' }} />
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--accent-red)' }}>请填写以下必填项：</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                      {errors.map(k => ({ company_name: '公司名称', industry: '所属行业', company_size: '公司规模', company_desc: '公司简介' })[k] || k).join('、')}
-                    </p>
-                  </div>
+                  <p className="text-sm" style={{ color: 'var(--accent-red)' }}>
+                    请填写必填项：{errors.map(k => ({ company_name: '公司名称', industry: '所属行业', company_size: '公司规模', company_desc: '公司简介' })[k] || k).join('、')}
+                  </p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-x-5 gap-y-3.5">
-                <div>
-                  <label className="text-xs font-medium mb-1.5 flex items-center gap-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <Building className="h-3.5 w-3.5" />公司名称 <span style={{ color: 'var(--accent-red)' }}>*</span>
-                  </label>
-                  <input value={form.company_name || ''} onChange={e => h('company_name', e.target.value)} placeholder="如：字节跳动" className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={editStyle('company_name')} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 flex items-center gap-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <Tag className="h-3.5 w-3.5" />所属行业 <span style={{ color: 'var(--accent-red)' }}>*</span>
-                  </label>
-                  <select value={form.industry || ''} onChange={e => h('industry', e.target.value)} className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={editStyle('industry')}>
-                    <option value="" disabled style={{ color: 'var(--color-on-surface-variant)' }}>请选择行业</option>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="公司名称" required>
+                  <input value={form.company_name || ''} onChange={e => h('company_name', e.target.value)} placeholder="如：字节跳动" className="form-input" />
+                </FormField>
+                <FormField label="所属行业" required>
+                  <select value={form.industry || ''} onChange={e => h('industry', e.target.value)} className="form-input">
+                    <option value="" disabled>请选择行业</option>
                     {industryOpts.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 flex items-center gap-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <Users className="h-3.5 w-3.5" />公司规模 <span style={{ color: 'var(--accent-red)' }}>*</span>
-                  </label>
-                  <select value={form.company_size || ''} onChange={e => h('company_size', e.target.value)} className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={editStyle('company_size')}>
+                </FormField>
+                <FormField label="公司规模" required>
+                  <select value={form.company_size || ''} onChange={e => h('company_size', e.target.value)} className="form-input">
                     <option value="" disabled>请选择规模</option>
-                    {['少于15人','15-50人','50-150人','150-500人','500-2000人','2000人以上'].map(o => <option key={o} value={o}>{o}</option>)}
+                    {sizeOpts.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 flex items-center gap-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <Globe className="h-3.5 w-3.5" />公司官网
-                  </label>
-                  <input value={form.company_website || ''} onChange={e => h('company_website', e.target.value)} placeholder="https://www.example.com" className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={editStyle('company_website')} />
-                </div>
+                </FormField>
+                <FormField label="公司官网">
+                  <input value={form.company_website || ''} onChange={e => h('company_website', e.target.value)} placeholder="https://www.example.com" className="form-input" />
+                </FormField>
               </div>
-              <div>
-                <label className="text-xs font-medium mb-1.5 flex items-center gap-1" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  公司简介 <span style={{ color: 'var(--accent-red)' }}>*</span>
-                </label>
-                <textarea value={form.company_desc || ''} onChange={e => h('company_desc', e.target.value)} rows={4} placeholder="介绍公司业务方向、技术栈、团队氛围..." className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none resize-none" style={editStyle('company_desc')} />
-              </div>
-              <div>
-                <label className="text-xs font-medium mb-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>公司福利</label>
-                <input value={form.company_benefits || ''} onChange={e => h('company_benefits', e.target.value)} placeholder="五险一金, 双休, 弹性工作, 年终奖, 餐补（逗号分隔）" className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={editStyle('company_benefits')} />
+
+              <FormField label="公司简介" required>
+                <textarea value={form.company_desc || ''} onChange={e => h('company_desc', e.target.value)} rows={4} placeholder="介绍公司业务方向、技术栈、团队氛围..." className="form-input" />
+              </FormField>
+
+              <FormField label="公司福利（逗号分隔）">
+                <input value={form.company_benefits || ''} onChange={e => h('company_benefits', e.target.value)} placeholder="五险一金, 双休, 弹性工作, 年终奖" className="form-input" />
                 {form.company_benefits?.trim() && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-2.5">
                     {form.company_benefits.split(/[,，、]/).filter(Boolean).map((b: string) => (
-                      <span key={b} className="px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: 'var(--accent-purple-dim)', color: 'var(--accent-purple)' }}>{b.trim()}</span>
+                      <span key={b} className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{b.trim()}</span>
                     ))}
                   </div>
                 )}
+              </FormField>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button onClick={() => setModal(false)} className="px-5 py-2.5 rounded-lg text-base font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>取消</button>
+                <button
+                  onClick={save}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-lg text-base font-semibold disabled:opacity-60 flex items-center gap-2"
+                  style={{ background: saved ? 'var(--accent-green)' : 'var(--color-primary)', color: 'var(--color-on-primary)' }}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                  {saved ? '已保存' : '保存'}
+                </button>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
-              <button onClick={() => setModal(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>取消</button>
-              <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60" style={{ background: saved ? 'var(--accent-green)' : 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}{saved ? '已保存' : '保存'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        .form-input {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1px solid var(--color-outline-variant);
+          background: var(--color-surface);
+          color: var(--color-on-surface);
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .form-input:focus {
+          border-color: var(--color-primary);
+        }
+      `}</style>
     </div>
   )
 }
 
+// ─── 通用弹窗 ───
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'var(--color-scrim)' }}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        onClick={e => e.stopPropagation()}
+        className="rounded-2xl border w-full max-w-2xl max-h-[85vh] overflow-y-auto"
+        style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--color-on-surface)' }}>{title}</h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>
+              <span style={{ color: 'var(--accent-red)' }}>*</span> 为必填项
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-container-high)]">
+            <X className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── 信息行（只读）───
 function InfoRow({ icon: Icon, label, value, link }: { icon: any; label: string; value?: string; link?: boolean }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3.5">
       <Icon className="h-4 w-4 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }} />
-      <span className="text-xs font-medium w-20 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</span>
-      <span className="text-sm" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic', fontWeight: value ? 600 : 400 }}>
+      <span className="text-sm w-24 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</span>
+      <span className="text-base" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic' }}>
         {value ? (link ? <a href={value} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--color-primary)' }}>{value}</a> : value) : '未填写'}
       </span>
     </div>
   )
 }
 
-function StatCard({ label, value, color, onClick }: { label: string; value: number; color: string; onClick?: () => void }) {
+// ─── 表单字段 ───
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div onClick={onClick} className={`rounded-2xl border p-5 text-center ${onClick ? 'cursor-pointer hover:shadow-md' : ''}`}
-      style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-      <p className="text-3xl font-extrabold" style={{ color }}>{value}</p>
-      <p className="text-xs font-semibold mt-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</p>
+    <div>
+      <label className="block text-sm mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+        {label}{required && <span style={{ color: 'var(--accent-red-strong)' }}> *</span>}
+      </label>
+      {children}
     </div>
   )
 }
