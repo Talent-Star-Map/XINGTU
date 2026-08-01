@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Plus, Edit3, Eye, Loader2, X, Trash2, Power, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Edit3, Eye, Loader2, X, Trash2, Power, GitCompare, Users } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { EPNav } from '../../lib/NavContext'
 
 // 岗位类型 — 字段来自后端 /api/enterprise/jobs
 interface JobItem {
@@ -49,11 +50,13 @@ const EMPTY_FORM = {
 }
 
 export default function JobManage() {
+  const { setPage, params } = EPNav.use()
   const [jobs, setJobs] = useState<JobItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
   const [toast, setToast] = useState('')
+  const listRef = useRef<HTMLDivElement>(null)
 
   // 弹窗状态
   const [viewing, setViewing] = useState<JobDetail | null>(null)        // 详情弹窗
@@ -85,6 +88,23 @@ export default function JobManage() {
   }
 
   useEffect(() => { load() }, [filter])
+
+  // 从外部跳转进入时，锚定到指定岗位
+  useEffect(() => {
+    if (params.selectedJobId && jobs.length > 0) {
+      // 延迟等待 DOM 渲染完成
+      setTimeout(() => {
+        const el = document.getElementById(`job-row-${params.selectedJobId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // 高亮闪烁效果
+          el.style.transition = 'background 0.8s'
+          el.style.background = 'var(--color-primary-fixed)'
+          setTimeout(() => { el.style.background = '' }, 1500)
+        }
+      }, 100)
+    }
+  }, [params.selectedJobId, jobs])
 
   // 顶部消息提示（3 秒自动消失）
   const showToast = (msg: string) => {
@@ -317,6 +337,7 @@ export default function JobManage() {
                 return (
                   <motion.div
                     key={job.id}
+                    id={`job-row-${job.id}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     transition={{ delay: Math.min(i * 0.02, 0.2) }}
                     className="grid grid-cols-[2fr_1fr_1fr_1fr_140px_220px] gap-8 px-8 py-5 items-center border-b last:border-b-0 transition-colors hover:bg-[var(--color-surface-container-low)]"
@@ -352,13 +373,34 @@ export default function JobManage() {
                     {/* 经验 */}
                     <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{job.experience || '—'}</span>
 
-                    {/* 候选人数 — 右对齐，数字 */}
+                    {/* 候选人数 — 右对齐，数字，点击跳转人才星 */}
                     <div className="text-right">
-                      <span className="text-xl font-semibold tabular-nums" style={{ color: 'var(--color-on-surface)' }}>{job.candidates}</span>
+                      <button
+                        onClick={() => setPage('talent', { filterJobId: job.id })}
+                        title="查看该岗位候选人"
+                        className="text-xl font-semibold tabular-nums transition-colors hover:text-[var(--color-primary)]"
+                        style={{ color: 'var(--color-on-surface)' }}
+                      >
+                        {job.candidates}
+                      </button>
                     </div>
 
                     {/* 操作 — 行内图标按钮，悬停高亮 */}
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setPage('talent', { filterJobId: job.id })}
+                        title="查看候选人"
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                      >
+                        <Users className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+                      </button>
+                      <button
+                        onClick={() => setPage('talent', { filterJobId: job.id, autoCompare: true })}
+                        title="对比候选人"
+                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                      >
+                        <GitCompare className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+                      </button>
                       <button
                         onClick={() => openView(job)}
                         title="查看详情"

@@ -1,53 +1,79 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
-import { EPNav } from '../lib/NavContext'
+import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
 
-// 企业端导航项 — 图标仅用于扫描，无装饰色
-type Page = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry' | 'company'
+// 企业端导航项
+type Page = EPPage
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'jobs', icon: Briefcase, label: '岗位管理' },
   { key: 'talent', icon: Users, label: '人才星' },
+  { key: 'messages', icon: MessageSquare, label: '消息' },
   { key: 'market', icon: TrendingUp, label: '市场洞察' },
   { key: 'industry', icon: FileText, label: '行业报告' },
-  // 质检已移至管理员端，企业端不再展示
 ]
 
 import EPDashboard from '../pages/enterprise/Dashboard'
 import EPJobs from '../pages/enterprise/JobManage'
 import EPTalent from '../pages/enterprise/TalentSearch'
+import EPMessages from '../pages/enterprise/Conversations'
 import EPMarket from '../pages/enterprise/MarketInsight'
 import EPIndustry from '../pages/enterprise/IndustryReport'
 import EPCompany from '../pages/enterprise/CompanyProfile'
 
 const pages: Record<Page, () => JSX.Element> = {
-  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, market: EPMarket, industry: EPIndustry, company: EPCompany,
+  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
+  market: EPMarket, industry: EPIndustry, company: EPCompany,
 }
 
 interface Props { onLogout: () => void }
 
 export default function EnterpriseShell({ onLogout }: Props) {
-  const [page, setPage] = useState<Page>('dashboard')
+  const [page, setPageState] = useState<Page>('dashboard')
+  const [navParams, setNavParams] = useState<EPNavParams>({})
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  // 未读消息数
+  const [unreadCount, setUnreadCount] = useState(0)
   const { theme, toggle } = useTheme()
+
+  // 带参导航
+  const setPage = (p: Page, params?: EPNavParams) => {
+    setPageState(p)
+    setNavParams(params || {})
+  }
+
   const PageComp = pages[page]
+
+  // 定时轮询未读消息数
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const r = await fetch('/api/enterprise/conversations?size=1')
+        const d = await r.json()
+        if (d.success && d.data) {
+          setUnreadCount(d.data.unread_total || 0)
+        }
+      } catch { /* 忽略 */ }
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000) // 30秒轮询
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* ── 顶部导航 — 极简，单一 accent 色 ── */}
+      {/* ── 顶部导航 ── */}
       <header className="shrink-0 border-b z-50" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
         <div className="flex items-center justify-between h-20 px-14 mx-auto">
           <div className="flex items-center gap-12">
-            {/* 品牌区 — 文字为主，无渐变无旋转 */}
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>星图</span>
               <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
             </div>
-            {/* 桌面导航 — active 用 layoutId 平滑切换，无装饰图标背景 */}
             <nav className="hidden md:flex items-center gap-1.5">
               {navItems.map(item => {
                 const active = page === item.key
@@ -66,13 +92,19 @@ export default function EnterpriseShell({ onLogout }: Props) {
                     )}
                     <item.icon className="h-5 w-5 relative z-10" />
                     <span className="relative z-10 text-base font-medium">{item.label}</span>
+                    {/* 消息未读徽标 */}
+                    {item.key === 'messages' && unreadCount > 0 && (
+                      <span className="relative z-10 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold"
+                        style={{ background: 'var(--accent-red-strong)', color: 'white' }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                 )
               })}
             </nav>
           </div>
 
-          {/* 右侧操作区 — 仅主题切换 + 头像，去掉了通知 Bell（无实际功能） */}
           <div className="flex items-center gap-2">
             <button onClick={toggle} className="p-3 rounded-md transition-colors hover:bg-[var(--color-surface-container-high)]" style={{ color: 'var(--color-on-surface-variant)' }}>
               {theme === 'dark' ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
@@ -122,7 +154,6 @@ export default function EnterpriseShell({ onLogout }: Props) {
           </div>
         </div>
 
-        {/* 移动端导航 */}
         <AnimatePresence>
           {mobileMenu && (
             <motion.div
@@ -141,6 +172,12 @@ export default function EnterpriseShell({ onLogout }: Props) {
                       }}
                     >
                       <item.icon className="h-5 w-5" /> {item.label}
+                      {item.key === 'messages' && unreadCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-xs font-bold"
+                          style={{ background: 'var(--accent-red-strong)', color: 'white' }}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </button>
                   )
                 })}
@@ -152,7 +189,7 @@ export default function EnterpriseShell({ onLogout }: Props) {
 
       {/* ── 主内容区 ── */}
       <main className="flex-1 overflow-y-auto">
-        <EPNav.Provider value={{ setPage, page }}>
+        <EPNav.Provider value={{ setPage, page, params: navParams }}>
           <PageComp />
         </EPNav.Provider>
       </main>

@@ -139,7 +139,12 @@ class CrawledJob(Base):
     update_time = Column(DateTime)                            # 数据更新时间
 
 class MatchRecord(Base):
-    """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果"""
+    """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果
+
+    五维度评分体系（2026-08 升级）:
+        技能(skill) + 经验(exp) + 学历(edu) + 地域(location) + 薪资(salary)
+    旧的三维度字段保留兼容，新增 edu_match / location_match 两列。
+    """
     __tablename__ = 'match_records'
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(Integer, nullable=False)                  # 关联 enterprise_jobs.id
@@ -149,9 +154,26 @@ class MatchRecord(Base):
     skill_match = Column(Integer, nullable=True)              # 技能匹配度（维度1）
     exp_match = Column(Integer, nullable=True)                # 经验匹配度（维度2）
     salary_match = Column(Integer, nullable=True)             # 薪资匹配度（维度3）
+    edu_match = Column(Integer, nullable=True)                # 学历匹配度（维度4 — 新增）
+    location_match = Column(Integer, nullable=True)           # 地域匹配度（维度5 — 新增）
     status = Column(String(20), default='pending')            # pending/accepted/rejected
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+class Message(Base):
+    """沟通消息表 — 企业端"发起沟通"后的对话记录
+
+    企业 HR 与求职者之间的一对一聊天消息。
+    关联 match_records 确定沟通上下文（岗位+候选人）。
+    """
+    __tablename__ = 'messages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    match_record_id = Column(Integer, nullable=False, index=True)  # 关联 match_records.id
+    sender_type = Column(String(20), nullable=False)               # 'enterprise' 或 'jobseeker'
+    sender_id = Column(Integer, nullable=False)                    # 发送者 ID
+    content = Column(String(2000), nullable=False)                 # 消息内容
+    is_read = Column(Integer, default=0)                           # 0=未读, 1=已读
+    created_at = Column(DateTime, default=func.now())
 
 def init_db():
     Base.metadata.create_all(bind=engine)

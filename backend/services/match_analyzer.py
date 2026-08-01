@@ -117,7 +117,7 @@ def compute_match_score(
     profile_set_lower = {s.strip().lower() for s in profile["skills"] if s.strip()}
     jd_set_lower = {s.strip().lower() for s in jd_skills if s.strip()}
 
-    from skill_synonyms import (
+    from services.skill_synonyms import (
         is_synonym, best_match_in_profile, get_skill_popularity,
         has_adjacent_skill,
     )
@@ -249,7 +249,7 @@ def calc_miss_priority(
     priority = f(岗位核心度, JD出现频次, 与已有技能邻近度, 学习成本)
     返回：("high"|"medium"|"low", reason_str)
     """
-    from skill_synonyms import get_skill_popularity, has_adjacent_skill
+    from services.skill_synonyms import get_skill_popularity, has_adjacent_skill
 
     jd_skills = job.get("skills", [])
     idx = next((i for i, s in enumerate(jd_skills) if s == jd_skill), len(jd_skills))
@@ -479,7 +479,7 @@ def _generate_summary(have: list[dict], miss: list[dict], job: dict, overall: fl
 
 def _generate_recommendations(have: list[dict], miss: list[dict], job: dict, quality_context: dict) -> list[str]:
     """按缺失技能优先级生成改进建议（最多 5 条）"""
-    from skill_synonyms import get_skill_popularity
+    from services.skill_synonyms import get_skill_popularity
     try:
         from jobs import SEED_JOBS
         all_jobs = SEED_JOBS
