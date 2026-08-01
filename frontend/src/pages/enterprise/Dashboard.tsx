@@ -79,10 +79,10 @@ export default function Dashboard() {
 
   // 指标 — utility copy，不是营销文案
   const metrics = [
-    { label: '在招职位', value: data.metrics.active_jobs },
-    { label: '匹配候选人', value: data.metrics.total_candidates },
-    { label: '高匹配人才 (≥85)', value: data.metrics.high_match },
-    { label: '待沟通', value: data.metrics.pending_count },
+    { label: '在招职位', value: data.metrics.active_jobs, action: () => setPage('jobs') },
+    { label: '匹配候选人', value: data.metrics.total_candidates, action: () => setPage('talent') },
+    { label: '高匹配人才 (≥85)', value: data.metrics.high_match, action: () => setPage('talent') },
+    { label: '待沟通', value: data.metrics.pending_count, action: () => setPage('talent') },
   ]
 
   // 匹配度分布 — 用于水平条形图
@@ -112,7 +112,8 @@ export default function Dashboard() {
                 key={m.label}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.04 }}
-                className={`py-9 px-3 ${i < 3 ? 'border-r' : ''}`}
+                onClick={m.action}
+                className={`py-9 px-3 ${i < 3 ? 'border-r' : ''} cursor-pointer transition-colors hover:bg-[var(--color-surface-container-low)]`}
                 style={{ borderColor: 'var(--color-outline-variant)' }}
               >
                 <p className="text-base mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>{m.label}</p>
@@ -145,7 +146,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={job.id}
-                      onClick={() => setPage('jobs')}
+                      onClick={() => setPage('jobs', { selectedJobId: job.id })}
                       className="flex items-center justify-between py-5 border-b transition-colors hover:bg-[var(--color-surface-container-low)] cursor-pointer -mx-3 px-3 rounded"
                       style={{ borderColor: 'var(--color-outline-variant)' }}
                     >

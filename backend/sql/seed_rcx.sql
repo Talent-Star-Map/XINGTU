@@ -83,53 +83,70 @@ VALUES
 ((SELECT COALESCE((SELECT id FROM `enterprises` ORDER BY id LIMIT 1), 1)), '[测试]测试开发工程师',     '负责自动化测试框架开发和维护，推动CI/CD流程中的质量保障',     '深圳', 15, 20, '15K-20K', '本科', '1-3年', 'Python,Selenium,JMeter,Pytest,接口测试',         'closed');
 
 -- ============================================================
--- 4. 插入 10 条测试匹配记录
+-- 4. 插入 10 条测试匹配记录（五维度：技能/经验/学历/地域/薪资）
 -- ============================================================
 -- 通过子查询关联：用 email 查 jobseeker_id，用 title 查 job_id
 -- 注意：每条岗位 title 在测试数据中唯一，可以用来关联
 -- 测试分数仅用于联调，后续匹配引擎就绪后会被真实分数覆盖
+--
+-- 五维度分数说明:
+--   skill_match  — 技能匹配度（0-92）
+--   exp_match    — 经验匹配度（0-92）
+--   edu_match    — 学历匹配度（0-92）
+--   location_match — 地域匹配度（0-90）
+--   salary_match — 薪资匹配度（0-92）
 INSERT INTO `match_records`
-(`job_id`, `jobseeker_id`, `match_score`, `skill_match`, `exp_match`, `salary_match`, `status`)
+(`job_id`, `jobseeker_id`, `match_score`, `skill_match`, `exp_match`, `edu_match`, `location_match`, `salary_match`, `status`)
 VALUES
+-- AI应用开发工程师(硕士,北京) ↔ 刘洋(硕士,杭州→北京) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]AI应用开发工程师'   ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js5@test.com'),
- 92, 95, 88, 90, 'accepted'),
+ 90, 92, 90, 88, 90, 85, 'accepted'),
 
+-- 高级前端开发工程师(本科,北京) ↔ 张明(本科,北京→北京) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]高级前端开发工程师' ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js1@test.com'),
- 88, 90, 85, 88, 'pending'),
+ 86, 90, 85, 88, 90, 82, 'pending'),
 
+-- 后端开发工程师(本科,上海) ↔ 李华(硕士,北京→北京) → 学历高一级92, 不同省25
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]后端开发工程师'     ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js2@test.com'),
- 85, 88, 85, 82, 'pending'),
+ 78, 88, 85, 92, 25, 75, 'pending'),
 
+-- 数据分析师(本科,深圳) ↔ 王芳(本科,广州→深圳) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]数据分析师'         ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js3@test.com'),
- 78, 80, 72, 82, 'pending'),
+ 75, 80, 72, 88, 90, 78, 'pending'),
 
+-- 全栈开发工程师(本科,北京) ↔ 陈杰(硕士,北京→北京) → 学历高一级92, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]全栈开发工程师'     ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js4@test.com'),
- 91, 93, 90, 90, 'accepted'),
+ 89, 93, 90, 92, 90, 85, 'accepted'),
 
+-- 产品经理(本科,杭州) ↔ 赵琳(本科,上海→杭州) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]产品经理'           ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js6@test.com'),
- 72, 75, 65, 76, 'pending'),
+ 70, 75, 65, 88, 90, 72, 'pending'),
 
+-- Go后端工程师(本科,上海) ↔ 孙强(本科,武汉→上海) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]Go后端工程师'       ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js7@test.com'),
- 86, 88, 85, 85, 'pending'),
+ 84, 88, 85, 88, 90, 80, 'pending'),
 
+-- UI设计师(本科,广州) ↔ 周敏(本科,杭州→广州) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]UI设计师'           ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js8@test.com'),
- 81, 85, 78, 80, 'rejected'),
+ 79, 85, 78, 88, 90, 75, 'rejected'),
 
+-- 数据工程师(硕士,北京) ↔ 吴磊(硕士,上海→北京) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]数据工程师'         ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js9@test.com'),
- 89, 92, 88, 87, 'pending'),
+ 87, 92, 88, 88, 90, 82, 'pending'),
 
+-- 测试开发工程师(本科,深圳) ↔ 郑雪(本科,南京→深圳) → 学历满足88, 同城90
 ((SELECT id FROM `enterprise_jobs` WHERE title='[测试]测试开发工程师'     ORDER BY id DESC LIMIT 1),
  (SELECT id FROM `jobseekers`       WHERE email='test_js10@test.com'),
- 76, 78, 72, 78, 'rejected');
+ 74, 78, 72, 88, 90, 72, 'rejected');
 
 -- ============================================================
 -- 5. 验证导入结果
@@ -140,9 +157,9 @@ SELECT id, email, username, real_name, target_position, experience FROM `jobseek
 SELECT '===== 岗位 =====' AS section;
 SELECT id, enterprise_id, title, location, salary_range, status FROM `enterprise_jobs` WHERE title LIKE '[测试]%';
 
-SELECT '===== 匹配记录 =====' AS section;
+SELECT '===== 匹配记录（五维度）=====' AS section;
 SELECT mr.id, j.title AS job_title, js.email AS jobseeker_email,
-       mr.match_score, mr.skill_match, mr.exp_match, mr.salary_match, mr.status
+       mr.match_score, mr.skill_match, mr.exp_match, mr.edu_match, mr.location_match, mr.salary_match, mr.status
 FROM `match_records` mr
 JOIN `enterprise_jobs` j ON mr.job_id = j.id
 JOIN `jobseekers` js ON mr.jobseeker_id = js.id

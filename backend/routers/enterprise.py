@@ -16,8 +16,9 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 from typing import Optional
+from sqlalchemy import func
 
-from database import get_session, Job, Jobseeker, MatchRecord
+from database import get_session, Job, Jobseeker, MatchRecord, Message
 # services 模块已迁移到 services/ 子目录
 from services.match_engine import run_match_batch
 
@@ -30,31 +31,33 @@ def _err(code: str, message: str, details=None):
 
 
 def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
-    """组装单个候选人字典，字段名按前端约定映射"""
+    """组装单个候选人字典，字段名按前端约定映射（五维度版）"""
     # 技能列表：DB 中是逗号分隔字符串，转成数组便于前端渲染
     skills = [s.strip() for s in (js.skills or '').split(',') if s.strip()]
     # 头像文字：优先 real_name 首字，其次 username 首字
     name = js.real_name or js.username or '匿名'
     av = name[0] if name else '?'
     return {
-        # 注意：id 用 match_record.id（唯一），不用 jobseeker.id
-        # 因为"全部岗位"模式下同一求职者会因匹配多个岗位出现多次，jobseeker.id 会重复导致前端 key 冲突
         'id': mr.id,
-        'jobseeker_id': js.id,                    # 求职者原始 id（供前端按需使用）
+        'jobseeker_id': js.id,
         'name': name,
-        'title': js.target_position or '',          # 当前求职意向岗位
+        'title': js.target_position or '',
         'skills': skills,
-        'exp': js.experience or '',                 # experience -> exp
+        'exp': js.experience or '',
         'salary': js.expected_salary or '',
-        'match': mr.match_score,                    # match_score -> match (可能为 None)
-        'av': av,                                   # avatar_text -> av
-        # 三维度分数（可能为 None，前端按需展示）
+        'education': js.education or '',           # 学历（新增，对比面板用）
+        'city': js.target_city or js.city or '',    # 意向城市（新增，对比面板用）
+        'match': mr.match_score,
+        'av': av,
+        # 五维度分数（可能为 None，前端按需展示）
         'match_breakdown': {
             'skill': mr.skill_match,
             'exp': mr.exp_match,
+            'edu': mr.edu_match,
+            'location': mr.location_match,
             'salary': mr.salary_match,
         },
-        'match_status': mr.status or 'pending',     # pending/accepted/rejected
+        'match_status': mr.status or 'pending',
         'job_title': job.title if job else '',
     }
 
@@ -147,7 +150,7 @@ def list_candidates(
 @router.post('/run-match')
 def trigger_match():
     """
-    手动触发匹配引擎 — 遍历所有 active 岗位 × 所有求职者，计算分数并写入 match_records。
+    手动触发匹配引擎 — 遍历所有 active 岗位 × 所有求职者，计算五维度分数并写入 match_records。
     用作 demo：前端点"重新匹配"按钮即调用此接口，跑完后刷新候选人列表即可看到真实分数。
 
     返回结构:
@@ -155,7 +158,9 @@ def trigger_match():
           "success": true,
           "data": {
             "total_jobs": int, "total_seekers": int, "total_matches": int,
-            "sample": {job_title, seeker_name, skill, exp, salary, total}  # 首个样本
+            "dimensions": 5,
+            "algorithm": "TF-IDF + Gaussian + IoU + Level Mapping",
+            "sample": {job_title, seeker_name, skill, exp, edu, location, salary, total}
           }
         }
     """
@@ -164,10 +169,92 @@ def trigger_match():
         return {
             'success': True,
             'data': result,
-            'message': f"匹配完成: {result['total_matches']} 条记录已更新",
+            'message': f"五维度匹配完成: {result['total_matches']} 条记录已更新",
         }
     except Exception as e:
         return _err('MATCH_ENGINE_ERROR', f'匹配引擎执行失败: {e}')
+
+
+class CompareReq(BaseModel):
+    """候选人对比请求体（支持 2~10 人对比，前端可配置上限）"""
+    ids: list[int] = Field(..., min_length=2, max_length=10, description='要对比的 match_record id 列表（2-10个）')
+
+
+@router.post('/candidates/compare')
+def compare_candidates(req: CompareReq):
+    """
+    候选人对比 — 支持同时对比 2-10 个候选人（前端可配置上限）
+
+    返回结构:
+        {
+          "success": true,
+          "data": {
+            "candidates": [...],          # 各候选人详情（含五维度分数）
+            "skill_analysis": {            # 技能交集/差异分析
+              "common": [...],             # 共同拥有的技能
+              "unique": {id: [...]}        # 各候选人独有的技能
+            },
+            "dimension_ranking": [...]     # 各维度最优候选人
+          }
+        }
+    """
+    session = get_session()
+    try:
+        # 查询指定的 match_records（含关联的 jobseeker 和 job）
+        rows = (session.query(MatchRecord, Jobseeker, Job)
+                .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
+                .join(Job, MatchRecord.job_id == Job.id, isouter=True)
+                .filter(MatchRecord.id.in_(req.ids))
+                .all())
+
+        if len(rows) < 2:
+            return _err('COMPARE_NEED_MORE', '对比至少需要 2 个候选人')
+
+        candidates = [_candidate_dict(mr, js, job) for mr, js, job in rows]
+
+        # ── 技能交集/差异分析 ──
+        skill_sets = [set(c['skills']) for c in candidates]
+        # 交集：所有候选人都拥有的技能
+        common = sorted(set.intersection(*skill_sets)) if skill_sets else []
+        # 各候选人独有技能
+        unique = {}
+        for i, c in enumerate(candidates):
+            others = set()
+            for j, s in enumerate(skill_sets):
+                if i != j:
+                    others |= s
+            unique[c['id']] = sorted(skill_sets[i] - others)
+
+        # ── 各维度排名（分数最高的候选人）──
+        dims = ['skill', 'exp', 'edu', 'location', 'salary']
+        dimension_ranking = []
+        for dim in dims:
+            ranked = sorted(candidates, key=lambda c: c['match_breakdown'].get(dim) or 0, reverse=True)
+            best = ranked[0]
+            dimension_ranking.append({
+                'dimension': dim,
+                'best_id': best['id'],
+                'best_name': best['name'],
+                'best_score': best['match_breakdown'].get(dim),
+                'scores': {c['id']: c['match_breakdown'].get(dim) for c in candidates},
+            })
+
+        return {
+            'success': True,
+            'data': {
+                'candidates': candidates,
+                'skill_analysis': {
+                    'common': common,
+                    'unique': unique,
+                },
+                'dimension_ranking': dimension_ranking,
+            },
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('COMPARE_ERROR', f'对比失败: {e}')
+    finally:
+        session.close()
 
 
 @router.get('/dashboard')
@@ -518,3 +605,270 @@ def delete_job(job_id: int):
 def _status_label(status: str) -> str:
     """状态码转中文，供消息展示"""
     return {'active': '招聘中', 'draft': '草稿', 'closed': '已关闭'}.get(status, status)
+
+
+# ─── 沟通消息 API ─────────────────────────────────────────────────────
+
+class SendMessageReq(BaseModel):
+    """发送消息请求体"""
+    match_record_id: int = Field(..., description='关联的匹配记录 ID')
+    content: str = Field(..., min_length=1, max_length=2000, description='消息内容')
+
+
+@router.get('/messages/{match_record_id}')
+def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Query(50, ge=1, le=200)):
+    """
+    获取沟通消息列表 — 按时间正序（旧→新），支持分页
+
+    返回结构:
+        {
+          "success": true,
+          "data": {
+            "messages": [{id, sender_type, sender_id, content, is_read, created_at}, ...],
+            "total": int,
+            "page": int,
+            "size": int
+          }
+        }
+    """
+    session = get_session()
+    try:
+        # 验证 match_record 存在
+        mr = session.query(MatchRecord).filter(MatchRecord.id == match_record_id).first()
+        if not mr:
+            return _err('MATCH_NOT_FOUND', f'匹配记录不存在: id={match_record_id}')
+
+        total = session.query(Message).filter(Message.match_record_id == match_record_id).count()
+        msgs = (session.query(Message)
+                .filter(Message.match_record_id == match_record_id)
+                .order_by(Message.created_at.asc())
+                .offset((page - 1) * size)
+                .limit(size)
+                .all())
+
+        return {
+            'success': True,
+            'data': {
+                'messages': [{
+                    'id': m.id,
+                    'sender_type': m.sender_type,
+                    'sender_id': m.sender_id,
+                    'content': m.content,
+                    'is_read': m.is_read,
+                    'created_at': m.created_at.strftime('%Y-%m-%d %H:%M:%S') if m.created_at else '',
+                } for m in msgs],
+                'total': total,
+                'page': page,
+                'size': size,
+            },
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('GET_MESSAGES_ERROR', f'获取消息失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/messages')
+def send_message(req: SendMessageReq):
+    """
+    发送沟通消息 — 企业端发起沟通或回复
+
+    同时将关联 match_record 的状态更新为 'communicating'（首次沟通时）。
+    """
+    session = get_session()
+    try:
+        # 验证 match_record 存在
+        mr = session.query(MatchRecord).filter(MatchRecord.id == req.match_record_id).first()
+        if not mr:
+            return _err('MATCH_NOT_FOUND', f'匹配记录不存在: id={req.match_record_id}')
+
+        msg = Message(
+            match_record_id=req.match_record_id,
+            sender_type='enterprise',   # 企业端发送
+            sender_id=mr.job_id,        # 记录发布岗位的企业
+            content=req.content,
+            is_read=0,
+        )
+        session.add(msg)
+
+        # 首次沟通时更新匹配状态
+        if mr.status == 'pending':
+            mr.status = 'communicating'
+            mr.updated_at = func.now()
+
+        session.commit()
+        session.refresh(msg)
+
+        return {
+            'success': True,
+            'data': {
+                'id': msg.id,
+                'sender_type': msg.sender_type,
+                'content': msg.content,
+                'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else '',
+            },
+            'message': '消息已发送',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('SEND_MESSAGE_ERROR', f'发送消息失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/messages/read')
+def mark_messages_read(match_record_id: int):
+    """
+    将指定对话中所有来自求职者的消息标记为已读。
+    在用户打开聊天对话框时调用。
+    """
+    session = get_session()
+    try:
+        session.query(Message).filter(
+            Message.match_record_id == match_record_id,
+            Message.sender_type == 'jobseeker',
+            Message.is_read == 0,
+        ).update({'is_read': 1}, synchronize_session=False)
+        session.commit()
+        return {'success': True, 'data': {'match_record_id': match_record_id}, 'message': '已读'}
+    except Exception as e:
+        session.rollback()
+        return _err('MARK_READ_ERROR', f'标记已读失败: {e}')
+    finally:
+        session.close()
+
+
+@router.get('/conversations')
+def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100)):
+    """
+    获取沟通对话列表 — 按最后消息时间倒序，类似微信聊天列表
+
+    每条对话 = 一个 match_record（岗位-候选人配对），
+    聚合该 match_record 下的最新消息、未读数、候选人信息。
+
+    返回结构:
+        {
+          "success": true,
+          "data": {
+            "conversations": [
+              {
+                "match_record_id": int,
+                "candidate_name": str,
+                "candidate_av": str,
+                "job_title": str,
+                "match_score": int | null,
+                "last_message": str | null,    # 最后一条消息的摘要
+                "last_time": str | null,        # 最后消息时间
+                "unread_count": int,            # 未读消息数（企业视角）
+                "status": str,                  # 匹配状态
+              }
+            ],
+            "total": int,
+            "unread_total": int,    # 所有对话的未读总数（用于导航栏徽标）
+            "page": int,
+            "size": int,
+          }
+        }
+    """
+    session = get_session()
+    try:
+        # 查询所有存在沟通记录的 match_records（用消息表反查）
+        # 用子查询：每个 match_record 的最后一条消息时间
+        from sqlalchemy import func as sa_func
+
+        # 子查询：每个 match_record 的最后消息时间
+        last_msg_subq = (
+            session.query(
+                Message.match_record_id,
+                sa_func.max(Message.created_at).label('last_time'),
+                sa_func.max(Message.id).label('last_msg_id'),
+            )
+            .group_by(Message.match_record_id)
+            .subquery()
+        )
+
+        # 主查询：关联 match_records、jobseekers、jobs
+        rows = (
+            session.query(
+                MatchRecord,
+                Jobseeker,
+                Job,
+                last_msg_subq.c.last_time,
+                last_msg_subq.c.last_msg_id,
+            )
+            .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
+            .join(Job, MatchRecord.job_id == Job.id, isouter=True)
+            .join(last_msg_subq, MatchRecord.id == last_msg_subq.c.match_record_id, isouter=True)
+            .filter(MatchRecord.status == 'communicating')  # 只展示已有沟通消息的对话
+            .order_by(sa_func.coalesce(last_msg_subq.c.last_time, MatchRecord.updated_at).desc())
+            .offset((page - 1) * size)
+            .limit(size)
+            .all()
+        )
+
+        # 总对话数
+        total = (
+            session.query(MatchRecord)
+            .filter(MatchRecord.status == 'communicating')
+            .count()
+        )
+
+        # 总未读（企业视角：sender_type='jobseeker' 且 is_read=0）
+        unread_total = (
+            session.query(sa_func.count(Message.id))
+            .filter(Message.sender_type == 'jobseeker', Message.is_read == 0)
+            .scalar()
+        ) or 0
+
+        # 获取每条对话的最后一条消息内容和未读数
+        conversations = []
+        for mr, js, job, last_time, last_msg_id in rows:
+            name = js.real_name or js.username or '匿名'
+            av = name[0] if name else '?'
+
+            # 获取最后一条消息内容
+            last_msg = None
+            if last_msg_id:
+                msg = session.query(Message).filter(Message.id == last_msg_id).first()
+                if msg:
+                    last_msg = msg.content[:80]  # 截取前80字
+
+            # 未读数（企业视角）
+            unread = (
+                session.query(sa_func.count(Message.id))
+                .filter(
+                    Message.match_record_id == mr.id,
+                    Message.sender_type == 'jobseeker',
+                    Message.is_read == 0,
+                )
+                .scalar()
+            ) or 0
+
+            conversations.append({
+                'match_record_id': mr.id,
+                'candidate_name': name,
+                'candidate_av': av,
+                'job_title': job.title if job else '',
+                'match_score': mr.match_score,
+                'last_message': last_msg or '',
+                'last_time': last_time.strftime('%Y-%m-%d %H:%M') if last_time else (mr.updated_at.strftime('%Y-%m-%d %H:%M') if mr.updated_at else ''),
+                'unread_count': unread,
+                'status': mr.status or 'pending',
+            })
+
+        return {
+            'success': True,
+            'data': {
+                'conversations': conversations,
+                'total': total,
+                'unread_total': unread_total,
+                'page': page,
+                'size': size,
+            },
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('CONVERSATIONS_ERROR', f'获取对话列表失败: {e}')
+    finally:
+        session.close()
