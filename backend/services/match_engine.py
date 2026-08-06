@@ -162,6 +162,10 @@ def get_province(city: str) -> str:
 FLOOR = 20   # 每维度保底线
 CEIL  = 92   # 每维度天花板
 
+# 总分边界（调整后）— 拉宽区间提升区分度
+TOTAL_FLOOR = 15   # 严重不匹配的最低分
+TOTAL_CEIL  = 95   # 完美匹配的最高分
+
 
 def calc_skill_match_weighted(
     job_skills_str: str,
@@ -179,6 +183,29 @@ def calc_skill_match_weighted(
 
     最终分数 = FLOOR + raw_ratio × (CEIL - FLOOR)，范围 20~92
     """
+    detail = calc_skill_match_detailed(job_skills_str, seeker_skills_str, idf_weights)
+    return detail['score']
+
+
+def calc_skill_match_detailed(
+    job_skills_str: str,
+    seeker_skills_str: str,
+    idf_weights: Optional[Dict[str, float]] = None,
+) -> dict:
+    """
+    技能匹配详细分析（增强版）— 返回分数 + 核心技能缺失数 + 匹配率
+
+    供 calc_adjustments() 使用，实现核心技能硬门槛等严格逻辑。
+
+    返回:
+        {
+          'score': int,               # 技能匹配分（20~92）
+          'core_miss_count': int,     # 核心技能缺失数
+          'match_ratio': float,       # 原始匹配率（0~1）
+          'seeker_skill_count': int,  # 求职者技能总数
+          'job_skill_count': int,     # 岗位要求技能总数
+        }
+    """
     from services.skill_synonyms import is_synonym, best_match_in_profile, has_adjacent_skill
 
     job_skills = [s.strip() for s in (job_skills_str or '').split(',') if s.strip()]
@@ -186,17 +213,19 @@ def calc_skill_match_weighted(
 
     # 岗位无技能要求 → 给 CEIL（不是 100），留区分空间
     if not job_skills:
-        return CEIL
+        return {'score': CEIL, 'core_miss_count': 0, 'match_ratio': 1.0,
+                'seeker_skill_count': len(seek_skills), 'job_skill_count': 0}
 
     # 求职者无技能 → 保底线（不是 0）
     if not seek_skills:
-        return FLOOR
+        return {'score': FLOOR, 'core_miss_count': len(job_skills), 'match_ratio': 0.0,
+                'seeker_skill_count': 0, 'job_skill_count': len(job_skills)}
 
-    # 区分直接匹配和同义词匹配
     seek_set_lower = {s.lower() for s in seek_skills}
 
     # 核心技能分界点（前 1/3 为核心）
     core_threshold = max(len(job_skills) // 3, 1)
+    core_miss_count = 0  # 核心技能缺失计数（用于硬门槛惩罚）
 
     total_weight = 0.0
     matched_weight = 0.0
@@ -209,8 +238,8 @@ def calc_skill_match_weighted(
         if idf_weights and s_lower in idf_weights:
             idf = idf_weights[s_lower]
 
-        # 核心技能增益
-        core_bonus = 1.5 if idx < core_threshold else 1.0
+        # 核心技能增益（从 1.5 提升到 2.0，强化核心技能重要性）
+        core_bonus = 2.0 if idx < core_threshold else 1.0
         weight = idf * core_bonus
         total_weight += weight
 
@@ -226,29 +255,43 @@ def calc_skill_match_weighted(
             elif has_adjacent_skill(jd_skill, seek_skills):
                 # 邻近技能 → 0.45
                 matched_weight += weight * 0.45
+            else:
+                # 无匹配 — 核心技能缺失则计数
+                if idx < core_threshold:
+                    core_miss_count += 1
 
     if total_weight == 0:
-        return FLOOR
+        return {'score': FLOOR, 'core_miss_count': core_miss_count, 'match_ratio': 0.0,
+                'seeker_skill_count': len(seek_skills), 'job_skill_count': len(job_skills)}
 
     # 原始匹配率 0~1 → 映射到 FLOOR~CEIL 区间
     raw_ratio = matched_weight / total_weight
     score = FLOOR + raw_ratio * (CEIL - FLOOR)
-    return int(min(max(score, FLOOR), CEIL))
+    return {
+        'score': int(min(max(score, FLOOR), CEIL)),
+        'core_miss_count': core_miss_count,
+        'match_ratio': raw_ratio,
+        'seeker_skill_count': len(seek_skills),
+        'job_skill_count': len(job_skills),
+    }
 
 
 def calc_exp_match_gaussian(job_exp_str: str, seeker_exp_str: str) -> int:
     """
-    经验匹配度（区间内梯度 + 区间外高斯衰减到保底）
+    经验匹配度（区间内梯度 + 区间外高斯衰减到保底）— 严格版
+
+    严格化改进（相比旧版）:
+        - 低于下限衰减更快：sigma 从 lo/2 缩小到 lo/3，能力不足惩罚加重
+        - 区间内梯度更陡：边缘从 85 降到 80，中点保持 92
 
     区间内:
         - 正好在区间中点 → 92（CEIL）
-        - 在区间边缘     → 85
-        （不再统一给 100，区间内也有区分度）
+        - 在区间边缘     → 80（严格化，原来是85）
 
     区间外:
-        - 高斯衰减，从 85 平滑降到 FLOOR(20)
-        - 低于下限衰减更快（能力不足是硬伤）
-        - 高于上限衰减更缓（overqualified 不是大问题）
+        - 高斯衰减，从 80 平滑降到 FLOOR(20)
+        - 低于下限衰减更快（sigma=lo/3，能力不足是硬伤）
+        - 高于上限衰减更缓（sigma=区间宽度/2，overqualified 不是大问题）
 
     无法解析: 50（中性分）
     """
@@ -258,22 +301,20 @@ def calc_exp_match_gaussian(job_exp_str: str, seeker_exp_str: str) -> int:
     if (lo is None and hi is None) or years is None:
         return 50
 
-    # 区间内峰值分数（不再直接 100）
+    # 区间内峰值分数
     PEAK = CEIL       # 92 — 正好在区间中点
-    EDGE = 85         # 区间边缘
-    # 区间外衰减起点
-    OUTER_START = 85  # 刚出区间边缘时的分数
+    EDGE = 80         # 区间边缘（严格化，原 85）
+    OUTER_START = 80  # 刚出区间边缘时的分数
 
     # 只有下限（"5年+"）
     if hi is None:
         if years >= lo:
-            # 超过下限：lo 处给 EDGE(85)，远超给 PEAK(92)
             if lo == 0:
                 return PEAK
             excess_ratio = min((years - lo) / max(lo, 1), 1.0)
             return int(EDGE + excess_ratio * (PEAK - EDGE))
-        # 低于下限：高斯衰减到 FLOOR
-        sigma = max(lo / 2, 1)
+        # 低于下限：高斯衰减到 FLOOR（sigma 缩小，衰减更快）
+        sigma = max(lo / 3, 0.5)  # 严格化：lo/3（原 lo/2）
         d = lo - years
         raw = math.exp(-(d * d) / (2 * sigma * sigma))
         return int(FLOOR + raw * (OUTER_START - FLOOR))
@@ -284,13 +325,12 @@ def calc_exp_match_gaussian(job_exp_str: str, seeker_exp_str: str) -> int:
             return PEAK  # 单值要求，刚好满足
         mid = (lo + hi) / 2
         half_range = (hi - lo) / 2
-        # 偏离中点的比例 0(中点)~1(边缘)
         offset_ratio = abs(years - mid) / half_range
         return int(PEAK - offset_ratio * (PEAK - EDGE))
 
-    # 低于下限：高斯衰减到 FLOOR
+    # 低于下限：高斯衰减到 FLOOR（sigma 缩小，衰减更快）
     if years < lo:
-        sigma = max(lo / 2, 1)
+        sigma = max(lo / 3, 0.5)  # 严格化：lo/3（原 lo/2）
         d = lo - years
         raw = math.exp(-(d * d) / (2 * sigma * sigma))
         return int(FLOOR + raw * (OUTER_START - FLOOR))
@@ -497,28 +537,125 @@ def has_skill_overlap(job_skills_str: str, seeker_skills_str: str) -> bool:
     return False
 
 
+def calc_adjustments(
+    skill_detail: dict,
+    exp_score: int,
+    edu_score: int,
+    location_score: int,
+    salary_score: int,
+    job: 'Job',
+    seeker: 'Jobseeker',
+) -> dict:
+    """
+    计算五维度之外的严格化调整项 — 实现多因素综合区分人才
+
+    调整项（均可正可负，叠加到基础加权总分上）:
+        1. core_skill_penalty  — 核心技能硬门槛：每个缺失核心技能扣 8 分
+        2. ecosystem_bonus     — 技能生态链加分：高匹配率（>85%）且技能数充足，+5 分
+        3. exp_skill_consistency — 经验-技能一致性：
+           经验长但技能少（<3个）→ 可疑，扣 6 分
+           经验短但技能多（>15个）→ 可能虚标，扣 4 分
+        4. red_flag_penalty    — 红旗惩罚：任何维度 < 30 分，扣 10 分
+        5. balance_bonus       — 均衡性加分：五维度标准差小（全面匹配），+3 分
+
+    返回: {调整项名: 分值}，总分 = base_score + sum(调整项)
+    """
+    adjustments = {}
+
+    # 1. 核心技能硬门槛惩罚
+    core_miss = skill_detail.get('core_miss_count', 0)
+    adjustments['core_skill_penalty'] = -core_miss * 8
+
+    # 2. 技能生态链加分（高匹配率 + 技能数充足）
+    match_ratio = skill_detail.get('match_ratio', 0)
+    seeker_skill_count = skill_detail.get('seeker_skill_count', 0)
+    if match_ratio > 0.85 and seeker_skill_count >= 5:
+        adjustments['ecosystem_bonus'] = 5
+    elif match_ratio > 0.7 and seeker_skill_count >= 3:
+        adjustments['ecosystem_bonus'] = 2
+    else:
+        adjustments['ecosystem_bonus'] = 0
+
+    # 3. 经验-技能一致性校验
+    exp_years = parse_years(seeker.experience or '')
+    if exp_years is not None:
+        if exp_years >= 3 and seeker_skill_count < 3:
+            # 经验长但技能少 — 简历可能注水或能力单一
+            adjustments['exp_skill_consistency'] = -6
+        elif exp_years < 1 and seeker_skill_count > 15:
+            # 经验短但技能多 — 可能虚标
+            adjustments['exp_skill_consistency'] = -4
+        else:
+            adjustments['exp_skill_consistency'] = 0
+    else:
+        adjustments['exp_skill_consistency'] = 0
+
+    # 4. 红旗惩罚：任何维度严重不匹配（<30）
+    dim_scores = [skill_detail['score'], exp_score, edu_score, location_score, salary_score]
+    if min(dim_scores) < 30:
+        adjustments['red_flag_penalty'] = -10
+    else:
+        adjustments['red_flag_penalty'] = 0
+
+    # 5. 均衡性加分：五维度标准差小 → 全面匹配
+    import statistics
+    if len(dim_scores) >= 2:
+        stdev = statistics.stdev(dim_scores)
+        # 标准差 < 8 说明各维度均衡，加分
+        if stdev < 8:
+            adjustments['balance_bonus'] = 3
+        elif stdev < 15:
+            adjustments['balance_bonus'] = 1
+        else:
+            adjustments['balance_bonus'] = 0
+    else:
+        adjustments['balance_bonus'] = 0
+
+    return adjustments
+
+
 def match_one(job: Job, seeker: Jobseeker, idf_weights: Optional[Dict[str, float]] = None) -> dict:
     """
-    对单个 岗位-求职者 计算五维度匹配分数
+    对单个 岗位-求职者 计算五维度匹配分数（增强版 — 含严格化调整项）
+
+    流程:
+        1. 五维度基础评分（TF-IDF + 高斯 + 等级 + 层级 + IoU）
+        2. 计算调整项（核心技能硬门槛 + 生态链 + 一致性 + 红旗 + 均衡性）
+        3. 最终分数 = clamp(基础分 + 调整项, TOTAL_FLOOR, TOTAL_CEIL)
 
     参数:
         job: 岗位 ORM 对象
         seeker: 求职者 ORM 对象
         idf_weights: 技能 IDF 权重表（由 compute_idf_weights 预计算）
     """
-    skill = calc_skill_match_weighted(job.skills_required, seeker.skills, idf_weights)
+    # ── 五维度基础评分 ──
+    skill_detail = calc_skill_match_detailed(job.skills_required, seeker.skills, idf_weights)
+    skill = skill_detail['score']
     exp = calc_exp_match_gaussian(job.experience, seeker.experience)
     edu = calc_edu_match(job.education, seeker.education)
     location = calc_location_match(job.location, seeker.target_city, seeker.city)
     salary = calc_salary_match(job.salary_range, job.salary_min, job.salary_max, seeker.expected_salary)
-    total = calc_total_score(skill, exp, edu, location, salary)
+
+    # ── 基础加权总分 ──
+    base_score = calc_total_score(skill, exp, edu, location, salary)
+
+    # ── 严格化调整项 ──
+    adjustments = calc_adjustments(skill_detail, exp, edu, location, salary, job, seeker)
+    adjustment_total = sum(adjustments.values())
+
+    # ── 最终分数：基础分 + 调整项，限制在 [TOTAL_FLOOR, TOTAL_CEIL] ──
+    final_score = int(min(max(base_score + adjustment_total, TOTAL_FLOOR), TOTAL_CEIL))
+
     return {
-        'match_score': total,
+        'match_score': final_score,
         'skill_match': skill,
         'exp_match': exp,
         'edu_match': edu,
         'location_match': location,
         'salary_match': salary,
+        'adjustments': adjustments,         # 调整项明细（调试/展示用）
+        'base_score': base_score,           # 基础分（调整前）
+        'adjustment_total': adjustment_total,  # 调整项合计
     }
 
 
@@ -607,6 +744,9 @@ def run_match_batch(job_id: Optional[int] = None) -> dict:
                         'location': scores['location_match'],
                         'salary': scores['salary_match'],
                         'total': scores['match_score'],
+                        'base_score': scores.get('base_score'),
+                        'adjustment_total': scores.get('adjustment_total'),
+                        'adjustments': scores.get('adjustments'),
                     }
 
         session.commit()
@@ -619,7 +759,7 @@ def run_match_batch(job_id: Optional[int] = None) -> dict:
             'cleaned': deleted_count,
             'sample': sample,
             'dimensions': 5,  # 标记当前使用五维度算法
-            'algorithm': 'TF-IDF + Gaussian + IoU + Level Mapping',
+            'algorithm': 'TF-IDF + Gaussian + IoU + Level Mapping + Strict Adjustments (v2)',
         }
     except Exception as e:
         session.rollback()

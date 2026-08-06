@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "title": "Java后端开发工程师",
+    "description": "负责电商核心系统后端设计与开发，参与高并发分布式系统架构优化"
+  },
+  {
+    "id": 2,
+    "title": "AI应用开发工程师",
+    "description": "基于大模型和RAG技术构建企业级AI应用，负责Agent框架设计与实现"
+  },
+  {
+    "id": 3,
+    "title": "大模型算法工程师",
+    "description": "负责大语言模型训练与微调，优化模型推理性能，探索Agent与多模态技术"
+  },
+  {
+    "id": 4,
+    "title": "前端开发工程师",
+    "description": "负责企业级SaaS产品前端架构设计与开发，优化性能和用户体验"
+  },
+  {
+    "id": 5,
+    "title": "云原生工程师",
+    "description": "负责Kubernetes平台建设与运维，设计微服务治理方案，推动DevOps实践"
+  },
+  {
+    "id": 6,
+    "title": "数据工程师",
+    "description": "负责大数据平台建设，ETL流程优化，实时数据处理Pipeline开发"
+  },
+  {
+    "id": 7,
+    "title": "DevOps工程师",
+    "description": "负责CI/CD流水线建设，容器化平台运维，监控告警体系搭建"
+  },
+  {
+    "id": 8,
+    "title": "Python后端开发",
+    "description": "负责内容推荐系统后端开发，使用FastAPI + PostgreSQL，参与微服务拆分"
+  },
+  {
+    "id": 9,
+    "title": "全栈开发工程师",
+    "description": "负责内部工具平台全栈开发，React前端 + Go后端，参与架构设计"
+  },
+  {
+    "id": 10,
+    "title": "AI Agent开发工程师",
+    "description": "负责多Agent协作框架开发，集成大模型与工具调用，构建自主决策系统"
+  }
+]

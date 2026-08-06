@@ -19,6 +19,7 @@ from typing import Optional
 from sqlalchemy import func
 
 from database import get_session, Job, Jobseeker, MatchRecord, Message
+from services.deerflow_compare import run_deep_compare
 # services 模块已迁移到 services/ 子目录
 from services.match_engine import run_match_batch
 
@@ -253,6 +254,63 @@ def compare_candidates(req: CompareReq):
         }
     except Exception as e:
         return _err('COMPARE_ERROR', f'对比失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/candidates/deep-compare')
+def deep_compare_candidates(req: CompareReq):
+    """
+    候选人 AI 深度对比 — 基于 DeerFlow 编排的多 Agent 协同分析
+
+    在规则引擎对比的基础上，调用 LongCat LLM 进行语义级深度分析:
+        Agent 1「技能迁移分析师」— 可迁移能力、语义相似、技能缺口
+        Agent 2「综合决策报告师」— 排名建议、优势/劣势/风险、推荐理由
+
+    返回结构:
+        {
+          "success": true,
+          "data": {
+            "ranking": [{candidate_id, candidate_name, rank, strengths, weaknesses, risks, recommendation}],
+            "overall_summary": "整体对比总结",
+            "key_insights": ["关键洞察"],
+            "skill_analysis": {...},  // Agent 1 输出
+            "agents_trace": [...]     // Agent 执行轨迹
+          }
+        }
+    """
+    session = get_session()
+    try:
+        # 复用规则引擎的候选人数据（含五维度分数）
+        rows = (session.query(MatchRecord, Jobseeker, Job)
+                .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
+                .join(Job, MatchRecord.job_id == Job.id, isouter=True)
+                .filter(MatchRecord.id.in_(req.ids))
+                .all())
+
+        if len(rows) < 2:
+            return _err('COMPARE_NEED_MORE', '对比至少需要 2 个候选人')
+
+        candidates = [_candidate_dict(mr, js, job) for mr, js, job in rows]
+
+        # 构造岗位信息（取第一个候选人的关联岗位）
+        first_job = rows[0][2]
+        job_info = {
+            'title': first_job.title if first_job else '未知岗位',
+            'skills_required': [s.strip() for s in (first_job.skills_required or '').split(',') if s.strip()] if first_job else [],
+            'experience': first_job.experience if first_job else '',
+            'education': first_job.education if first_job else '',
+        }
+
+        # 调用 DeerFlow 编排器
+        result = run_deep_compare(candidates, job_info)
+
+        if result['success']:
+            return {'success': True, 'data': result['data'], 'message': 'AI 深度分析完成'}
+        else:
+            return _err('DEEP_COMPARE_FAILED', result.get('error', 'AI 分析失败'), result.get('agents_trace'))
+    except Exception as e:
+        return _err('DEEP_COMPARE_ERROR', f'深度对比失败: {e}')
     finally:
         session.close()
 
