@@ -67,6 +67,22 @@ interface CompareData {
   }>
 }
 
+// AI 深度对比结果（DeerFlow 编排产出）
+interface DeepCompareData {
+  ranking: Array<{
+    candidate_id: number
+    candidate_name: string
+    rank: number
+    strengths: string[]
+    weaknesses: string[]
+    risks: string[]
+    recommendation: string
+  }>
+  overall_summary: string
+  key_insights: string[]
+  skill_analysis?: any
+}
+
 // 匹配度颜色梯度
 function matchColor(v: number | null) {
   if (v === null || v === undefined) return 'var(--color-on-surface-variant)'
@@ -247,6 +263,12 @@ export default function TalentSearch() {
   const [maxCompare, setMaxCompare] = useState(4)  // 最多对比人数，可手动设置（2-10）
   const autoCompareTriggered = useRef(false)  // 防止自动对比重复触发
 
+  // ── AI 深度对比状态（DeerFlow 编排）──
+  const [deepCompareData, setDeepCompareData] = useState<DeepCompareData | null>(null)
+  const [deepCompareLoading, setDeepCompareLoading] = useState(false)
+  const [deepCompareError, setDeepCompareError] = useState('')
+  const [showDeepPanel, setShowDeepPanel] = useState(false)  // 主界面 AI 分析结果浮层
+
   // ── 沟通对话状态 ──
   const [chatOpen, setChatOpen] = useState(false)
   const [chatCandidate, setChatCandidate] = useState<{ id: number; name: string; job_title: string; match: number | null } | null>(null)
@@ -370,6 +392,31 @@ export default function TalentSearch() {
       setShowCompare(false)
     } finally {
       setCompareLoading(false)
+    }
+  }
+
+  // 触发 AI 深度对比（DeerFlow 多 Agent 编排）
+  const runDeepCompare = async () => {
+    if (compareSelected.size < 2) return
+    setDeepCompareLoading(true)
+    setDeepCompareError('')
+    setDeepCompareData(null)
+    try {
+      const r = await fetch('/api/enterprise/candidates/deep-compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(compareSelected) }),
+      })
+      const d = await r.json()
+      if (d.success) {
+        setDeepCompareData(d.data)
+      } else {
+        setDeepCompareError(d.error?.message || 'AI 分析失败')
+      }
+    } catch {
+      setDeepCompareError('AI 分析请求失败，请检查网络')
+    } finally {
+      setDeepCompareLoading(false)
     }
   }
 
@@ -777,10 +824,19 @@ export default function TalentSearch() {
                 disabled={compareSelected.size < 2 || compareLoading}
                 data-compare-btn
                 className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
-                style={{ background: 'var(--color-primary)', color: 'white' }}
+                style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)', border: '1px solid var(--color-outline-variant)' }}
               >
                 {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
-                对比候选人 ({compareSelected.size})
+                雷达对比 ({compareSelected.size})
+              </button>
+              <button
+                onClick={() => { setShowDeepPanel(true); runDeepCompare() }}
+                disabled={compareSelected.size < 2 || deepCompareLoading}
+                className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
+                style={{ background: 'var(--color-primary)', color: 'white' }}
+              >
+                {deepCompareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="text-lg">🦌</span>}
+                AI 深度对比 ({compareSelected.size})
               </button>
             </div>
           </motion.div>
@@ -794,7 +850,7 @@ export default function TalentSearch() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-8"
             style={{ background: 'rgba(0,0,0,0.5)' }}
-            onClick={() => { setShowCompare(false); setCompareData(null) }}
+            onClick={() => { setShowCompare(false); setCompareData(null); setDeepCompareData(null); setDeepCompareError('') }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
@@ -804,12 +860,12 @@ export default function TalentSearch() {
               onClick={e => e.stopPropagation()}
             >
               {/* 弹窗头 */}
-              <div className="flex items-center justify-between px-8 py-6 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+              <div className="flex items-center justify-between px-8 py-6 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
                 <div className="flex items-center gap-3">
                   <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
                   <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>候选人对比</h2>
                 </div>
-                <button onClick={() => { setShowCompare(false); setCompareData(null) }} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
+                <button onClick={() => { setShowCompare(false); setCompareData(null); setDeepCompareData(null); setDeepCompareError('') }} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
                   <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
                 </button>
               </div>
@@ -821,81 +877,18 @@ export default function TalentSearch() {
                 </div>
               ) : compareData ? (
                 <div className="px-8 py-8 space-y-10">
-                  {/* ── 雷达图 + 分数表 ── */}
-                  <div className="grid grid-cols-2 gap-12">
-                    {/* 雷达图 */}
-                    <div className="flex flex-col items-center justify-center">
-                      <RadarChart candidates={compareData.candidates} />
-                      {/* 图例 */}
-                      <div className="flex flex-wrap gap-4 mt-4 justify-center">
-                        {compareData.candidates.map((c, idx) => (
-                          <div key={c.id} className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full" style={{ background: getCompareColor(idx) }} />
-                            <span className="text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
-                            <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{c.match}分</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 五维度分数对比表 */}
-                    <div>
-                      <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>五维度分数对比</h3>
-                      <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
-                              <th className="text-left px-5 py-3 text-sm font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>维度</th>
-                              {compareData.candidates.map((c, idx) => (
-                                <th key={c.id} className="text-center px-5 py-3 text-sm font-medium">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCompareColor(idx) }} />
-                                    <span style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
-                                  </div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {DIMENSIONS.map(dim => {
-                              const ranking = compareData.dimension_ranking.find(r => r.dimension === dim.key)
-                              return (
-                                <tr key={dim.key} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                                  <td className="px-5 py-3 text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{dim.label}</td>
-                                  {compareData.candidates.map(c => {
-                                    const score = c.match_breakdown[dim.key as keyof typeof c.match_breakdown] ?? '—'
-                                    const isBest = ranking?.best_id === c.id
-                                    return (
-                                      <td key={c.id} className="text-center px-5 py-3">
-                                        <span className="text-lg font-semibold tabular-nums"
-                                          style={{ color: isBest ? 'var(--accent-green)' : 'var(--color-on-surface)' }}>
-                                          {score}
-                                        </span>
-                                        {isBest && <span className="ml-1 text-xs" style={{ color: 'var(--accent-green)' }}>★</span>}
-                                      </td>
-                                    )
-                                  })}
-                                </tr>
-                              )
-                            })}
-                            {/* 总分行 */}
-                            <tr style={{ background: 'var(--color-surface-container-low)' }}>
-                              <td className="px-5 py-4 text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>总分</td>
-                              {compareData.candidates.map(c => {
-                                const bestTotal = Math.max(...compareData.candidates.map(x => x.match ?? 0))
-                                const isBest = c.match === bestTotal
-                                return (
-                                  <td key={c.id} className="text-center px-5 py-4">
-                                    <span className="text-2xl font-bold tabular-nums" style={{ color: isBest ? 'var(--accent-green)' : 'var(--color-on-surface)' }}>
-                                      {c.match ?? '—'}
-                                    </span>
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+                  {/* ── 雷达图 ── */}
+                  <div className="flex flex-col items-center justify-center">
+                    <RadarChart candidates={compareData.candidates} />
+                    {/* 图例 */}
+                    <div className="flex flex-wrap gap-4 mt-4 justify-center">
+                      {compareData.candidates.map((c, idx) => (
+                        <div key={c.id} className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full" style={{ background: getCompareColor(idx) }} />
+                          <span className="text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                          <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{c.match}分</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -987,6 +980,169 @@ export default function TalentSearch() {
                   </div>
                 </div>
               ) : null}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── AI 深度对比结果浮层（主界面，DeerFlow 多 Agent 编排）── */}
+      <AnimatePresence>
+        {showDeepPanel && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-8"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={() => setShowDeepPanel(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-2xl border-2 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+              style={{ borderColor: 'var(--color-primary)', background: 'var(--color-surface)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* 浮层头 */}
+              <div className="flex items-center justify-between px-8 py-6 border-b sticky top-0 z-10"
+                style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🦌</span>
+                  <div>
+                    <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>AI 深度对比</h2>
+                    <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>DeerFlow 多 Agent 编排 · 技能迁移分析 + 综合决策</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!deepCompareLoading && !deepCompareData && !deepCompareError && (
+                    <button onClick={runDeepCompare}
+                      className="flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-medium transition-colors"
+                      style={{ background: 'var(--color-primary)', color: 'white' }}>
+                      启动分析
+                    </button>
+                  )}
+                  <button onClick={() => setShowDeepPanel(false)}
+                    className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
+                    <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 浮层内容 */}
+              <div className="px-8 py-8">
+                {deepCompareLoading && (
+                  <div className="flex flex-col items-center gap-4 py-16">
+                    <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                    <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>AI Agent 分析中，预计 10-20 秒...</span>
+                  </div>
+                )}
+
+                {deepCompareError && !deepCompareLoading && (
+                  <div className="rounded-lg px-5 py-4 text-base" style={{ background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
+                    {deepCompareError}
+                  </div>
+                )}
+
+                {!deepCompareData && !deepCompareLoading && !deepCompareError && (
+                  <div className="py-16 text-center">
+                    <p className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>
+                      点击「启动分析」，多 Agent 协同分析候选人技能迁移能力与综合匹配度
+                    </p>
+                  </div>
+                )}
+
+                {deepCompareData && !deepCompareLoading && (
+                  <div className="space-y-6">
+                    {/* 整体总结 */}
+                    <div className="rounded-lg p-5" style={{ background: 'var(--color-primary-fixed-dim)' }}>
+                      <p className="text-base leading-relaxed" style={{ color: 'var(--color-on-surface)' }}>
+                        {deepCompareData.overall_summary}
+                      </p>
+                    </div>
+
+                    {/* 排名推荐 */}
+                    <div className="space-y-4">
+                      {[...deepCompareData.ranking].sort((a, b) => a.rank - b.rank).map((item) => (
+                        <div key={item.candidate_id} className="rounded-lg border p-5" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                          <div className="flex items-center gap-3 mb-4">
+                            <span className="inline-flex items-center justify-center w-9 h-9 rounded-full text-lg font-bold"
+                              style={{
+                                background: item.rank === 1 ? 'var(--accent-green)' : 'var(--color-surface-container-high)',
+                                color: item.rank === 1 ? 'white' : 'var(--color-on-surface-variant)'
+                              }}>
+                              {item.rank}
+                            </span>
+                            <span className="text-lg font-semibold" style={{ color: 'var(--color-on-surface)' }}>
+                              {item.candidate_name}
+                            </span>
+                            {item.rank === 1 && (
+                              <span className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+                                最推荐
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            {/* 优势 */}
+                            <div>
+                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-green)' }}>优势</p>
+                              <ul className="space-y-1.5">
+                                {item.strengths.map((s, i) => (
+                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                    <span style={{ color: 'var(--accent-green)' }}>+</span> {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            {/* 劣势 */}
+                            <div>
+                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-orange)' }}>劣势</p>
+                              <ul className="space-y-1.5">
+                                {item.weaknesses.map((s, i) => (
+                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                    <span style={{ color: 'var(--accent-orange)' }}>-</span> {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            {/* 风险 */}
+                            <div>
+                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-red-strong)' }}>风险</p>
+                              <ul className="space-y-1.5">
+                                {item.risks.map((s, i) => (
+                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                    <span style={{ color: 'var(--accent-red-strong)' }}>!</span> {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+
+                          {/* 推荐理由 */}
+                          <div className="rounded p-3" style={{ background: 'var(--color-surface-container-low)' }}>
+                            <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                              <span className="font-medium" style={{ color: 'var(--color-on-surface)' }}>推荐理由：</span>
+                              {item.recommendation}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 关键洞察 */}
+                    {deepCompareData.key_insights.length > 0 && (
+                      <div className="rounded-lg p-5" style={{ background: 'var(--color-surface-container-low)' }}>
+                        <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-primary)' }}>关键洞察</p>
+                        <ul className="space-y-2">
+                          {deepCompareData.key_insights.map((insight, i) => (
+                            <li key={i} className="text-base flex gap-2" style={{ color: 'var(--color-on-surface)' }}>
+                              <span style={{ color: 'var(--color-primary)' }}>•</span> {insight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
