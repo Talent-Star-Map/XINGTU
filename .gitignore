@@ -1,9 +1,7 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
 
-# Build output
+# Build
 dist/
 build/
 
@@ -11,22 +9,15 @@ build/
 .env.local
 .env.*.local
 .env.production
-.env.staging
-.env.docker
 
-# Database
-*.db
-*.sqlite
-# SQL 备份文件（mysqldump 产物）
-*.sql
-!docs/*.sql
-!backend/sql/*.sql
+# Python
+__pycache__/
+*.pyc
+*.pyo
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
 # OS
 .DS_Store
@@ -34,41 +25,23 @@ Thumbs.db
 
 # Logs
 *.log
-/tmp/
-backend/logs/
 
 # Docker
 mysql_data/
 
-# TypeScript/Vite
-*.tsbuildinfo
-.vite/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-.eggs/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Backend（子目录产物同样忽略 — __pycache__ 通配符已覆盖 routers/services/scripts/tests）
-backend/*.db
+# Project-specific
 backend/uploads/
 backend/test_data/
 backend/match_cache/
+backend/*.db
+start.bat
+stop.bat
 
 # AI 工具
 .mimocode
 .trae
 .workbuddy
-.agents
-.codex
 .claude/
 
-# 个人开发配置（含密钥引用、个人规范）
+# Personal config
 CLAUDE.md
