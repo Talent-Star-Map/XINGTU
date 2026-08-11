@@ -1,14 +1,16 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, Users, Database, Zap, ArrowRight, ChevronRight } from 'lucide-react'
+import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, ChevronRight, BookOpen, Target, AlertCircle } from 'lucide-react'
+import { JSNav } from '../../lib/NavContext'
 import StatsCounter from '../../components/ui/StatsCounter'
-// import GlareHover from '../../components/ui/GlareHover'
 
-const quickActions = [
-  { icon: Upload, label: '上传简历', desc: 'AI 自动解析，1 分钟建立能力档案', color: 'var(--color-primary)' },
-  { icon: Briefcase, label: '浏览岗位', desc: '基于能力图谱精准推荐', color: 'var(--accent-purple)' },
-  { icon: LineChart, label: '人岗匹配', desc: '多维度匹配诊断与差距分析', color: 'var(--accent-green)' },
-  { icon: TrendingUp, label: '趋势洞察', desc: '实时追踪技能需求变化', color: 'var(--accent-orange)' },
-]
+interface DiagnosisHistory {
+  id: string
+  jobTitle: string
+  score: number
+  grade: string
+  timestamp: number
+}
 
 const statsData = [
   { label: '收录岗位', value: 2817, color: 'var(--color-primary)' },
@@ -17,22 +19,45 @@ const statsData = [
   { label: '平台用户', value: 8642, color: 'var(--accent-orange)' },
 ]
 
-const hotJobs = [
-  { title: 'AI 应用开发工程师', growth: '+320%', tag: '火热', color: 'var(--accent-orange)' },
-  { title: 'MCP 协议开发工程师', growth: '新发', tag: '新兴', color: 'var(--color-primary)' },
-  { title: '大模型算法工程师', growth: '+180%', tag: '火热', color: 'var(--accent-orange)' },
-  { title: 'AI Agent 开发工程师', growth: '+250%', tag: '新兴', color: 'var(--color-primary)' },
-]
-
-const updates = [
-  { color: 'var(--accent-green)', title: '新增岗位', highlight: 'MCP 协议开发工程师', sub: '多源数据交叉验证发现，置信度 94%' },
-  { color: 'var(--accent-orange)', title: '技能更新', highlight: 'Java 后端开发工程师', sub: '新增 K8s/Docker，移除 Struts' },
-  { color: 'var(--color-primary)', title: '图谱更新', highlight: '156 个节点', sub: '基于本周采集的 234 条 JD' },
-]
-
 export default function Dashboard() {
+  const { setPage } = JSNav.use()
+  const [history, setHistory] = useState<DiagnosisHistory[]>([])
+  const [masteredCount, setMasteredCount] = useState(0)
+
+  useEffect(() => {
+    // 加载诊断历史
+    try {
+      const saved = localStorage.getItem('jt_diagnosis_history')
+      if (saved) {
+        const list = JSON.parse(saved)
+        setHistory(Array.isArray(list) ? list.slice(0, 3) : [])
+      }
+    } catch {}
+
+    // 加载已掌握技能数
+    try {
+      const skills = localStorage.getItem('jt_mastered_skills')
+      if (skills) {
+        setMasteredCount(JSON.parse(skills).length)
+      }
+    } catch {}
+  }, [])
+
+  const quickActions = [
+    { icon: Upload, label: '上传简历', desc: 'AI 自动解析，1 分钟建立能力档案', color: 'var(--color-primary)', page: 'resume' as const },
+    { icon: Briefcase, label: '浏览岗位', desc: '基于能力图谱精准推荐', color: 'var(--accent-purple)', page: 'match' as const },
+    { icon: LineChart, label: '人岗匹配', desc: '多维度匹配诊断与差距分析', color: 'var(--accent-green)', page: 'match' as const },
+    { icon: TrendingUp, label: '趋势洞察', desc: '实时追踪技能需求变化', color: 'var(--accent-orange)', page: 'trend' as const },
+  ]
+
+  const getGradeColor = (grade: string) => {
+    const colors: Record<string, string> = { S: '#10b981', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' }
+    return colors[grade] || 'var(--color-primary)'
+  }
+
   return (
     <div className="space-y-6 px-6 py-8 max-w-[1400px] mx-auto">
+      {/* 欢迎横幅 */}
       <div className="relative overflow-hidden rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
         <div className="absolute -top-24 right-[-10%] h-[400px] w-[400px] rounded-full opacity-20 blur-3xl" style={{ background: 'var(--color-primary)' }} />
         <div className="absolute -bottom-32 left-[-60px] h-[300px] w-[300px] rounded-full opacity-10 blur-3xl" style={{ background: 'var(--accent-purple)' }} />
@@ -46,6 +71,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* 统计卡片 */}
       <div className="grid grid-cols-4 gap-5">
         {statsData.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
@@ -59,11 +85,14 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* 快捷功能 */}
       <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>快捷功能</h2>
       <div className="grid grid-cols-4 gap-4">
         {quickActions.map((action, i) => (
-          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-            className="rounded-2xl border p-5 cursor-pointer" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <motion.div key={action.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
+            className="rounded-2xl border p-5 cursor-pointer transition-all hover:shadow-md"
+            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
+            onClick={() => setPage(action.page)}>
             <div className="flex h-12 w-12 items-center justify-center rounded-xl mb-4" style={{ background: `${action.color}15` }}>
               <action.icon className="h-6 w-6" style={{ color: action.color }} />
             </div>
@@ -74,44 +103,85 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-5">
+        {/* 最近诊断 */}
         <div className="rounded-2xl border shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>热门岗位趋势</h3>
-            <ChevronRight className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>最近诊断</h3>
+            <button onClick={() => history.length > 0 ? setPage('diagnosis') : setPage('match')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
+              {history.length > 0 ? '查看全部' : '去诊断'} <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <div className="p-5 space-y-1">
-            {hotJobs.map((job, i) => (
-              <motion.div key={job.title} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-                className="flex items-center justify-between px-4 py-3 rounded-xl transition-colors cursor-pointer"
-                style={{ background: i === 0 ? 'var(--color-primary-fixed)' : 'transparent' }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ background: job.tag === '新兴' ? 'var(--color-primary-fixed)' : 'var(--accent-orange-dim)', color: job.tag === '新兴' ? 'var(--color-primary)' : 'var(--accent-orange)' }}>{job.tag}</span>
-                </div>
-                <span className="text-sm font-bold" style={{ color: job.tag === '新兴' ? 'var(--color-primary)' : 'var(--accent-green)' }}>{job.growth}</span>
-              </motion.div>
-            ))}
+          <div className="p-5">
+            {history.length === 0 ? (
+              <div className="text-center py-8">
+                <Target className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
+                <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>暂无诊断记录</p>
+                <button onClick={() => setPage('match')} className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
+                  开始诊断
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {history.map((item) => (
+                  <motion.div key={item.id} whileHover={{ scale: 1.01 }}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors"
+                    style={{ background: 'var(--color-surface-container)' }}
+                    onClick={() => {
+                      // 将历史诊断结果写入 jt_diagnosis_result，供页面直接读取
+                      const resultData = {
+                        job: { id: item.jobId, title: item.jobTitle, company: item.jobCompany, salary: item.jobSalary, location: item.jobLocation, skills: [] },
+                        result: { overall: item.overall, grade: item.grade, skills: item.skills || { have: [], miss: [], extra: [] }, recommendations: item.recommendations || [] },
+                        phases: item.phases || [],
+                        timestamp: item.timestamp,
+                      }
+                      localStorage.setItem('jt_diagnosis_result', JSON.stringify(resultData))
+                      setPage('learning')
+                    }}>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white" style={{ background: getGradeColor(item.grade) }}>
+                        {item.grade}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{item.jobTitle}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{new Date(item.timestamp).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold" style={{ color: getGradeColor(item.grade) }}>{item.overall}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>分</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* 学习进度 */}
         <div className="rounded-2xl border shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>图谱更新动态</h3>
-            <ChevronRight className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>学习进度</h3>
+            <button onClick={() => setPage('learning')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
+              进入学习 <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <div className="p-5 space-y-5">
-            {updates.map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="flex items-start gap-3">
-                <motion.div className="h-3 w-3 rounded-full mt-1 shrink-0" style={{ background: item.color }} animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }} />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>{item.title}</span>
-                    <span className="text-sm font-bold" style={{ color: item.color }}>{item.highlight}</span>
-                  </div>
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{item.sub}</p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="p-5">
+            <div className="text-center py-6">
+              <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredCount}</span> 项技能
+              </p>
+              <div className="mt-4 h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
+                <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredCount * 5, 100)}%` }}
+                  transition={{ duration: 1 }} style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--accent-purple))' }} />
+              </div>
+              <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+                {masteredCount < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
+              </p>
+              <button onClick={() => setPage('skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
+                查看能力图谱
+              </button>
+            </div>
           </div>
         </div>
       </div>

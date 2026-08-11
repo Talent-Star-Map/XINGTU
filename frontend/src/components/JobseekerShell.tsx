@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav } from '../lib/NavContext'
+import { LearningProvider } from '../lib/LearningContext'
 
 type Page = 'dashboard' | 'skill-graph' | 'resume' | 'match' | 'learning' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'diagnosis' | 'job-detail'
 
@@ -26,6 +27,7 @@ import JSTrend from '../pages/jobseeker/Trend'
 import JSProfileHome from '../pages/jobseeker/ProfileHome'
 import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
 import QualityDashboard from '../pages/enterprise/QualityDashboard'
+import TutuChat from './TutuChat'
 
 const pages: Record<Page, () => JSX.Element> = {
   dashboard: JSDashboard, 'skill-graph': JSSkillGraph,
@@ -42,7 +44,7 @@ const profileItems: { key: Page; icon: any; label: string }[] = [
 ]
 
 export default function JobseekerShell({ onLogout }: Props) {
-  const [page, setPage] = useState<Page>('skill-graph')
+  const [page, setPage] = useState<Page>('dashboard')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
@@ -136,11 +138,14 @@ export default function JobseekerShell({ onLogout }: Props) {
       </header>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
-          <JSNav.Provider value={{ setPage, page }}>
-            <PageComp />
-          </JSNav.Provider>
+          <LearningProvider>
+            <JSNav.Provider value={{ setPage, page }}>
+              <PageComp />
+            </JSNav.Provider>
+          </LearningProvider>
         </div>
       </main>
+      <TutuChat />
     </div>
   )
 }

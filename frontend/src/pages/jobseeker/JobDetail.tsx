@@ -30,7 +30,6 @@ export default function JobDetail() {
       if (raw) {
         const j = JSON.parse(raw)
         setJob(j)
-        localStorage.removeItem('jt_job_detail')
       }
     } catch { /* ignore */ }
   }, [])
@@ -38,6 +37,11 @@ export default function JobDetail() {
   const handleDiagnose = () => {
     if (!job) return
     localStorage.setItem('jt_diagnosis_job', JSON.stringify(job))
+    // 从 localStorage 读取用户已选技能，如果没有则用空数组
+    const existing = localStorage.getItem('jt_diagnosis_skills')
+    if (!existing) {
+      localStorage.setItem('jt_diagnosis_skills', JSON.stringify([]))
+    }
     setPage('diagnosis')
   }
 
@@ -133,13 +137,6 @@ export default function JobDetail() {
               style={{ background: 'var(--color-primary)' }}
             >
               <Target className="h-4 w-4" /> 开始诊断
-            </button>
-            <button
-              onClick={() => { localStorage.setItem('jt_learning_target', JSON.stringify(job)); setPage('learning') }}
-              className="w-full h-9 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 mt-2"
-              style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
-            >
-              <BookOpen className="h-4 w-4" /> 设为学习目标
             </button>
           </div>
 

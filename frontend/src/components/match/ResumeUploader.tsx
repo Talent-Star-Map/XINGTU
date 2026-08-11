@@ -1,4 +1,4 @@
-import { Upload, CheckCircle, ChevronDown } from 'lucide-react'
+import { Upload, CheckCircle, ChevronDown, Sparkles } from 'lucide-react'
 import ManualSkillInput from './ManualSkillInput'
 
 interface Props {
@@ -17,7 +17,7 @@ export default function ResumeUploader({
   hasProfile, showSkillInput, selSkills, onTagsChange,
   onConfirm, onAutoMatch, onShowSkillInput, onSkip, onGoToResume,
 }: Props) {
-  // 已检测到简历 — 显示已选技能摘要
+  // 已检测到简历 — 显示已选技能摘要 + 智能匹配按钮
   if (hasProfile === true && !showSkillInput) {
     return (
       <div
@@ -33,11 +33,16 @@ export default function ResumeUploader({
             style={{ color: 'var(--color-primary)' }}
           ><ChevronDown className="h-3 w-3" /> 修改</button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {selSkills.map(s => (
             <span key={s} className="px-2 py-0.5 rounded text-[11px] font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{s}</span>
           ))}
         </div>
+        <button
+          onClick={() => onAutoMatch(selSkills)}
+          className="w-full h-9 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2"
+          style={{ background: 'var(--color-primary)' }}
+        ><Sparkles className="h-4 w-4" /> 智能匹配</button>
       </div>
     )
   }

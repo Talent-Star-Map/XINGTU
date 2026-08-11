@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, MessageCircle, BookOpen, Video, FileText, CheckCircle, ArrowRight, Star, Compass, Rocket, Brain, Zap, Target, RotateCcw, ExternalLink } from 'lucide-react'
+import { Sparkles, MessageCircle, BookOpen, Video, FileText, CheckCircle, ArrowRight, Star, Compass, Rocket, Brain, Zap, Target, RotateCcw, ExternalLink, Play, Clock } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import { useLearning } from '../../lib/LearningContext'
 
 interface Phase { phase: string; title: string; duration: string; icon: any; skills: string[]; resources: { name: string; type: string; url: string }[]; color: string; tip: string }
 interface DiagnosisResult { overall: number; grade: string; phases: any[]; recommendations: string[]; skills: { have: any[]; miss: any[]; extra: string[] } }
 interface Job { id: number; title: string; company: string; salary: string; location: string; skills: string[] }
 
-const typeIcons: Record<string, any> = { '文档': FileText, '课程': Video, '教程': BookOpen, '文章': FileText, '项目': Rocket }
+const typeIcons: Record<string, any> = { '文档': FileText, '课程': Video, '教程': BookOpen, '文章': FileText, '项目': Rocket, '视频': Play }
+const typeColors: Record<string, string> = { '文档': 'var(--color-primary)', '视频': '#ef4444', '教程': 'var(--accent-green)', '课程': 'var(--accent-purple)' }
 
 const tutuKnowledge: { keywords: string[]; answer: string }[] = [
   { keywords: ['langchain', 'langchain'], answer: 'LangChain 是当前最主流的 LLM 应用开发框架。建议从官方文档的 Quickstart 开始，先理解 Chain、Agent、Memory 三个核心概念，然后动手写一个简单的 QA 应用。 📚' },
@@ -100,56 +102,55 @@ async function fetchResources(skills: string[]): Promise<{ name: string; type: s
 
 export default function LearningPath() {
   const { setPage } = JSNav.use()
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [targetJob, setTargetJob] = useState<Job | null>(() => {
-    try { const raw = localStorage.getItem('jt_learning_target'); return raw ? JSON.parse(raw) : null } catch { return null }
-  })
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(() => {
-    try { const raw = localStorage.getItem('jt_learning_report'); return raw ? JSON.parse(raw) : null } catch { return null }
-  })
+  const { masteredSkills, toggleMastered } = useLearning()
+  const [targetJob, setTargetJob] = useState<Job | null>(null)
+  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null)
   const [step, setStep] = useState(0)
   const [msg, setMsg] = useState('')
   const [chatLog, setChatLog] = useState<{ role: string; text: string }[]>([
-    { role: 'tutu', text: '你好呀！我是图图，你的 AI 学习助手。选一个目标岗位，星星会为你规划学习路径，我来解答你的学习疑问~ 😊' },
+    { role: 'tutu', text: '你好呀！我是图图，你的 AI 学习助手。我已经了解了你的诊断结果，可以针对性地帮你学习~ 😊' },
   ])
-  const [analyzing, setAnalyzing] = useState(false)
   const [resources, setResources] = useState<{ name: string; type: string; url: string }[]>([])
   const [loadingResources, setLoadingResources] = useState(false)
+  const [resourceFilter, setResourceFilter] = useState<string>('all')
   const chatRef = useRef<HTMLDivElement>(null)
 
   // 切换阶段时清空资源
   const changeStep = (i: number) => {
     setStep(i)
     setResources([])
+    setResourceFilter('all')
   }
 
+  // 计算阶段进度
+  const getPhaseProgress = (skills: string[]) => {
+    if (!skills.length) return 0
+    const mastered = skills.filter(s => masteredSkills.has(s)).length
+    return Math.round((mastered / skills.length) * 100)
+  }
+
+  // 直接从诊断结果读取数据
   useEffect(() => {
-    fetch('/api/jobs?size=50').then(r => r.json()).then(d => {
-      if (d.success && d.data?.length) setJobs(d.data.map((j: any) => ({ id: j.id, title: j.title, company: j.company, salary: j.salary, location: j.location, skills: j.skills || [] })))
-    }).catch(() => {})
+    try {
+      const raw = localStorage.getItem('jt_diagnosis_result')
+      if (raw) {
+        const data = JSON.parse(raw)
+        // 检查诊断结果是否在24小时内，超过则视为过期
+        const age = Date.now() - (data.timestamp || 0)
+        if (age < 24 * 60 * 60 * 1000) {
+          setTargetJob(data.job)
+          setDiagnosis(data.result)
+        } else {
+          // 诊断结果过期，清除并引导重新诊断
+          localStorage.removeItem('jt_diagnosis_result')
+        }
+      }
+    } catch { /* ignore */ }
   }, [])
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   }, [chatLog])
-
-  const runDiagnose = async (job: Job) => {
-    const t = localStorage.getItem('xingtu_token')
-    if (!t) return
-    setAnalyzing(true); setTargetJob(job); setDiagnosis(null)
-    try {
-      const skillsRaw = localStorage.getItem('jt_diagnosis_skills')
-      const skills = skillsRaw ? JSON.parse(skillsRaw) : []
-      const body: Record<string, any> = { job_id: job.id, use_profile_skills: true }
-      if (skills.length) { body.resume_text = `熟练掌握 ${skills.join('、')}`; body.use_profile_skills = false }
-      const r = await fetch(`/api/match/analyze?token=${t}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const d = await r.json()
-      if (d.success) {
-        setDiagnosis(d.data)
-        localStorage.setItem('jt_learning_report', JSON.stringify(d.data))
-      }
-    } catch { /* noop */ } finally { setAnalyzing(false) }
-  }
 
   const sendMsg = async () => {
     const text = msg.trim()
@@ -157,17 +158,26 @@ export default function LearningPath() {
     setMsg('')
     setChatLog(prev => [...prev, { role: 'user', text }, { role: 'tutu', text: '思考中...' }])
     try {
-      // 构造诊断上下文（从已构建的 phases 和 skills.miss 提取）
+      // 构造诊断上下文
       const phases = buildPhases(diagnosis)
       const diagnosisContext = diagnosis ? {
         miss_skills: (diagnosis.skills?.miss || []).map((s: any) => typeof s === 'string' ? s : (s.skill || s.name || '')).filter(Boolean),
         phases: phases.map(p => p.title),
         target_job: targetJob?.title || '',
       } : null
+      // 构建聊天历史（后端取最后6条）
+      const history = chatLog
+        .filter(m => m.text !== '思考中...')
+        .slice(-6)
+        .map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.text,
+        }))
+
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, diagnosis: diagnosisContext }),
+        body: JSON.stringify({ message: text, diagnosis: diagnosisContext, history }),
         cache: 'no-store',
       })
       const d = await r.json()
@@ -187,8 +197,8 @@ export default function LearningPath() {
 
   const phases = buildPhases(diagnosis)
 
-  // 未选目标
-  if (!targetJob) {
+  // 未有诊断结果
+  if (!targetJob || !diagnosis) {
     return (
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -205,7 +215,7 @@ export default function LearningPath() {
             </motion.div>
             <div className="flex-1">
               <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 图图</h1>
-              <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>选择目标岗位，开启你的学习之旅 🎯</p>
+              <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>请先完成岗位诊断，再进入学习 🎯</p>
             </div>
             <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }} className="flex flex-col items-center gap-1">
               <div className="relative">
@@ -218,44 +228,16 @@ export default function LearningPath() {
             </motion.div>
           </div>
         </motion.div>
-        <div className="grid grid-cols-2 gap-4">
-          {jobs.map(job => (
-            <div key={job.id} onClick={() => runDiagnose(job)}
-              className="rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-[var(--color-primary)]"
-              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>{job.title}</h3>
-                <span className="text-sm font-bold" style={{ color: 'var(--color-primary)' }}>{job.salary}</span>
-              </div>
-              <p className="text-xs mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>{job.company} · {job.location}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {job.skills?.slice(0, 5).map((s: string) => (
-                  <span key={s} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: '#D5E4FA', color: '#434654' }}>{s}</span>
-                ))}
-                {(job.skills?.length || 0) > 5 && <span className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>+{job.skills.length - 5}</span>}
-              </div>
-            </div>
-          ))}
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <Target className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--color-primary)' }} />
+          <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-on-surface)' }}>还没有诊断结果</p>
+          <p className="text-xs mb-4" style={{ color: 'var(--color-on-surface-variant)' }}>请先在岗位页面选择岗位进行诊断，然后进入学习</p>
+          <button onClick={() => setPage('match')}
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+            style={{ background: 'var(--color-primary)' }}>
+            去选择岗位
+          </button>
         </div>
-      </div>
-    )
-  }
-
-  // 分析中
-  if (analyzing) {
-    return (
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-4">
-        <div className="flex items-center gap-3">
-          <button onClick={() => { setTargetJob(null); setDiagnosis(null) }} className="text-sm font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>← 返回</button>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--color-on-surface)' }}>正在分析：{targetJob.title}</h1>
-        </div>
-        {[1, 2, 3].map(i => (
-          <div key={i} className="rounded-xl border p-4 space-y-3 animate-pulse" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center gap-2"><div className="h-8 w-8 rounded-full" style={{ background: 'var(--color-surface-container)' }} /><div className="h-4 w-40 rounded" style={{ background: 'var(--color-surface-container)' }} /></div>
-            <div className="h-3 w-full rounded" style={{ background: 'var(--color-surface-container)' }} />
-            <div className="h-3 w-3/4 rounded" style={{ background: 'var(--color-surface-container)' }} />
-          </div>
-        ))}
       </div>
     )
   }
@@ -283,14 +265,14 @@ export default function LearningPath() {
               <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>目标：{targetJob.title} · {targetJob.company}</p>
               <div className="flex items-center gap-4 mt-2">
                 <span className="text-xs flex items-center gap-1" style={{ color: 'var(--color-primary)' }}><Target className="h-3.5 w-3.5" /> 匹配度 {diagnosis ? Math.round(diagnosis.overall) : '-'}</span>
-                <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-green)' }}><CheckCircle className="h-3.5 w-3.5" /> 已掌握 {diagnosis?.skills?.have?.length || 0}</span>
+                <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-green)' }}><CheckCircle className="h-3.5 w-3.5" /> 已掌握 {masteredSkills.size}</span>
                 <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-red)' }}><Zap className="h-3.5 w-3.5" /> 待提升 {diagnosis?.skills?.miss?.length || 0}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => runDiagnose(targetJob!)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border" style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}><RotateCcw className="h-3.5 w-3.5" /> 重新诊断</button>
-            <button onClick={() => { setTargetJob(null); setDiagnosis(null); localStorage.removeItem('jt_learning_target'); localStorage.removeItem('jt_learning_report') }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>换岗位</button>
+            <button onClick={() => { localStorage.removeItem('jt_diagnosis_result'); setPage('match') }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border" style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}><RotateCcw className="h-3.5 w-3.5" /> 重新诊断</button>
+            <button onClick={() => { setTargetJob(null); setDiagnosis(null); localStorage.removeItem('jt_diagnosis_result'); localStorage.removeItem('jt_diagnosis_job'); localStorage.removeItem('jt_diagnosis_skills'); setPage('match') }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>换岗位</button>
           </div>
         </div>
       </motion.div>
@@ -319,7 +301,7 @@ export default function LearningPath() {
                       <p.icon className="h-5 w-5" style={{ color: active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)' }} />
                     </motion.div>
                     <span className="text-[10px] font-semibold text-center leading-tight" style={{ color: active ? p.color : 'var(--color-on-surface-variant)', maxWidth: 64 }}>{p.title}</span>
-                    <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>{p.duration}</span>
+                    <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>{getPhaseProgress(p.skills)}% · {p.duration}</span>
                   </button>
                 )
               })}
@@ -345,15 +327,48 @@ export default function LearningPath() {
                     </div>
                   </div>
                   <div className="mb-4">
-                    <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>学习目标</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}>学习目标</p>
+                      <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
+                        {phases[step].skills.filter(s => masteredSkills.has(s)).length}/{phases[step].skills.length} 已掌握
+                      </span>
+                    </div>
+                    {/* 阶段进度条 */}
+                    <div className="h-1.5 rounded-full mb-3" style={{ background: 'var(--color-surface)' }}>
+                      <motion.div className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${getPhaseProgress(phases[step].skills)}%` }}
+                        transition={{ duration: 0.5 }}
+                        style={{ background: `linear-gradient(90deg, ${phases[step].color}, ${phases[step].color}cc)` }} />
+                    </div>
                     <div className="flex flex-wrap gap-2">
-                      {phases[step].skills.map(s => (
-                        <button key={s} onClick={() => loadResources([s])}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-                          style={{ background: `${phases[step].color}10`, color: phases[step].color }}>
-                          <CheckCircle className="h-3 w-3" />{s}
-                        </button>
-                      ))}
+                      {phases[step].skills.map(s => {
+                        const isMastered = masteredSkills.has(s)
+                        return (
+                          <div key={s} className="flex items-center gap-1">
+                            <button onClick={() => loadResources([s])}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                              style={{
+                                background: isMastered ? `${phases[step].color}25` : `${phases[step].color}10`,
+                                color: phases[step].color,
+                                textDecoration: isMastered ? 'line-through' : 'none',
+                                opacity: isMastered ? 0.7 : 1,
+                              }}>
+                              {isMastered ? <CheckCircle className="h-3 w-3" /> : <BookOpen className="h-3 w-3" />}{s}
+                            </button>
+                            <button onClick={() => toggleMastered(s)}
+                              className="h-6 w-6 rounded-full flex items-center justify-center text-xs transition-all hover:scale-110"
+                              title={isMastered ? '取消掌握' : '标记为已掌握'}
+                              style={{
+                                background: isMastered ? 'var(--accent-green)' : 'var(--color-surface)',
+                                color: isMastered ? '#fff' : 'var(--color-on-surface-variant)',
+                                border: `1px solid ${isMastered ? 'var(--accent-green)' : 'var(--color-outline-variant)'}`,
+                              }}>
+                              {isMastered ? '✓' : '+'}
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                   {/* 学习资源区 */}
@@ -374,22 +389,62 @@ export default function LearningPath() {
                           {[1, 2].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: 'var(--color-surface)' }} />)}
                         </div>
                       ) : resources.length > 0 ? (
-                        <div className="space-y-2">
-                          {resources.slice(0, 4).map((r, j) => (
-                            <a key={j} href={r.url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-2.5 rounded-xl transition-all hover:opacity-80"
-                              style={{ background: 'var(--color-surface)' }}>
-                              <div className="flex h-8 w-8 items-center justify-center shrink-0 rounded-lg" style={{ background: `${phases[step].color}10` }}>
-                                {(() => { const Icon = typeIcons[r.type] || BookOpen; return <Icon className="h-4 w-4" style={{ color: phases[step].color }} /> })()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium truncate">{r.name}</p>
-                                <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>{r.type}</p>
-                              </div>
-                              <ExternalLink className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }} />
-                            </a>
-                          ))}
-                        </div>
+                        <>
+                          {/* 资源类型筛选 */}
+                          <div className="flex gap-1.5 mb-2">
+                            {['all', '视频', '文档', '教程'].map(type => {
+                              const count = type === 'all' ? resources.length : resources.filter(r => r.type === type).length
+                              if (type !== 'all' && count === 0) return null
+                              return (
+                                <button key={type} onClick={() => setResourceFilter(type)}
+                                  className="px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all"
+                                  style={{
+                                    background: resourceFilter === type ? `${phases[step].color}20` : 'transparent',
+                                    color: resourceFilter === type ? phases[step].color : 'var(--color-on-surface-variant)',
+                                    border: `1px solid ${resourceFilter === type ? phases[step].color : 'var(--color-outline-variant)'}`,
+                                  }}>
+                                  {type === 'all' ? '全部' : type} ({count})
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <div className="space-y-2">
+                            {resources
+                              .filter(r => resourceFilter === 'all' || r.type === resourceFilter)
+                              .slice(0, 6)
+                              .map((r, j) => {
+                                const isVideo = r.type === '视频'
+                                const rColor = typeColors[r.type] || phases[step].color
+                                return (
+                                  <a key={j} href={r.url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-3 p-2.5 rounded-xl transition-all hover:shadow-sm group"
+                                    style={{ background: isVideo ? '#fef2f2' : 'var(--color-surface)', border: isVideo ? '1px solid #fecaca' : 'none' }}>
+                                    <div className="flex h-8 w-8 items-center justify-center shrink-0 rounded-lg relative"
+                                      style={{ background: `${rColor}15` }}>
+                                      {(() => { const Icon = typeIcons[r.type] || BookOpen; return <Icon className="h-4 w-4" style={{ color: rColor }} /> })()}
+                                      {isVideo && (
+                                        <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full flex items-center justify-center"
+                                          style={{ background: '#ef4444' }}>
+                                          <Play className="h-2 w-2 text-white" fill="white" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium truncate group-hover:text-[var(--color-primary)]">{r.name}</p>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded"
+                                          style={{ background: `${rColor}10`, color: rColor }}>
+                                          {r.type}
+                                        </span>
+                                        {isVideo && <span className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>视频教程</span>}
+                                      </div>
+                                    </div>
+                                    <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--color-on-surface-variant)' }} />
+                                  </a>
+                                )
+                              })}
+                          </div>
+                        </>
                       ) : null}
                     </div>
                   )}
@@ -397,7 +452,7 @@ export default function LearningPath() {
                     <Sparkles className="h-3.5 w-3.5" style={{ color: '#FFD700' }} />
                     星星建议：{phases[step].tip}
                   </div>
-                  <p className="text-[10px] mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>💡 点击技能标签或"查看全部"获取学习资源链接</p>
+                  <p className="text-[10px] mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>💡 点击技能标签获取资源，点击 <span style={{ color: 'var(--accent-green)' }}>+ / ✓</span> 标记掌握状态</p>
                 </div>
               </motion.div>
             )}
