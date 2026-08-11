@@ -21,8 +21,9 @@ from pydantic import BaseModel, Field
 
 from database import (
     get_session, verify_token,
-    Jobseeker, Enterprise, Admin, Job, MatchRecord,
+    Jobseeker, Enterprise, Admin, Job, MatchRecord, SkillResource,
 )
+from services.learning_path import invalidate_cache as _invalidate_resource_cache
 
 
 # ─── 管理员鉴权依赖 — 所有 admin 接口强制校验 token + role=admin ──────────────
@@ -44,6 +45,11 @@ router = APIRouter(prefix='/api/admin', tags=['admin'], dependencies=[Depends(re
 def _err(code: str, message: str, details=None):
     """统一错误响应格式: {success:false, error:{code, message, details}}"""
     return {'success': False, 'error': {'code': code, 'message': message, 'details': details or {}}}
+
+
+def _like_escape(s: str) -> str:
+    """转义 LIKE 通配符，防止 % _ 注入"""
+    return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
 # ─── 密码强度校验 — 与 auth.py 注册接口保持一致 ─────────────────────────────
@@ -132,7 +138,7 @@ def list_jobseekers(
     try:
         q = session.query(Jobseeker)
         if keyword:
-            kw = f'%{keyword}%'
+            kw = f'%{_like_escape(keyword)}%'
             q = q.filter(
                 (Jobseeker.email.like(kw)) |
                 (Jobseeker.username.like(kw)) |
@@ -258,7 +264,7 @@ def list_enterprises(
     try:
         q = session.query(Enterprise)
         if keyword:
-            kw = f'%{keyword}%'
+            kw = f'%{_like_escape(keyword)}%'
             q = q.filter(
                 (Enterprise.email.like(kw)) |
                 (Enterprise.username.like(kw)) |
@@ -387,7 +393,7 @@ def list_jobs(
         if status:
             q = q.filter(Job.status == status)
         if keyword:
-            kw = f'%{keyword}%'
+            kw = f'%{_like_escape(keyword)}%'
             q = q.filter(
                 (Job.title.like(kw)) |
                 (Job.skills_required.like(kw)) |
@@ -463,5 +469,190 @@ def list_admins():
         }
     except Exception as e:
         return _err('INTERNAL_ERROR', f'查询管理员列表失败: {e}')
+    finally:
+        session.close()
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 学习资源管理（skill_resources 表）
+# ════════════════════════════════════════════════════════════════════════
+class ResourceCreateReq(BaseModel):
+    """创建/更新学习资源的请求体"""
+    skill_name: str = Field(..., description='技能名称，如 Python')
+    resource_type: str = Field('文档', description='类型：文档/教程/视频/课程/搜索')
+    title: str = Field(..., description='资源标题')
+    url: str = Field(..., description='资源链接（必须 http/https 开头）')
+    sort_order: int = Field(0, description='排序权重（越小越靠前）')
+
+    def validate_url(self):
+        if not self.url.startswith(('http://', 'https://')):
+            raise ValueError('URL 必须以 http:// 或 https:// 开头')
+        return self
+
+
+def _resource_to_dict(r: SkillResource) -> dict:
+    """资源 ORM → 前端字典"""
+    return {
+        'id': r.id,
+        'skill_name': r.skill_name,
+        'resource_type': r.resource_type or '文档',
+        'title': r.title,
+        'url': r.url,
+        'sort_order': r.sort_order or 0,
+        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+    }
+
+
+@router.get('/resources')
+def list_resources(
+    skill: str = Query('', description='按技能名称筛选'),
+    keyword: str = Query('', description='按标题/URL 模糊搜索'),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=200),
+):
+    """学习资源列表（分页 + 筛选）"""
+    session = get_session()
+    try:
+        q = session.query(SkillResource)
+        if skill:
+            q = q.filter(SkillResource.skill_name == skill)
+        if keyword:
+            kw = f'%{_like_escape(keyword)}%'
+            q = q.filter(
+                (SkillResource.title.like(kw)) | (SkillResource.url.like(kw))
+            )
+        total = q.count()
+        rows = q.order_by(SkillResource.skill_name, SkillResource.sort_order).offset((page - 1) * size).limit(size).all()
+        return {
+            'success': True,
+            'data': {
+                'list': [_resource_to_dict(r) for r in rows],
+                'total': total, 'page': page, 'size': size,
+            },
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('INTERNAL_ERROR', f'查询资源列表失败: {e}')
+    finally:
+        session.close()
+
+
+@router.get('/resources/skills')
+def list_resource_skills():
+    """返回所有有资源的技能名称列表（用于筛选下拉）"""
+    session = get_session()
+    try:
+        rows = session.query(SkillResource.skill_name).distinct().order_by(SkillResource.skill_name).all()
+        return {
+            'success': True,
+            'data': [r[0] for r in rows],
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('INTERNAL_ERROR', f'查询技能列表失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/resources')
+def create_resource(req: ResourceCreateReq):
+    """新增学习资源"""
+    session = get_session()
+    try:
+        r = SkillResource(
+            skill_name=req.skill_name.strip(),
+            resource_type=req.resource_type,
+            title=req.title,
+            url=req.url,
+            sort_order=req.sort_order,
+        )
+        session.add(r); session.commit(); session.refresh(r)
+        _invalidate_resource_cache()
+        return {
+            'success': True,
+            'data': _resource_to_dict(r),
+            'message': f'资源「{r.title}」创建成功',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('CREATE_ERROR', f'创建资源失败: {e}')
+    finally:
+        session.close()
+
+
+@router.put('/resources/{res_id}')
+def update_resource(res_id: int, req: ResourceCreateReq):
+    """更新学习资源"""
+    session = get_session()
+    try:
+        r = session.query(SkillResource).filter(SkillResource.id == res_id).first()
+        if not r:
+            return _err('NOT_FOUND', f'资源不存在: id={res_id}')
+        r.skill_name = req.skill_name.strip()
+        r.resource_type = req.resource_type
+        r.title = req.title
+        r.url = req.url
+        r.sort_order = req.sort_order
+        session.commit(); session.refresh(r)
+        _invalidate_resource_cache()
+        return {
+            'success': True,
+            'data': _resource_to_dict(r),
+            'message': f'资源「{r.title}」更新成功',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('UPDATE_ERROR', f'更新资源失败: {e}')
+    finally:
+        session.close()
+
+
+@router.delete('/resources/{res_id}')
+def delete_resource(res_id: int):
+    """删除学习资源"""
+    session = get_session()
+    try:
+        r = session.query(SkillResource).filter(SkillResource.id == res_id).first()
+        if not r:
+            return _err('NOT_FOUND', f'资源不存在: id={res_id}')
+        title = r.title
+        session.delete(r); session.commit()
+        _invalidate_resource_cache()
+        return {'success': True, 'data': {'id': res_id}, 'message': f'资源「{title}」已删除'}
+    except Exception as e:
+        session.rollback()
+        return _err('DELETE_ERROR', f'删除资源失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/resources/batch')
+def batch_import_resources(items: list[ResourceCreateReq]):
+    """批量导入学习资源（用于初始数据迁移，上限 200 条）"""
+    if len(items) > 200:
+        return _err('BATCH_TOO_LARGE', '单次批量导入上限 200 条')
+    session = get_session()
+    try:
+        created = 0
+        for item in items:
+            r = SkillResource(
+                skill_name=item.skill_name.strip(),
+                resource_type=item.resource_type,
+                title=item.title,
+                url=item.url,
+                sort_order=item.sort_order,
+            )
+            session.add(r)
+            created += 1
+        session.commit()
+        _invalidate_resource_cache()
+        return {
+            'success': True,
+            'data': {'count': created},
+            'message': f'成功导入 {created} 条资源',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('BATCH_ERROR', f'批量导入失败: {e}')
     finally:
         session.close()

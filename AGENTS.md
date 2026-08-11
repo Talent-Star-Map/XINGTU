@@ -61,7 +61,15 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 **Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`LONGCAT_API_KEY` 等运行配置，已提交供团队共享。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
 
-**图图 AI 问答.** `chat_api.py` 调用 LongCat API（`https://api.longcat.chat/anthropic/v1/messages`，Anthropic Messages 格式）。需配置 `LONGCAT_API_KEY` / `LONGCAT_MODEL` / `LONGCAT_BASE_URL`。API 不可用时自动回退到本地关键词知识库。新增 `/api/chat/resources` 端点根据技能返回真实学习链接（`learning_path.py`）。
+**图图 AI 问答.** `chat_api.py` 调用 DeepSeek API（OpenAI Chat Completions 格式）。需配置 `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` / `DEEPSEEK_BASE_URL`。API 不可用时自动回退到本地关键词知识库。`/api/chat/resources` 端点根据技能返回真实学习链接（`learning_path.py`）。**注意：`/api/chat/debug` 和 `/api/chat/raw` 已移除（安全原因）。**
+
+**学习数据存储.** `learning_api.py` 提供 6 个 API 端点（技能掌握/诊断历史/学习进度），数据存储在 MySQL 3 张新表：`user_skills`、`diagnosis_history`、`learning_progress`。前端通过 `LearningContext.tsx` 全局状态管理读写，不再依赖 localStorage。
+
+**SMTP 密码已移至 .env.** `backend/.env` 中配置 `SMTP_PASSWORD`，代码中通过 `os.getenv('SMTP_PASSWORD')` 读取，不再硬编码。
+
+**缓存自动清理.** `match_api.py` 启动时自动清理超过 1 小时的匹配缓存文件。
+
+**学习资源数据库化.** 学习资源已从 `learning_path.py` 硬编码迁移到 `skill_resources` 数据库表（33 技能 88 条资源）。`learning_path.py` 通过 `_fetch_all_resources()` 从 DB 读取，保留原有模糊匹配 + fallback 逻辑。管理员通过 `/api/admin/resources` CRUD 接口维护资源，前端管理页面 `AdminResourceManage.tsx`。
 
 ## Architecture
 
@@ -70,21 +78,22 @@ XINGTU/
 ├── backend/                   # FastAPI app (Python 3.12)
 │   ├── main.py                # App entrypoint, mounts routers + /uploads static mount
 │   ├── database.py            # SQLAlchemy models: Jobseeker, Enterprise, Admin, VerifyCode, Job, MatchRecord + JWT helpers
-│   ├── routers/               # FastAPI 路由层（7 个 router 模块）
+│   ├── routers/               # FastAPI 路由层（8 个 router 模块）
 │   │   ├── auth.py            # /api/auth — register, login, profile, resume CRUD; /api/auth/admin/login
 │   │   ├── jobs.py            # /api/jobs — seeded job data + stats (SEED_JOBS, 15 hardcoded)
 │   │   ├── company.py         # /api/company — public enterprise profiles
 │   │   ├── enterprise.py      # /api/enterprise — talent search, job CRUD, dashboard, run-match
 │   │   ├── match_api.py       # /api/match — 人岗匹配分析接口
 │   │   ├── quality_api.py     # /api/quality — data quality reports + accuracy tests (admin-only, require_admin dep)
-│   │   └── chat_api.py        # /api/chat — 图图 AI 问答（LongCat API, Anthropic 格式）
+│   │   ├── chat_api.py        # /api/chat — 图图 AI 问答（DeepSeek API, OpenAI 格式）+ 学习资源
+│   │   └── learning_api.py    # /api/learning — 技能掌握/诊断历史/学习进度（数据库存储）
 │   ├── services/              # 业务逻辑层（无 router，被 routers 调用）
 │   │   ├── match_engine.py    # 3-dimensional matching engine (skill/exp/salary) → match_records
 │   │   ├── match_analyzer.py  # 多维度匹配算法：技能50%/经验20%/学历15%/薪资15%
 │   │   ├── skill_synonyms.py  # 技能同义词映射表
 │   │   ├── resume_parser.py   # 简历解析：PDF/Word → 技能提取 + 同义词归一化
 │   │   ├── quality_checker.py # Data quality analysis (plagiarism, inflation, cross-validation)
-│   │   └── learning_path.py   # 技能→学习资源链接映射
+│   │   └── learning_path.py   # 技能→学习资源链接映射（含视频教程）
 │   ├── scripts/               # 独立运行的 CLI 脚本（不被业务代码 import）
 │   │   ├── jd_scraper.py      # JD scraping from Boss/拉勾 (requests-based CLI tool)
 │   │   └── selenium_scraper.py # JD scraping via Selenium headless Chrome (alt to jd_scraper)
@@ -116,7 +125,7 @@ XINGTU/
 │   │   │   ├── CompanyCard.tsx     # Enterprise company display card
 │   │   │   ├── Graph3D.tsx         # Three.js 3D graph visualization
 │   │   │   └── ui/          # Reusable animation/effect components (aurora, particles, tilt cards, glare, star border, etc.)
-│   │   ├── lib/              # NavContext, utils
+│   │   ├── lib/              # NavContext, LearningContext, utils
 │   │   └── types/index.ts    # Shared TypeScript interfaces
 │   └── nginx.conf     # Production: SPA fallback + /api/ reverse proxy
 ├── docs/              # Competition briefs, architecture docs (Chinese)

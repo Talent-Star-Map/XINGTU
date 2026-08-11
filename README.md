@@ -82,6 +82,10 @@ npm run dev
 | `admins` | 管理员账号表 | `database.py::Admin` |
 | `match_records` | 人岗匹配记录表 | `database.py::MatchRecord` |
 | `verify_codes` | 验证码表 | `database.py::VerifyCode` |
+| `user_skills` | 用户已掌握技能（按岗位区分） | SQL 直接操作 |
+| `diagnosis_history` | 诊断历史记录（含完整技能数据） | SQL 直接操作 |
+| `learning_progress` | 学习进度（按用户+岗位+技能） | SQL 直接操作 |
+| `skill_resources` | 技能学习资源（管理员后台维护，33 技能 88 条） | `database.py::SkillResource` |
 
 > ⚠️ **注意 `jobs` 和 `enterprise_jobs` 是两张不同的表**：
 > - `jobs` = 爬虫采集的真实市场岗位（求职者端浏览）

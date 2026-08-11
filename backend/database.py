@@ -138,6 +138,19 @@ class CrawledJob(Base):
     crawl_time = Column(DateTime)                             # 数据采集时间
     update_time = Column(DateTime)                            # 数据更新时间
 
+class SkillResource(Base):
+    """技能学习资源表 — 管理后台维护，求职端学习中心展示"""
+    __tablename__ = 'skill_resources'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    skill_name = Column(String(100), nullable=False, index=True)       # 技能名称，如"Python"
+    resource_type = Column(String(20), default='文档')                  # 类型：文档/教程/视频/课程/搜索
+    title = Column(String(300), nullable=False)                         # 资源标题
+    url = Column(String(500), nullable=False)                           # 资源链接
+    sort_order = Column(Integer, default=0)                             # 排序权重（越小越靠前）
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 class MatchRecord(Base):
     """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果
 
@@ -210,31 +223,27 @@ def create_user(email, phone, password, role, username=''):
 
 def get_user_by_login(login):
     session = get_session()
-    user = session.query(Jobseeker).filter(
-        (Jobseeker.email == login) | (Jobseeker.phone == login)
-    ).first()
-    if user:
-        result = dict(id=user.id, email=user.email, phone=user.phone,
-                      username=user.username, password=user.password, role='jobseeker')
+    try:
+        user = session.query(Jobseeker).filter(
+            (Jobseeker.email == login) | (Jobseeker.phone == login)
+        ).first()
+        if user:
+            return dict(id=user.id, email=user.email, phone=user.phone,
+                        username=user.username, password=user.password, role='jobseeker')
+        user = session.query(Enterprise).filter(
+            (Enterprise.email == login) | (Enterprise.phone == login)
+        ).first()
+        if user:
+            return dict(id=user.id, email=user.email, phone=user.phone,
+                        username=user.username, password=user.password, role='enterprise')
+        # 管理员只允许邮箱登录，无手机号字段
+        user = session.query(Admin).filter(Admin.email == login).first()
+        if user:
+            return dict(id=user.id, email=user.email, phone=None,
+                        username=user.username or '管理员', password=user.password, role='admin')
+        return None
+    finally:
         session.close()
-        return result
-    user = session.query(Enterprise).filter(
-        (Enterprise.email == login) | (Enterprise.phone == login)
-    ).first()
-    if user:
-        result = dict(id=user.id, email=user.email, phone=user.phone,
-                      username=user.username, password=user.password, role='enterprise')
-        session.close()
-        return result
-    # 管理员只允许邮箱登录，无手机号字段
-    user = session.query(Admin).filter(Admin.email == login).first()
-    if user:
-        result = dict(id=user.id, email=user.email, phone=None,
-                      username=user.username or '管理员', password=user.password, role='admin')
-        session.close()
-        return result
-    session.close()
-    return None
 
 def get_user_model_by_role(role):
     """根据 role 返回对应的模型类"""
