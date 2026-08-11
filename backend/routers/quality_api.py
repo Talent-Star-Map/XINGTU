@@ -5,18 +5,27 @@
 from fastapi import APIRouter, Query, Depends, HTTPException
 # services 跨目录引用
 from services.quality_checker import full_quality_report, cross_validate, detect_plagiarism, detect_inflation
-from routers.jobs import SEED_JOBS
-from database import verify_token
+from database import verify_token, get_session, CrawledJob
 import json, os, tempfile
 
+
 def _load_jobs():
-    """加载扩展数据集（含抄袭/通胀样本），否则用种子数据"""
-    # test_data 目录在 backend/ 根，需向上跳一层
+    """从数据库加载岗位数据，用于质检报告"""
     expanded = os.path.join(os.path.dirname(__file__), '..', 'test_data', 'expanded_jobs.json')
     if os.path.exists(expanded):
         with open(expanded, 'r', encoding='utf-8') as f:
             return json.load(f)
-    return SEED_JOBS
+    # 从数据库查询
+    session = get_session()
+    try:
+        jobs = session.query(CrawledJob).filter(CrawledJob.data_type == 1).limit(50).all()
+        return [{
+            'id': j.id, 'title': j.title, 'company': j.company_name,
+            'skills': j.skill_tags or [], 'source': j.source or 'unknown',
+            'description': j.job_description or '',
+        } for j in jobs]
+    finally:
+        session.close()
 
 # ─── 管理员鉴权依赖 — 所有质检接口必须携带管理员 token 才能访问 ──────────────
 def require_admin(token: str = Query(...)):
@@ -92,11 +101,12 @@ def run_accuracy_test():
         jd_path = os.path.join(TEST_DATA_DIR, 'sample_jds.json')
 
     if not os.path.exists(jd_path) or not os.path.exists(ans_path):
+        jobs = _load_jobs()
         samples = []
         answers = []
-        for j in SEED_JOBS[:10]:
-            samples.append({'id': j['id'], 'title': j['title'], 'description': j['description']})
-            answers.append({'id': j['id'], 'skills': j['skills']})
+        for j in jobs[:10]:
+            samples.append({'id': j['id'], 'title': j['title'], 'description': j.get('description', '')})
+            answers.append({'id': j['id'], 'skills': j.get('skills', [])})
         with open(jd_path, 'w', encoding='utf-8') as f:
             json.dump(samples, f, ensure_ascii=False, indent=2)
         with open(ans_path, 'w', encoding='utf-8') as f:
@@ -107,7 +117,7 @@ def run_accuracy_test():
     with open(ans_path, 'r', encoding='utf-8') as f:
         answers = json.load(f)
 
-    from resume_parser import parse_resume
+    from services.resume_parser import parse_resume
 
     total_precision = 0
     total_recall = 0
@@ -227,7 +237,7 @@ def run_resume_test():
     with open(resume_path, 'r', encoding='utf-8') as f:
         resumes = json.load(f)
 
-    from resume_parser import parse_resume
+    from services.resume_parser import parse_resume
 
     total_precision = 0
     total_recall = 0
