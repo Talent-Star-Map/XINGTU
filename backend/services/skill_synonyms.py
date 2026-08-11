@@ -118,7 +118,7 @@ def is_synonym(s1: str, s2: str) -> bool:
 def get_skill_popularity(skill: str, all_jobs: Optional[list[dict]] = None) -> float:
     if not all_jobs:
         try:
-            from jobs import SEED_JOBS
+            from routers.jobs import SEED_JOBS
             all_jobs = SEED_JOBS
         except ImportError: return 0.0
     s = skill.strip().lower()

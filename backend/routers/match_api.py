@@ -31,6 +31,27 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 MATCH_CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'match_cache')
 os.makedirs(MATCH_CACHE_DIR, exist_ok=True)
 
+def _cleanup_old_cache():
+    """启动时清理超过1小时的缓存文件"""
+    import glob as _glob
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    for f in _glob.glob(os.path.join(MATCH_CACHE_DIR, '*.json')):
+        try:
+            with open(f, 'r', encoding='utf-8') as fp:
+                data = json.load(fp)
+            created = data.get('created_at', '')
+            if created:
+                ct = datetime.fromisoformat(created)
+                if ct.tzinfo is None:
+                    ct = ct.replace(tzinfo=timezone.utc)
+                if ct < cutoff:
+                    os.remove(f)
+        except Exception:
+            pass
+
+_cleanup_old_cache()
+
 
 # ──────────────────────────────────────────────
 # 请求/响应 schema
@@ -50,7 +71,7 @@ class AnalyzeReq(BaseModel):
 @router.post('/analyze')
 def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
     # 1. 鉴权
-    from auth import verify_token  # 避免循环引用
+    from database import verify_token
     try:
         payload = verify_token(token)
     except ValueError as e:
@@ -73,7 +94,7 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
         raise HTTPException(404, '用户不存在')
 
     # 4. 构图 quality_context（交叉验证状态）
-    from jobs import SEED_JOBS as all_jobs_for_validation
+    from routers.jobs import SEED_JOBS as all_jobs_for_validation
     source_skills_map = defaultdict(list)
     for j in all_jobs_for_validation:
         source_skills_map[j['source']].extend(j.get('skills', []))
@@ -136,7 +157,7 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
                 profile["salary_max"] = int(nums[1])
         if not profile.get("experience_years") and user.experience:
             try:
-                from match_analyzer import _parse_experience
+                from services.match_analyzer import _parse_experience
                 profile["experience_years"] = _parse_experience(user.experience)
             except: pass
 
@@ -152,7 +173,8 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
     cache_key = f"{user_id}_{req.job_id}"
     match_cache_path = os.path.join(MATCH_CACHE_DIR, f"{cache_key}.json")
     cache_hit = False
-    computed_at = __import__('datetime').datetime.now().isoformat()
+    from datetime import datetime, timezone
+    computed_at = datetime.now(timezone.utc).isoformat()
 
     try:
         if os.path.exists(match_cache_path):
@@ -161,8 +183,10 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
             cached_at = cached.get("created_at", "")
             # 检查是否在 3 分钟内
             if cached_at:
-                from datetime import datetime, timezone
                 cached_time = datetime.fromisoformat(cached_at)
+                # 确保两个时间都有时区信息
+                if cached_time.tzinfo is None:
+                    cached_time = cached_time.replace(tzinfo=timezone.utc)
                 now = datetime.now(timezone.utc)
                 if (now - cached_time).total_seconds() < 180:  # 3 min
                     cached_result = cached.get("result", {})
@@ -207,7 +231,7 @@ def api_match_recommend(
     token: str = Query(...),
 ):
     """推荐岗位 Top N（支持传入技能列表或 resume_text）"""
-    from auth import verify_token
+    from database import verify_token
     try:
         payload = verify_token(token)
     except ValueError as e:
@@ -265,18 +289,22 @@ def api_match_recommend(
     if profile is None:
         return {'success': False, 'code': 'NO_PROFILE', 'data': [], 'message': '无可用技能数据'}
 
-    # quality context
-    from jobs import SEED_JOBS as all_jobs_for_validation
-    source_skills_map = defaultdict(list)
-    for j in all_jobs_for_validation:
-        source_skills_map[j['source']].extend(j.get('skills', []))
-    skills_per_source = [(src, skills) for src, skills in source_skills_map.items()]
-    quality_ctx = cross_validate(skills_per_source)
-
-    # 遍历所有岗位打分（同步，≤20 个）
-    scores = []
+    # 快速预筛选：只保留技能有重叠的岗位（避免全量计算）
+    user_skills_lower = set(s.lower() for s in profile.get("skills", []) if s)
+    candidate_jobs = []
     for job in SEED_JOBS:
-        result = compute_match_score(profile, job, quality_ctx)
+        job_skills = set(s.lower() for s in job.get("skills", []) if s)
+        overlap = len(user_skills_lower & job_skills)
+        if overlap >= 1:  # 至少1个技能重叠
+            candidate_jobs.append((overlap, job))
+    # 按重叠数降序，最多取50个详细计算
+    candidate_jobs.sort(key=lambda x: x[0], reverse=True)
+    candidate_jobs = [job for _, job in candidate_jobs[:50]]
+
+    # 详细计算匹配分数
+    scores = []
+    for job in candidate_jobs:
+        result = compute_match_score(profile, job, {})
         have_skills = [s["skill"] for s in result["skills"]["have"]]
         miss_high = [s["skill"] for s in result["skills"]["miss"] if s.get("priority") == "high"]
         scores.append({
@@ -317,7 +345,7 @@ def api_match_recommend(
 
 @router.delete('/cache')
 def api_clear_cache(token: str = Query(...)):
-    from auth import verify_token
+    from database import verify_token
     try:
         payload = verify_token(token)
     except ValueError as e:

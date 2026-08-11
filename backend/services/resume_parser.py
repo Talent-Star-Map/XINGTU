@@ -207,7 +207,7 @@ def parse_resume(file_path: str) -> dict:
         final = rule_result
 
     # 质检：置信度评分 + 原文溯源
-    from quality_checker import score_skills, trace_skills
+    from services.quality_checker import score_skills, trace_skills
     scored = score_skills(final.get('skills', []), text, method='deepseek' if llm_result else 'rule_based')
     traces = trace_skills(final.get('skills', []), text)
 

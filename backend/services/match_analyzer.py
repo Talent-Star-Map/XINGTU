@@ -53,7 +53,7 @@ def extract_profile_features(
 
     if source_type == "resume_text":
         # 走完整简历解析
-        from resume_parser import rule_based_extract, deepseek_extract
+        from services.resume_parser import rule_based_extract, deepseek_extract
         text = source
         llm = deepseek_extract(text)
         rule = rule_based_extract(text)
@@ -257,7 +257,7 @@ def calc_miss_priority(
 
     try:
         all_jobs = None
-        from jobs import SEED_JOBS
+        from routers.jobs import SEED_JOBS
         all_jobs = SEED_JOBS
     except ImportError:
         all_jobs = [job]
@@ -481,7 +481,7 @@ def _generate_recommendations(have: list[dict], miss: list[dict], job: dict, qua
     """按缺失技能优先级生成改进建议（最多 5 条）"""
     from services.skill_synonyms import get_skill_popularity
     try:
-        from jobs import SEED_JOBS
+        from routers.jobs import SEED_JOBS
         all_jobs = SEED_JOBS
     except ImportError:
         all_jobs = [job]

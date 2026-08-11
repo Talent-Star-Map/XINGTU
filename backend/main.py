@@ -14,6 +14,7 @@ from routers.quality_api import router as quality_router
 from routers.enterprise import router as enterprise_router
 from routers.match_api import router as match_router
 from routers.chat_api import router as chat_router
+from routers.learning_api import router as learning_router
 from routers.admin import router as admin_router
 import os
 
@@ -42,6 +43,7 @@ app.include_router(quality_router)
 app.include_router(enterprise_router)
 app.include_router(match_router)
 app.include_router(chat_router)
+app.include_router(learning_router)
 app.include_router(admin_router)
 
 @app.get('/api/health')

@@ -2,6 +2,7 @@
 
 @owner: 佳豪（求职端"我的"+企业端企业信息+幻觉防控）
 """
+import os
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
@@ -10,7 +11,7 @@ from email.mime.text import MIMEText
 
 router = APIRouter(prefix='/api/auth', tags=['auth'])
 
-SMTP_HOST = 'smtp.qq.com'; SMTP_PORT = 465; SMTP_USER = '3757913901@qq.com'; SMTP_PASS = 'hjncdropikuccjef'
+SMTP_HOST = 'smtp.qq.com'; SMTP_PORT = 465; SMTP_USER = '3757913901@qq.com'; SMTP_PASS = os.getenv('SMTP_PASSWORD', '')
 
 class RegisterReq(BaseModel):
     account: str; password: str; code: str; role: str = 'jobseeker'; username: str = ''
@@ -41,7 +42,7 @@ def send_code(req: SendCodeReq):
     session.add(VerifyCode(target=req.account, code=code))
     session.commit(); session.close()
     try: send_email(req.account, code); return {'success': True, 'message': '验证码已发送到邮箱'}
-    except: print(f'\n===== 验证码 [{req.account}]：{code} =====\n'); return {'success': True, 'message': f'验证码: {code}'}
+    except Exception: print(f'\n===== 验证码 [{req.account}]：{code} =====\n'); return {'success': True, 'message': f'验证码: {code}'}
 
 @router.post('/register')
 def register(req: RegisterReq):
@@ -118,7 +119,7 @@ def update_profile(req: ProfileUpdate, token: str = Query(...)):
 
 import os, shutil
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 os.makedirs(os.path.join(UPLOAD_DIR, 'avatars'), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, 'resumes'), exist_ok=True)
 
@@ -164,7 +165,7 @@ async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
     path = os.path.join(UPLOAD_DIR, 'resumes', name)
     with open(path, 'wb') as f: f.write(content)
 
-    from resume_parser import parse_resume
+    from services.resume_parser import parse_resume
     import json as _json
     result = parse_resume(path)
     cache_path = path + '.json'
@@ -191,7 +192,7 @@ def resume_history(token: str = Query(...)):
         try:
             st = os.stat(f)
             info['date'] = __import__('datetime').datetime.fromtimestamp(st.st_mtime).strftime('%Y-%m-%d %H:%M')
-        except: pass
+        except Exception: pass
         cache = f + '.json'
         if os.path.exists(cache):
             try:
@@ -202,7 +203,7 @@ def resume_history(token: str = Query(...)):
                 info['name'] = c.get('name', '')
                 info['target_position'] = c.get('target_position', '')
                 info['filename'] = c.get('filename', base)
-            except: pass
+            except Exception: pass
         files.append(info)
     return {'success': True, 'data': files}
 
@@ -215,7 +216,7 @@ def resume_reparse(filename: str = Query(...), token: str = Query(...)):
     if not safe.startswith(f'{uid}_'): raise HTTPException(403, '无权访问')
     path = os.path.join(UPLOAD_DIR, 'resumes', safe)
     if not os.path.exists(path): raise HTTPException(404, '文件不存在')
-    from resume_parser import parse_resume
+    from services.resume_parser import parse_resume
     import json as _json
     result = parse_resume(path)
     cache_path = path + '.json'
