@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Save, User, MapPin, GraduationCap, Briefcase, Target, Star, Building, Loader2, CheckCircle, AlertCircle, Mail, Phone } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Save, User, MapPin, GraduationCap, Briefcase, Target, Star, Building, Loader2, CheckCircle, AlertCircle, Mail, Phone, Search, X } from 'lucide-react'
 import ProfileSidebar from '../../components/ProfileSidebar'
 
 const requiredFields = ['real_name', 'phone', 'education', 'target_position']
@@ -164,22 +164,103 @@ export default function ProfileEdit() {
           {/* 技能标签 */}
           <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <h2 className="text-base font-bold mb-4" style={{ color: 'var(--color-on-surface)' }}>技能标签</h2>
-            <p className="text-xs mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>用逗号分隔，系统会根据您的简历自动更新</p>
-            <textarea value={form.skills || ''} onChange={e => h('skills', e.target.value)} rows={3}
-              placeholder="Java, Python, Spring Boot, React, MySQL"
-              className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors resize-none"
-              style={inputStyle('skills')} />
-            {form.skills?.trim() && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {form.skills.split(',').filter(Boolean).map((s: string) => (
-                  <span key={s} className="px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
-                    {s.trim()}
-                  </span>
-                ))}
-              </div>
-            )}
+            <p className="text-xs mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>点击选择技能，系统会根据您的简历自动更新</p>
+            <ProfileSkillSelector
+              skills={form.skills ? form.skills.split(',').filter(Boolean) : []}
+              onChange={(skills) => h('skills', skills.join(', '))}
+            />
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+const SKILL_CATEGORIES: { name: string; skills: string[] }[] = [
+  { name: '编程语言', skills: ['Java', 'Python', 'Go', 'C++', 'Rust', 'TypeScript', 'JavaScript', 'Scala', 'Kotlin', 'Swift', 'PHP', 'Ruby', 'Shell', 'SQL', 'Git', 'Maven', 'Gradle', 'MATLAB'] },
+  { name: '前端框架', skills: ['React', 'Vue', 'Angular', 'Svelte', 'Next.js', 'HTML', 'CSS', 'Node.js', 'Webpack', 'Vite', 'Tailwind CSS', 'Ant Design', 'Element Plus', 'Taro', 'uni-app', 'Electron'] },
+  { name: '后端框架', skills: ['Spring Boot', 'Spring Cloud', 'Django', 'Flask', 'FastAPI', 'Express', 'MyBatis', 'Hibernate', 'Gin', 'gRPC', 'RESTful', 'Dubbo', 'Netty', 'Koa', 'NestJS', 'GraphQL'] },
+  { name: '数据库',   skills: ['MySQL', 'PostgreSQL', 'Redis', 'MongoDB', 'Elasticsearch', 'SQLite', 'Oracle', 'Memcached', 'ClickHouse', 'Neo4j', 'TiDB', 'HBase', 'Cassandra', 'InfluxDB', 'DuckDB', 'MariaDB'] },
+  { name: 'AI/大模型', skills: ['大模型', 'LLM', 'LangChain', 'RAG', 'Agent', 'Prompt Engineering', 'NLP', 'CV', 'PyTorch', 'TensorFlow', 'Pandas', 'NumPy', 'Transformer', 'Stable Diffusion', 'Ollama', 'vLLM', 'LoRA', 'PaddlePaddle', 'MindSpore', 'OpenCV'] },
+  { name: '大数据',   skills: ['Spark', 'Flink', 'Hadoop', 'Kafka', 'Hive', 'HBase', 'DataX', 'Kettle', 'Airflow', 'ClickHouse', '数据仓库', 'ETL', 'Pulsar', 'Storm', 'Sqoop', 'Canal', 'Doris', 'StarRocks', 'Presto', 'Trino', 'Superset'] },
+  { name: '云原生/DevOps', skills: ['Docker', 'Kubernetes', 'K8s', 'CI/CD', 'Jenkins', 'Terraform', 'Nginx', 'Linux', 'AWS', '阿里云', '腾讯云', '微服务', 'Serverless', 'GitLab', 'ArgoCD', 'Prometheus', 'Grafana', 'Istio', 'Consul', 'Ansible', 'Harbor', 'RabbitMQ'] },
+  { name: '安全/测试', skills: ['渗透测试', 'Burp Suite', 'Metasploit', 'Selenium', 'JMeter', 'Postman', '安全架构', 'SDL', 'DevSecOps', 'OWASP', 'Nessus', 'Wireshark', 'Appium', 'LoadRunner', 'SonarQube', 'ZAP', 'SQL 注入', 'XSS'] },
+  { name: '架构/分布式', skills: ['分布式', '微服务', '高并发', '架构设计', '分布式事务', '分布式缓存', '消息队列', 'RabbitMQ', 'RocketMQ', '负载均衡', '服务网格', 'DDD', 'CAP 理论', '服务治理', '链路追踪', 'SkyWalking', 'Seata', 'Nacos', 'Sentinel'] },
+]
+
+function ProfileSkillSelector({ skills, onChange }: { skills: string[]; onChange: (s: string[]) => void }) {
+  const [search, setSearch] = useState('')
+  const [activeCat, setActiveCat] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const addSkill = (s: string) => { if (s && !skills.includes(s)) onChange([...skills, s]) }
+  const removeSkill = (s: string) => { onChange(skills.filter(x => x !== s)) }
+  const toggleFn = (s: string) => { skills.includes(s) ? removeSkill(s) : addSkill(s) }
+
+  const filteredCats = useMemo(() => {
+    const kw = search.toLowerCase().trim()
+    return SKILL_CATEGORIES.map(cat => ({
+      ...cat,
+      skills: kw ? cat.skills.filter(s => s.toLowerCase().includes(kw)).sort() : [...cat.skills].sort(),
+    }))
+  }, [search])
+
+  const currentCat = filteredCats[activeCat]
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && search.trim()) {
+      e.preventDefault()
+      const kw = search.toLowerCase().trim()
+      const first = currentCat.skills.find(s => s.toLowerCase().includes(kw))
+      if (first) { addSkill(first); setSearch(''); inputRef.current?.focus() }
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--color-on-surface-variant)' }} />
+        <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleKey}
+          placeholder="搜索技能，回车添加..."
+          className="w-full h-9 rounded-lg border pl-9 pr-3 text-sm outline-none"
+          style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
+      </div>
+      {skills.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-1.5">
+            {skills.map(t => (
+              <span key={t} onClick={() => removeSkill(t)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer"
+                style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
+                {t} <X className="h-3 w-3" />
+              </span>
+            ))}
+          </div>
+          <button onClick={() => onChange([])}
+            className="shrink-0 text-xs px-2 py-1 rounded-md flex items-center gap-1"
+            style={{ color: 'var(--color-on-surface-variant)', background: 'var(--color-surface)' }}>
+            <X className="h-3 w-3" /> 重置
+          </button>
+        </div>
+      )}
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {filteredCats.map((cat, idx) => (
+          <button key={cat.name} onClick={() => setActiveCat(idx)}
+            className="shrink-0 px-2.5 py-1 rounded text-xs font-medium"
+            style={{ background: activeCat === idx ? 'var(--color-primary)' : 'var(--color-surface)', color: activeCat === idx ? '#fff' : 'var(--color-on-surface-variant)' }}
+          >{cat.name}</button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+        {currentCat.skills.map(s => {
+          const active = skills.includes(s)
+          return (
+            <button key={s} onClick={() => toggleFn(s)}
+              className="px-2.5 py-1 rounded text-xs font-medium"
+              style={{ background: active ? 'var(--color-primary)' : 'var(--color-surface)', color: active ? '#fff' : 'var(--color-on-surface-variant)', border: active ? 'none' : '1px solid var(--color-outline-variant)' }}
+            >{s}</button>
+          )
+        })}
       </div>
     </div>
   )

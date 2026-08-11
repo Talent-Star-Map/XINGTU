@@ -22,8 +22,8 @@ interface JobItem {
   crawl_time?: string      // 采集时间
 }
 
-// 同事部署的后端服务器地址（新版 /api/jobs，300 条真实爬虫数据）
-const API_URL = 'http://180.76.227.159:8081/api/jobs'
+// 走本地代理
+const API_URL = '/api/jobs'
 
 export default function Jobs() {
   const [jobs, setJobs] = useState<JobItem[]>([])
