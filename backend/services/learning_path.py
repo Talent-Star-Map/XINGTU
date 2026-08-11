@@ -1,130 +1,88 @@
 """
-学习资源映射：技能 → 真实学习资源链接
+学习资源服务：从数据库读取技能学习资源，未知技能返回通用搜索链接
 
 @owner: 佳豪（求职端"我的"）
 """
 
-SKILL_RESOURCES: dict[str, list[dict]] = {
-    "Python": [
-        {"name": "菜鸟教程 Python3", "url": "https://www.runoob.com/python3/", "type": "教程"},
-        {"name": "廖雪峰 Python 教程", "url": "https://liaoxuefeng.com/books/python/", "type": "教程"},
-    ],
-    "Java": [
-        {"name": "菜鸟教程 Java", "url": "https://www.runoob.com/java/", "type": "教程"},
-        {"name": "黑马程序员 Java", "url": "https://www.itheima.com/", "type": "课程"},
-    ],
-    "C++": [
-        {"name": "菜鸟教程 C++", "url": "https://www.runoob.com/cplusplus/", "type": "教程"},
-        {"name": "C++ Reference", "url": "https://en.cppreference.com/", "type": "文档"},
-    ],
-    "JavaScript": [
-        {"name": "MDN JavaScript", "url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript", "type": "文档"},
-        {"name": "现代 JavaScript 教程", "url": "https://zh.javascript.info/", "type": "教程"},
-    ],
-    "TypeScript": [
-        {"name": "TypeScript 官方文档", "url": "https://www.typescriptlang.org/zh/docs/", "type": "文档"},
-        {"name": "TypeScript 入门教程", "url": "https://ts.xcatliu.com/", "type": "教程"},
-    ],
-    "Vue": [
-        {"name": "Vue.js 官方文档", "url": "https://cn.vuejs.org/guide/", "type": "文档"},
-        {"name": "Vue Mastery", "url": "https://www.vuemastery.com/", "type": "课程"},
-    ],
-    "React": [
-        {"name": "React 官方文档", "url": "https://zh-hans.react.dev/", "type": "文档"},
-        {"name": "React 入门教程", "url": "https://react-tutorial.app/", "type": "教程"},
-    ],
-    "Node.js": [
-        {"name": "Node.js 官方文档", "url": "https://nodejs.org/zh-cn/docs/", "type": "文档"},
-        {"name": "菜鸟教程 Node.js", "url": "https://www.runoob.com/nodejs/", "type": "教程"},
-    ],
-    "机器学习": [
-        {"name": "吴恩达机器学习", "url": "https://www.coursera.org/learn/machine-learning", "type": "课程"},
-        {"name": "sklearn 官方文档", "url": "https://scikit-learn.org/stable/", "type": "文档"},
-    ],
-    "深度学习": [
-        {"name": "PyTorch 官方教程", "url": "https://pytorch.org/tutorials/", "type": "教程"},
-        {"name": "动手学深度学习", "url": "https://zh.d2l.ai/", "type": "教程"},
-    ],
-    "数据分析": [
-        {"name": "Kaggle 学习", "url": "https://www.kaggle.com/learn", "type": "课程"},
-        {"name": "Pandas 官方文档", "url": "https://pandas.pydata.org/docs/", "type": "文档"},
-    ],
-    "MySQL": [
-        {"name": "MySQL 官方文档", "url": "https://dev.mysql.com/doc/", "type": "文档"},
-        {"name": "菜鸟教程 MySQL", "url": "https://www.runoob.com/mysql/", "type": "教程"},
-    ],
-    "Redis": [
-        {"name": "Redis 官方文档", "url": "https://redis.io/docs/", "type": "文档"},
-        {"name": "Redis 入门", "url": "https://www.runoob.com/redis/", "type": "教程"},
-    ],
-    "Docker": [
-        {"name": "Docker 官方文档", "url": "https://docs.docker.com/", "type": "文档"},
-        {"name": "Docker 入门教程", "url": "https://vuepress.mirror.docker-practice.com/", "type": "教程"},
-    ],
-    "Git": [
-        {"name": "Progit 中文版", "url": "https://progit2.com/", "type": "教程"},
-        {"name": "Git 官方文档", "url": "https://git-scm.com/doc", "type": "文档"},
-    ],
-    "FastAPI": [
-        {"name": "FastAPI 官方文档", "url": "https://fastapi.tiangolo.com/zh/", "type": "文档"},
-        {"name": "FastAPI 教程", "url": "https://github.com/tiangolo/fastapi", "type": "教程"},
-    ],
-    "Flask": [
-        {"name": "Flask 官方文档", "url": "https://flask.palletsprojects.com/", "type": "文档"},
-    ],
-    "Spring Boot": [
-        {"name": "Spring Boot 官方文档", "url": "https://spring.io/projects/spring-boot", "type": "文档"},
-    ],
-    "Linux": [
-        {"name": "Linux 教程", "url": "https://www.runoob.com/linux/", "type": "教程"},
-        {"name": "鸟哥的 Linux 私房菜", "url": "https://linux.vbird.org/", "type": "教程"},
-    ],
-    "Hadoop": [
-        {"name": "Hadoop 官方文档", "url": "https://hadoop.apache.org/docs/", "type": "文档"},
-    ],
-    "Spark": [
-        {"name": "Spark 官方文档", "url": "https://spark.apache.org/docs/latest/", "type": "文档"},
-    ],
-    "HTML": [
-        {"name": "MDN HTML", "url": "https://developer.mozilla.org/zh-CN/docs/Web/HTML", "type": "文档"},
-    ],
-    "CSS": [
-        {"name": "MDN CSS", "url": "https://developer.mozilla.org/zh-CN/docs/Web/CSS", "type": "文档"},
-    ],
-    "TensorFlow": [
-        {"name": "TensorFlow 官方教程", "url": "https://www.tensorflow.org/tutorials", "type": "教程"},
-    ],
-    "PyTorch": [
-        {"name": "PyTorch 官方教程", "url": "https://pytorch.org/tutorials/", "type": "教程"},
-    ],
-    "SQL": [
-        {"name": "SQL 教程", "url": "https://www.runoob.com/sql/", "type": "教程"},
-    ],
-    "NoSQL": [
-        {"name": "MongoDB 官方文档", "url": "https://www.mongodb.com/docs/", "type": "文档"},
-    ],
-    "RabbitMQ": [
-        {"name": "RabbitMQ 官方文档", "url": "https://www.rabbitmq.com/documentation.html", "type": "文档"},
-    ],
-    "Nginx": [
-        {"name": "Nginx 官方文档", "url": "https://nginx.org/en/docs/", "type": "文档"},
-    ],
-    "Kubernetes": [
-        {"name": "Kubernetes 官方文档", "url": "https://kubernetes.io/zh-cn/docs/", "type": "文档"},
-    ],
-}
+from database import get_session, SkillResource
+from sqlalchemy import func
+import time
+
+# ── 简单内存缓存（TTL 5 分钟）──
+_cache: dict[str, list[dict]] = {}
+_cache_ts: float = 0
+_CACHE_TTL = 300  # 秒
+
+
+def _fetch_all_resources() -> dict[str, list[dict]]:
+    """从数据库加载所有资源，按 skill_name 分组返回（带缓存）"""
+    global _cache, _cache_ts
+    now = time.time()
+    if _cache and (now - _cache_ts) < _CACHE_TTL:
+        return _cache
+
+    session = get_session()
+    try:
+        rows = session.query(SkillResource).order_by(
+            SkillResource.skill_name, SkillResource.sort_order
+        ).all()
+        result: dict[str, list[dict]] = {}
+        for r in rows:
+            result.setdefault(r.skill_name, []).append({
+                "name": r.title,
+                "url": r.url,
+                "type": r.resource_type,
+            })
+        _cache = result
+        _cache_ts = now
+        return result
+    except Exception as e:
+        print(f'[learning_path] 加载资源失败: {e}')
+        return _cache if _cache else {}
+    finally:
+        session.close()
+
+
+def invalidate_cache():
+    """管理员更新资源后调用，清除缓存"""
+    global _cache, _cache_ts
+    _cache = {}
+    _cache_ts = 0
 
 
 def get_resources(skills: list[str]) -> list[dict]:
     """根据技能列表返回学习资源，未知技能返回通用搜索链接"""
+    all_resources = _fetch_all_resources()
     resources = []
+    skill_lower_map = {k.lower(): k for k in all_resources.keys()}
+
     for skill in skills:
-        if skill in SKILL_RESOURCES:
-            resources.extend(SKILL_RESOURCES[skill])
+        skill_stripped = skill.strip()
+        # 1. 精确匹配
+        if skill_stripped in all_resources:
+            resources.extend(all_resources[skill_stripped])
+        # 2. 大小写不敏感匹配
+        elif skill_stripped.lower() in skill_lower_map:
+            resources.extend(all_resources[skill_lower_map[skill_stripped.lower()]])
+        # 3. 组合技能拆分
+        elif '+' in skill_stripped or '&' in skill_stripped:
+            parts = [p.strip() for p in skill_stripped.replace('&', '+').split('+') if p.strip()]
+            for part in parts:
+                if part in all_resources:
+                    resources.extend(all_resources[part])
+                elif part.lower() in skill_lower_map:
+                    resources.extend(all_resources[skill_lower_map[part.lower()]])
+                else:
+                    resources.append({
+                        "name": f"{part} - 菜鸟教程",
+                        "url": f"https://www.runoob.com/?s={part}",
+                        "type": "搜索",
+                    })
+        # 4. 未知技能 → 搜索兜底
         else:
             resources.append({
-                "name": f"{skill} - 菜鸟教程",
-                "url": f"https://www.runoob.com/?s={skill}",
+                "name": f"{skill_stripped} - 菜鸟教程",
+                "url": f"https://www.runoob.com/?s={skill_stripped}",
                 "type": "搜索",
             })
     # 去重（按 url）
@@ -135,3 +93,13 @@ def get_resources(skills: list[str]) -> list[dict]:
             seen.add(r["url"])
             unique.append(r)
     return unique
+
+
+def get_all_skill_names() -> list[str]:
+    """返回数据库中所有有资源的技能名称列表"""
+    session = get_session()
+    try:
+        rows = session.query(SkillResource.skill_name).distinct().order_by(SkillResource.skill_name).all()
+        return [r[0] for r in rows]
+    finally:
+        session.close()
