@@ -19,6 +19,7 @@ from typing import Optional
 from sqlalchemy import func
 
 from database import get_session, Job, Jobseeker, MatchRecord, Message
+from sqlalchemy import func as _func
 from services.deerflow_compare import run_deep_compare
 # services 模块已迁移到 services/ 子目录
 from services.match_engine import run_match_batch
@@ -29,6 +30,11 @@ router = APIRouter(prefix='/api/enterprise', tags=['enterprise'])
 def _err(code: str, message: str, details=None):
     """统一错误响应格式: {success:false, error:{code, message, details}}"""
     return {'success': False, 'error': {'code': code, 'message': message, 'details': details or {}}}
+
+
+def _like_escape(s: str) -> str:
+    """转义 LIKE 通配符，防止 % _ 注入"""
+    return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
 def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
@@ -84,17 +90,18 @@ def list_candidates(
     """
     session = get_session()
     try:
-        # ── 1. 岗位下拉：当前企业所有岗位 + 每个岗位的候选人数 ──
+        # ── 1. 岗位下拉：当前企业所有岗位 + 每个岗位的候选人数（批量查，避免 N+1）──
+        from sqlalchemy import func as _func
         jobs_query = session.query(Job).filter(Job.status == 'active')
-        jobs_list = []
-        for j in jobs_query.all():
-            cnt = session.query(MatchRecord).filter(MatchRecord.job_id == j.id).count()
-            jobs_list.append({
-                'id': j.id,
-                'title': j.title,
-                'status': j.status,
-                'count': cnt,
-            })
+        job_ids = [j.id for j in jobs_query.all()]
+        cnt_map = {}
+        if job_ids:
+            cnt_rows = (session.query(MatchRecord.job_id, _func.count())
+                        .filter(MatchRecord.job_id.in_(job_ids))
+                        .group_by(MatchRecord.job_id).all())
+            cnt_map = {jid: c for jid, c in cnt_rows}
+        jobs_list = [{'id': j.id, 'title': j.title, 'status': j.status, 'count': cnt_map.get(j.id, 0)}
+                     for j in jobs_query.all()]
 
         # ── 2. 候选人查询：match_records JOIN jobseekers ──
         q = (session.query(MatchRecord, Jobseeker, Job)
@@ -107,7 +114,7 @@ def list_candidates(
 
         # 关键字过滤：匹配姓名或技能
         if keyword:
-            kw = f'%{keyword}%'
+            kw = f'%{_like_escape(keyword)}%'
             q = q.filter(
                 (Jobseeker.real_name.like(kw)) |
                 (Jobseeker.username.like(kw)) |
@@ -354,23 +361,24 @@ def dashboard():
                          .filter(MatchRecord.status == 'pending')
                          .distinct().count())
 
-        # ── 近期岗位（按创建时间倒序，前 5 条）──
+        # ── 近期岗位（按创建时间倒序，前 5 条，批量查候选人数）──
         recent_jobs_rows = (session.query(Job)
                             .order_by(Job.created_at.desc())
                             .limit(5).all())
-        recent_jobs = []
-        for j in recent_jobs_rows:
-            cnt = session.query(MatchRecord).filter(MatchRecord.job_id == j.id).count()
-            recent_jobs.append({
-                'id': j.id,
-                'title': j.title,
-                'status': j.status,
-                'candidates': cnt,
-                'created_at': j.created_at.strftime('%Y-%m-%d') if j.created_at else '',
-            })
+        rj_ids = [j.id for j in recent_jobs_rows]
+        rj_cnt_map = {}
+        if rj_ids:
+            rj_cnt_rows = (session.query(MatchRecord.job_id, _func.count())
+                           .filter(MatchRecord.job_id.in_(rj_ids))
+                           .group_by(MatchRecord.job_id).all())
+            rj_cnt_map = {jid: c for jid, c in rj_cnt_rows}
+        recent_jobs = [{
+            'id': j.id, 'title': j.title, 'status': j.status,
+            'candidates': rj_cnt_map.get(j.id, 0),
+            'created_at': j.created_at.strftime('%Y-%m-%d') if j.created_at else '',
+        } for j in recent_jobs_rows]
 
-        # ── 匹配度分布 ──
-        high = session.query(MatchRecord).filter(MatchRecord.match_score >= 85).count()
+        # ── 匹配度分布（high 已在上面算过 high_match，复用）──
         mid = session.query(MatchRecord).filter(
             MatchRecord.match_score >= 60, MatchRecord.match_score < 85
         ).count()
@@ -386,7 +394,7 @@ def dashboard():
                     'pending_count': pending_count,
                 },
                 'recent_jobs': recent_jobs,
-                'match_distribution': {'high': high, 'mid': mid, 'low': low},
+                'match_distribution': {'high': high_match, 'mid': mid, 'low': low},
             },
             'message': 'ok',
         }
