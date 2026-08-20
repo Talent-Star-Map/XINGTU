@@ -86,6 +86,7 @@ npm run dev
 | `diagnosis_history` | 诊断历史记录（含完整技能数据） | SQL 直接操作 |
 | `learning_progress` | 学习进度（按用户+岗位+技能） | SQL 直接操作 |
 | `skill_resources` | 技能学习资源（管理员后台维护，33 技能 88 条） | `database.py::SkillResource` |
+| `llm_configs` | 模型配置表（管理员端「模型配置」页面维护，LLM 路由层读取） | `database.py::LlmConfig` |
 
 > ⚠️ **注意 `jobs` 和 `enterprise_jobs` 是两张不同的表**：
 > - `jobs` = 爬虫采集的真实市场岗位（求职者端浏览）

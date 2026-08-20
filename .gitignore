@@ -45,3 +45,6 @@ stop.bat
 
 # Personal config
 CLAUDE.md
+
+# Vite 缓存（backend 误装 vite 产生的缓存）
+backend/.vite/

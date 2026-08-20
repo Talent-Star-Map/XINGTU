@@ -6,7 +6,9 @@ from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:xingtu123@localhost:3307/xingtu')
 
-engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=3600)
+# connect_args charset=utf8mb4：双保险，确保读写连接走 UTF-8，避免中文双编码
+engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=3600,
+                       connect_args={"charset": "utf8mb4"})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -148,6 +150,46 @@ class SkillResource(Base):
     url = Column(String(500), nullable=False)                           # 资源链接
     sort_order = Column(Integer, default=0)                             # 排序权重（越小越靠前）
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+# LlmConfig 使用「方式B」（手动建表），不参与 Base.metadata.create_all 自动建表。
+# 表结构见 backend/sql/llm_configs.sql，需在 Navicat 手动执行创建（与 diagnosis_history 等一致）。
+# 变更任何字段时，同步更新 backend/sql/llm_configs.sql 并在此模型 + 字段说明处保持一致。
+LlmConfigBase = declarative_base()
+
+class LlmConfig(LlmConfigBase):
+    """模型配置表 — 管理员端「模型配置」页面维护，LLM 路由层读取
+
+    配置项（config_key）：
+        global_enabled        总开关（1/0）
+        mock_mode             Mock 模式（1=开发期假数据，0=真实调用）
+        provider              全局 Provider 组合描述（如 deepseek+qwen，仅展示）
+        strong_provider       大模型 Provider 名（deepseek/openai-compatible/...）
+        strong_model          大模型名（如 deepseek-chat）
+        strong_base_url       大模型 API 地址
+        strong_api_key        大模型 API Key
+        fast_provider         小模型 Provider 名
+        fast_model            小模型名（如 qwen-turbo）
+        fast_base_url         小模型 API 地址
+        fast_api_key          小模型 API Key
+        vision_provider       多模态 Provider 名（预留）
+        vision_model          多模态模型名（预留）
+        vision_base_url       多模态 API 地址（预留）
+        vision_api_key        多模态 API Key（预留）
+
+    读取优先级：llm_configs 表 → .env（兼容 DEEPSEEK_API_KEY 等）→ 代码默认值
+
+    字段说明：
+        id            自增主键
+        config_key    配置项名（唯一，如 strong_model）
+        config_value  配置值（模型名 / API Key / 开关值等）
+        updated_at    更新时间（保存时自动刷新）
+    """
+    __tablename__ = 'llm_configs'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    config_key = Column(String(50), unique=True, nullable=False)       # 配置项名
+    config_value = Column(String(500), nullable=False)                 # 配置值
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 

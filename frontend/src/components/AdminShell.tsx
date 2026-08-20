@@ -1,24 +1,28 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen } from 'lucide-react'
+import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import QualityDashboard from '../pages/enterprise/QualityDashboard'
 import AdminUserManage from '../pages/admin/AdminUserManage'
 import AdminJobManage from '../pages/admin/AdminJobManage'
 import AdminResourceManage from '../pages/admin/AdminResourceManage'
+import AdminModelConfig from '../pages/admin/AdminModelConfig'
 
 // 管理员端功能模块：
 //   quality    — 质检（已有，质检已从求职端/企业端移除，统一归管理员监管）
 //   jobseekers — 求职者管理（列表/创建/删除/重置密码）
 //   enterprises— 企业管理（列表/创建/删除/重置密码）
 //   jobs       — 职位管理（列表/删除）
-type Page = 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources'
+//   resources  — 学习资源管理
+//   models     — 模型配置（LLM 路由层配置：大/小/多模态模型 + Mock 开关）
+type Page = 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'jobseekers', icon: Users, label: '求职者' },
   { key: 'enterprises', icon: Building2, label: '企业' },
   { key: 'jobs', icon: Briefcase, label: '职位' },
   { key: 'resources', icon: BookOpen, label: '学习资源' },
+  { key: 'models', icon: Cpu, label: '模型配置' },
   { key: 'quality', icon: Shield, label: '质检' },
 ]
 
@@ -31,6 +35,7 @@ const pages: Record<Page, () => JSX.Element> = {
   enterprises: EnterpriseManagePage,
   jobs: AdminJobManage,
   resources: AdminResourceManage,
+  models: AdminModelConfig,
   quality: QualityDashboard,
 }
 
