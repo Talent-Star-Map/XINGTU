@@ -21,9 +21,13 @@ from pydantic import BaseModel, Field
 
 from database import (
     get_session, verify_token,
-    Jobseeker, Enterprise, Admin, Job, MatchRecord, SkillResource,
+    Jobseeker, Enterprise, Admin, Job, MatchRecord, SkillResource, LlmConfig,
 )
 from services.learning_path import invalidate_cache as _invalidate_resource_cache
+from services.llm import (
+    CONFIG_KEYS, LLMTier, get_config, is_mock_mode, is_global_enabled,
+    invalidate_config_cache, test_connection,
+)
 
 
 # ─── 管理员鉴权依赖 — 所有 admin 接口强制校验 token + role=admin ──────────────
@@ -656,3 +660,125 @@ def batch_import_resources(items: list[ResourceCreateReq]):
         return _err('BATCH_ERROR', f'批量导入失败: {e}')
     finally:
         session.close()
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 模型配置管理（LLM 路由层配置 — 管理员可视化配置模型）
+# ════════════════════════════════════════════════════════════════════════
+
+# 允许写入的配置项白名单（同 services.llm.CONFIG_KEYS）
+_LLM_CONFIG_KEYS = set(CONFIG_KEYS)
+
+
+def _mask_key(value: str) -> str:
+    """API Key 掩码：sk-abc12345 → sk-***45，不回显明文"""
+    if not value:
+        return ''
+    if len(value) <= 8:
+        return '*' * 4
+    return value[:4] + '***' + value[-4:]
+
+
+class LlmConfigReq(BaseModel):
+    """保存模型配置的请求体：{config_key: value} 字典，只接受白名单 key"""
+    configs: dict = Field(..., description='模型配置键值对')
+
+
+class LlmTestReq(BaseModel):
+    """测试模型连通性的请求体"""
+    tier: str = Field('strong', description='测试档次: strong/fast/vision')
+
+
+@router.get('/llm-config')
+def get_llm_config():
+    """读取模型配置（API Key 掩码返回，不回显明文）"""
+    session = get_session()
+    try:
+        cfg = {}
+        for key in CONFIG_KEYS:
+            cfg[key] = get_config(key, '')
+        # 掩码 api_key（只显示首尾）
+        for key in list(cfg):
+            if key.endswith('api_key') and cfg[key]:
+                cfg[key] = _mask_key(cfg[key])
+        return {
+            'success': True,
+            'data': {
+                'configs': cfg,
+                'mock_mode': is_mock_mode(),
+                'global_enabled': is_global_enabled(),
+                'resolved': {
+                    # 当前实际生效的模型（含 env/默认回退），供前端展示
+                    'strong': {
+                        'provider': get_config('strong_provider', 'openai-compatible'),
+                        'model': get_config('strong_model', ''),
+                        'base_url': get_config('strong_base_url', ''),
+                    },
+                    'fast': {
+                        'provider': get_config('fast_provider', 'openai-compatible'),
+                        'model': get_config('fast_model', ''),
+                        'base_url': get_config('fast_base_url', ''),
+                    },
+                    'vision': {
+                        'provider': get_config('vision_provider', ''),
+                        'model': get_config('vision_model', ''),
+                        'base_url': get_config('vision_base_url', ''),
+                    },
+                },
+            },
+            'message': 'ok',
+        }
+    except Exception as e:
+        return _err('INTERNAL_ERROR', f'读取模型配置失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/llm-config')
+def save_llm_config(req: LlmConfigReq):
+    """保存模型配置（upsert 到 llm_configs 表）"""
+    # 校验只接受白名单 key
+    invalid = [k for k in req.configs if k not in _LLM_CONFIG_KEYS]
+    if invalid:
+        return _err('INVALID_KEY', f'不允许的配置项: {", ".join(invalid)}')
+    session = get_session()
+    try:
+        for key, value in req.configs.items():
+            row = session.query(LlmConfig).filter(LlmConfig.config_key == key).first()
+            v = str(value).strip()
+            if row:
+                if v == '':
+                    # 空值 = 删除该配置（回退到 .env / 默认）
+                    session.delete(row)
+                else:
+                    row.config_value = v
+            elif v != '':
+                session.add(LlmConfig(config_key=key, config_value=v))
+        session.commit()
+        # 立即刷新路由层缓存
+        invalidate_config_cache()
+        return {
+            'success': True,
+            'message': '模型配置已保存（约 30 秒内全站生效）',
+        }
+    except Exception as e:
+        session.rollback()
+        return _err('SAVE_ERROR', f'保存模型配置失败: {e}')
+    finally:
+        session.close()
+
+
+@router.post('/llm-config/test')
+def test_llm_config(req: LlmTestReq):
+    """测试模型连通性（发一条真实请求验证当前配置）"""
+    tier_map = {'strong': LLMTier.STRONG, 'fast': LLMTier.FAST, 'vision': LLMTier.VISION}
+    tier = tier_map.get(req.tier)
+    if not tier:
+        return _err('INVALID_TIER', f'不支持的测试档次: {req.tier}，可选 strong/fast/vision')
+    try:
+        result = test_connection(tier)
+        if result.get('success'):
+            return {'success': True, 'data': result, 'message': '连接测试成功'}
+        return _err('TEST_FAILED', result.get('message', '连接失败'), {'detail': result})
+    except Exception as e:
+        return _err('TEST_ERROR', f'测试连接异常: {e}')
