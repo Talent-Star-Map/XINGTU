@@ -29,6 +29,11 @@ interface Props {
   callbacks: Callbacks
 }
 
+/** 取 section 类型 — 兼容 camelCase(type)和 snake_case(section_type) */
+function sectionTypeOf(section: any): string {
+  return section?.type || section?.section_type || ''
+}
+
 /** 中间栏表单编辑 — 根据 section.type 路由到对应 Form */
 export function EditorCanvas({
   resumeSections, selectedSectionId, optimizingId, callbacks,
@@ -43,37 +48,39 @@ export function EditorCanvas({
             暂无模块,点击左侧"添加模块"开始构建简历
           </div>
         )}
-        {sorted.map((section, idx) => (
-          <SectionCard
-            key={section.id}
-            sectionType={section.type}
-            title={section.title || SECTION_LABELS[section.type] || section.type}
-            isSelected={selectedSectionId === String(section.id)}
-            onSelect={() => callbacks.onSelectSection(String(section.id))}
-            onRenameTitle={section.type !== 'personal_info'
-              ? (t) => callbacks.onRenameSection(String(section.id), t)
-              : undefined}
-            onDelete={() => {
-              if (confirm(`确认删除「${section.title || SECTION_LABELS[section.type]}」模块?`)) {
-                callbacks.onDeleteSection(String(section.id))
-              }
-            }}
-            optimizing={optimizingId === String(section.id)}
-            onAIOptimize={section.type === 'personal_info' || section.type === 'qr_codes'
-              ? undefined  // 这两类暂不接 AI 优化
-              : () => callbacks.onAIOptimize(section)}
-          >
-            {renderForm(section, (c) => callbacks.onUpdateContent(String(section.id), c))}
-          </SectionCard>
-        ))}
+        {sorted.map((section, idx) => {
+          const secType = sectionTypeOf(section)
+          return (
+            <SectionCard
+              key={section.id}
+              sectionType={secType}
+              title={section.title || SECTION_LABELS[secType] || secType}
+              isSelected={selectedSectionId === String(section.id)}
+              onSelect={() => callbacks.onSelectSection(String(section.id))}
+              onRenameTitle={secType !== 'personal_info'
+                ? (t) => callbacks.onRenameSection(String(section.id), t)
+                : undefined}
+              onDelete={() => {
+                if (confirm(`确认删除「${section.title || SECTION_LABELS[secType]}」模块?`)) {
+                  callbacks.onDeleteSection(String(section.id))
+                }
+              }}
+              optimizing={optimizingId === String(section.id)}
+              onAIOptimize={secType === 'personal_info' || secType === 'qr_codes'
+                ? undefined  // 这两类暂不接 AI 优化
+                : () => callbacks.onAIOptimize(section)}
+            >
+              {renderForm(secType, section.content || {}, (c) => callbacks.onUpdateContent(String(section.id), c))}
+            </SectionCard>
+          )
+        })}
       </div>
     </main>
   )
 }
 
-function renderForm(section: ResumeSection, onChange: (c: any) => void) {
-  const content = section.content || {}
-  switch (section.type) {
+function renderForm(secType: string, content: any, onChange: (c: any) => void) {
+  switch (secType) {
     case 'personal_info':  return <PersonalInfoForm content={content as any} onChange={onChange} />
     case 'summary':        return <SummaryForm content={content as any} onChange={onChange} />
     case 'work_experience':return <WorkExperienceForm content={content as any} onChange={onChange} />
@@ -85,6 +92,6 @@ function renderForm(section: ResumeSection, onChange: (c: any) => void) {
     case 'github':         return <GitHubForm content={content as any} onChange={onChange} />
     case 'custom':         return <CustomForm content={content as any} onChange={onChange} />
     case 'qr_codes':       return <QrCodesForm content={content as any} onChange={onChange} />
-    default: return <div className="text-xs text-zinc-400">未知模块类型: {section.type}</div>
+    default: return <div className="text-xs text-zinc-400">未知模块类型: {secType || '(空)'}</div>
   }
 }

@@ -59,7 +59,7 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
   }, [initial.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const existingTypes = useMemo(
-    () => new Set(resume.sections.map(s => s.type)),
+    () => new Set(resume.sections.map(s => (s as any).type || (s as any).section_type).filter(Boolean)),
     [resume.sections]
   )
 
@@ -125,7 +125,7 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
     scheduleAutoSave()
   }, [pushUndo, scheduleAutoSave])
 
-  // ── 移动 section ──
+  // ── 移动 section(↑↓ 按钮) ──
   const moveSection = useCallback((sectionId: string, dir: 'up' | 'down') => {
     pushUndo()
     setResume(prev => {
@@ -134,6 +134,25 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
       const target = dir === 'up' ? idx - 1 : idx + 1
       if (idx < 0 || target < 0 || target >= sorted.length) return prev
       ;[sorted[idx], sorted[target]] = [sorted[target], sorted[idx]]
+      return {
+        ...prev,
+        sections: sorted.map((s, i) => ({ ...s, sort_order: i })),
+      }
+    })
+    scheduleAutoSave()
+  }, [pushUndo, scheduleAutoSave])
+
+  // ── 拖拽重排序:把 fromId 移动到目标索引位置 ──
+  const reorderSection = useCallback((fromId: string, toIndex: number) => {
+    pushUndo()
+    setResume(prev => {
+      const sorted = [...prev.sections].sort((a, b) => a.sort_order - b.sort_order)
+      const fromIdx = sorted.findIndex(s => String(s.id) === fromId)
+      if (fromIdx < 0) return prev
+      // 计算目标位置(剔除自身后再插)
+      const moving = sorted.splice(fromIdx, 1)[0]
+      const clamped = Math.max(0, Math.min(toIndex, sorted.length))
+      sorted.splice(clamped, 0, moving)
       return {
         ...prev,
         sections: sorted.map((s, i) => ({ ...s, sort_order: i })),
@@ -213,7 +232,7 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          section_type: section.type,
+          section_type: (section as any).type || (section as any).section_type,
           content: section.content,
           instruction: '优化措辞,更专业、更有说服力',
           language: resume.language || 'zh',
@@ -287,6 +306,7 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
             onRenameSection: renameSection,
             onDeleteSection: deleteSection,
             onMoveSection: moveSection,
+            onReorderSection: reorderSection,
             onSelectSection: setSelectedSectionId,
             onAIOptimize: handleAIOptimize,
           }}
