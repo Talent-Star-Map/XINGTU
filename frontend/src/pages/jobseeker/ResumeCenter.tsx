@@ -34,13 +34,19 @@ const NEW_RESUME_DEFAULT_SECTIONS: { section_type: string; title: string; conten
 
 /** 给一份新简历构造默认区块,带上 sort_order 和临时 id,塞到编辑 state 里
  *  temp-{type} 作为 React key / 选中态判定用,等 PUT 成功返回真实 id 后会被替换
+ *
+ *  注意:同时写入 type(camelCase,前端类型)+ section_type(snake_case,后端字段),
+ *  EditorCanvas/EditorSidebar 读 type,ResumePreview/后端 PUT 读 section_type
  */
 function withDefaultSections(resume: ResumeItem): ResumeItem {
   return {
     ...resume,
     sections: NEW_RESUME_DEFAULT_SECTIONS.map((s, i) => ({
-      ...s,
       id: `temp-${s.section_type}-${i}`,
+      type: s.section_type,
+      section_type: s.section_type,
+      title: s.title,
+      content: s.content,
       sort_order: i,
       visible: 1,
     })),

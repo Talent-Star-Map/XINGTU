@@ -24,6 +24,8 @@ export interface PersonalInfoContent {
   github?: string;
   customLinks?: { label: string; url: string }[];
   avatar?: string;
+  /** 头像形状:'circle' = 圆形,'photo1inch' = 1寸照 */
+  avatarShape?: 'circle' | 'photo1inch';
 }
 
 export interface QrCodesContent {
