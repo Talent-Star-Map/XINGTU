@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Copy, Loader2, Sparkles, FileText, X, Check } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Copy, Loader2, Sparkles, FileText, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ResumePreview } from '../../components/resume/ResumePreview'
+import ResumeEditor from '../../components/resume/editor/ResumeEditor'
 
 // ─── token 注入 ───
 const getToken = () => localStorage.getItem('xingtu_token') || ''
@@ -187,13 +187,15 @@ export default function ResumeCenter() {
   // 模板名
   const templateName = (key: string) => templates.find(t => t.template_key === key)?.name || key
 
-  // ── 编辑器视图（编辑单份简历） ──
+  // ── 编辑器视图(JadeAI 风格三栏:模块导航 + 表单编辑 + 实时预览) ──
   if (editing) {
     return (
-      <EditorView
+      <ResumeEditor
         resume={editing}
         templates={templates}
         onBack={() => setEditing(null)}
+        onShare={() => shareResume(editing.id)}
+        onPlaceholder={(msg) => showToast(typeof msg === 'string' ? msg : '')}
         onSave={async (r) => {
           try {
             const resp = await fetch(withToken(`/api/resume-center/${r.id}`), {
@@ -201,8 +203,10 @@ export default function ResumeCenter() {
               body: JSON.stringify({ title: r.title, template_key: r.template_key, sections: r.sections }),
             })
             const d = await resp.json()
-            if (d.success) { showToast('简历已保存'); await loadAll() } else showToast(d.error?.message || '保存失败')
-          } catch { showToast('网络错误') }
+            if (d.success) { await loadAll() } else throw new Error(d.error?.message || '保存失败')
+          } catch (e: any) {
+            throw e
+          }
         }}
       />
     )
@@ -500,80 +504,4 @@ function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare }: {
   )
 }
 
-// ─── 编辑器视图 ───
-function EditorView({ resume, templates, onBack, onSave }: {
-  resume: ResumeItem; templates: Template[]; onBack: () => void; onSave: (r: ResumeItem) => Promise<void>
-}) {
-  const [r, setR] = useState<ResumeItem>(resume)
-  const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(false)
-
-  const updateContent = (idx: number, content: any) => {
-    setR(prev => ({ ...prev, sections: prev.sections.map((s, i) => i === idx ? { ...s, content } : s) }))
-  }
-
-  return (
-    <div className="h-full flex flex-col">
-      <header className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-        <div className="max-w-[1400px] mx-auto px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={onBack} className="p-2 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }}><X className="h-4 w-4" /></button>
-            <input value={r.title} onChange={e => setR({ ...r, title: e.target.value })}
-              className="h-8 px-2 rounded text-sm font-medium bg-transparent outline-none w-64"
-              style={{ color: 'var(--color-on-surface)' }} />
-          </div>
-          <div className="flex items-center gap-2">
-            <select value={r.template_key} onChange={e => setR({ ...r, template_key: e.target.value })}
-              className="h-8 px-2 rounded-lg text-xs border outline-none"
-              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}>
-              {templates.map(t => <option key={t.id} value={t.template_key}>{t.name}</option>)}
-            </select>
-            <button onClick={() => setEditing(!editing)} className="h-8 px-3 rounded-lg text-xs font-medium border"
-              style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
-              {editing ? '预览' : '编辑'}
-            </button>
-            <button onClick={async () => { setSaving(true); await onSave(r); setSaving(false) }} disabled={saving}
-              className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1 disabled:opacity-60"
-              style={{ background: 'var(--accent-green)', color: '#fff' }}>
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} 保存
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-[1000px] mx-auto px-8 py-6">
-          {editing ? (
-            <div className="space-y-4">
-              {r.sections.map((s, idx) => (
-                <SectionEditor key={idx} section={s} onChange={c => updateContent(idx, c)} />
-              ))}
-            </div>
-          ) : (
-            // 预览模式：不再嵌套带阴影/圆角的卡片，ResumePreview 内部已自带 A4 纸张样式
-            // （width:210mm + minHeight:297mm + bg-white + shadow-lg）。去掉外层 overflow-hidden
-            // 避免内容超出 297mm 时被裁切；超出部分由父级 overflow-auto 提供滚动。
-            <div className="py-4">
-              <ResumePreview resume={r} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── 区块编辑器 ───
-function SectionEditor({ section, onChange }: { section: ResumeSection; onChange: (c: any) => void }) {
-  const [json, setJson] = useState(JSON.stringify(section.content || {}, null, 2))
-  return (
-    <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-medium" style={{ color: 'var(--color-on-surface)' }}>{section.title} <span className="text-xs ml-1 opacity-60">{section.section_type}</span></div>
-      </div>
-      <textarea value={json} onChange={e => { setJson(e.target.value); try { onChange(JSON.parse(e.target.value)) } catch {} }}
-        rows={6} className="w-full p-3 rounded-lg text-xs font-mono border outline-none"
-        style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-    </div>
-  )
-}
+// 编辑器已迁移到 components/resume/editor/ResumeEditor.tsx
