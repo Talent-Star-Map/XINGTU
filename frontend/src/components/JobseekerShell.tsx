@@ -5,7 +5,7 @@ import { useTheme } from './ThemeProvider'
 import { JSNav } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
 
-type Page = 'dashboard' | 'skill-graph' | 'resume' | 'match' | 'learning' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'diagnosis' | 'job-detail'
+type Page = 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'learning' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'diagnosis' | 'job-detail'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -13,12 +13,14 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'match', icon: LineChart, label: '岗位' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
+  { key: 'resume-center', icon: FileText, label: '简历中心' },
   // 质检已移至管理员端，求职端不再展示
 ]
 
 import JSDashboard from '../pages/jobseeker/Dashboard'
 import JSSkillGraph from '../pages/jobseeker/SkillGraph'
 import JSResume from '../pages/jobseeker/Resume'
+import JSResumeCenter from '../pages/jobseeker/ResumeCenter'
 import JSMatch from '../pages/jobseeker/JobMatch'
 import JSDiagnosis from '../pages/jobseeker/Diagnosis'
 import JSJobDetail from '../pages/jobseeker/JobDetail'
@@ -31,7 +33,7 @@ import TutuChat from './TutuChat'
 
 const pages: Record<Page, () => JSX.Element> = {
   dashboard: JSDashboard, 'skill-graph': JSSkillGraph,
-  resume: JSResume, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
+  resume: JSResume, 'resume-center': JSResumeCenter, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
   'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph, quality: QualityDashboard,
 }
 

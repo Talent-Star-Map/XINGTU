@@ -16,6 +16,7 @@ from routers.match_api import router as match_router
 from routers.chat_api import router as chat_router
 from routers.learning_api import router as learning_router
 from routers.admin import router as admin_router
+from routers.resume_center import router as resume_router
 import os
 
 @asynccontextmanager
@@ -45,6 +46,7 @@ app.include_router(match_router)
 app.include_router(chat_router)
 app.include_router(learning_router)
 app.include_router(admin_router)
+app.include_router(resume_router)
 
 @app.get('/api/health')
 def health():

@@ -193,6 +193,99 @@ class LlmConfig(LlmConfigBase):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+# ─── AI 简历中心（方式B手动建表，建表 SQL 见 backend/sql/resume.sql）─────────
+ResumeBase = declarative_base()
+
+class ResumeTemplate(ResumeBase):
+    """简历模板表 — 管理员端「简历模板管理」页面维护
+
+    字段说明：
+        id          自增主键
+        name        模板显示名（如「经典」）
+        template_key 模板英文 key（对应前端 components/resume/preview/templates/<key>.tsx，唯一）
+        category    分类（经典/现代/极简/创意等）
+        thumbnail   预览图 URL（管理员上传）
+        sort_order  排序权重（越小越靠前）
+        is_active   上下架（1=上架，0=下架）
+        created_at  创建时间
+        updated_at  更新时间
+    """
+    __tablename__ = 'resume_templates'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    template_key = Column(String(50), unique=True, nullable=False)
+    category = Column(String(50), default='通用')
+    thumbnail = Column(String(500), default='')
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class Resume(ResumeBase):
+    """简历主表 — 求职者创建的简历
+
+    字段说明：
+        id           自增主键
+        user_id      所属求职者（关联 jobseekers.id）
+        title        简历标题（如「AI应用开发工程师 - AI生成简历」）
+        template_key 使用的模板 key
+        language     语言（zh/en）
+        created_at   创建时间
+        updated_at   更新时间
+    """
+    __tablename__ = 'resumes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    title = Column(String(200), default='未命名简历')
+    template_key = Column(String(50), default='classic')
+    language = Column(String(10), default='zh')
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class ResumeSection(ResumeBase):
+    """简历区块表 — 每份简历的 6 大区块内容（content 存 JSON）
+
+    字段说明：
+        id           自增主键
+        resume_id    关联 resumes.id
+        section_type 区块类型：personal_info/summary/work_experience/education/skills/projects
+        title        区块中文标题（如「工作经历」）
+        content      结构化内容（JSON）
+        sort_order   排序权重
+        visible      是否可见（1/0）
+    """
+    __tablename__ = 'resume_sections'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    resume_id = Column(Integer, nullable=False, index=True)
+    section_type = Column(String(50), nullable=False)
+    title = Column(String(100), nullable=False)
+    content = Column(JSON)
+    sort_order = Column(Integer, default=0)
+    visible = Column(Integer, default=1)
+
+
+class ResumeShare(ResumeBase):
+    """简历分享表 — 生成分享链接 + 二维码
+
+    字段说明：
+        id          自增主键
+        resume_id   关联 resumes.id
+        token       随机 token（URL 用，唯一）
+        expire_at   过期时间（NULL=永久有效）
+        visit_count 访问次数
+        created_at  创建时间
+    """
+    __tablename__ = 'resume_shares'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    resume_id = Column(Integer, nullable=False, index=True)
+    token = Column(String(64), unique=True, nullable=False)
+    expire_at = Column(DateTime, nullable=True)
+    visit_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+
+
 class MatchRecord(Base):
     """人岗匹配记录表 — 人才星核心数据源，岗位↔候选人匹配结果
 
