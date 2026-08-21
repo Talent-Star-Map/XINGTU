@@ -26,7 +26,7 @@ SECTION_TITLES = {
     'summary': '个人简介',
     'work_experience': '工作经历',
     'education': '教育背景',
-    'skills': '专业技能',
+    'skills': '技能特长',
     'projects': '项目经历',
 }
 

@@ -17,6 +17,36 @@ type ViewMode = 'grid' | 'list'
 
 const VIEW_PREF_KEY = 'xingtu_resume_view'
 
+// ─── 新建空简历时默认插入的 5 个区块(让侧栏"简历模块"非空) ────────────
+const EMPTY_PERSONAL = {
+  fullName: '', jobTitle: '', age: '', gender: '', politicalStatus: '',
+  ethnicity: '', hometown: '', maritalStatus: '', yearsOfExperience: '',
+  educationLevel: '', email: '', phone: '', wechat: '', location: '',
+  website: '', linkedin: '', github: '',
+}
+const NEW_RESUME_DEFAULT_SECTIONS: { section_type: string; title: string; content: any }[] = [
+  { section_type: 'personal_info', title: '个人信息',  content: EMPTY_PERSONAL },
+  { section_type: 'summary',       title: '个人简介',  content: { text: '' } },
+  { section_type: 'education',     title: '教育背景',  content: { items: [] } },
+  { section_type: 'skills',        title: '技能特长',  content: { categories: [] } },
+  { section_type: 'projects',      title: '项目经历',  content: { items: [] } },
+]
+
+/** 给一份新简历构造默认区块,带上 sort_order 和临时 id,塞到编辑 state 里
+ *  temp-{type} 作为 React key / 选中态判定用,等 PUT 成功返回真实 id 后会被替换
+ */
+function withDefaultSections(resume: ResumeItem): ResumeItem {
+  return {
+    ...resume,
+    sections: NEW_RESUME_DEFAULT_SECTIONS.map((s, i) => ({
+      ...s,
+      id: `temp-${s.section_type}-${i}`,
+      sort_order: i,
+      visible: 1,
+    })),
+  }
+}
+
 function sortResumes(resumes: ResumeItem[], sort: SortOption): ResumeItem[] {
   const sorted = [...resumes]
   switch (sort) {
@@ -131,8 +161,20 @@ export default function ResumeCenter() {
         body: JSON.stringify({ title: '未命名简历', template_key: templateKey }),
       })
       const d = await r.json()
-      if (d.success) { showToast('简历已创建'); setCreateOpen(false); setEditing(d.data); await loadAll() }
-      else showToast(d.error?.message || '创建失败')
+      if (!d.success) { showToast(d.error?.message || '创建失败'); return }
+      // 后端只创建空 Resume 主记录,前端补上 5 个默认区块,让侧栏非空
+      const filled = withDefaultSections(d.data)
+      setCreateOpen(false)
+      setEditing(filled)
+      showToast('简历已创建,已初始化 5 个默认模块')
+      // 立刻 PUT 把默认区块持久化到数据库(防止用户关闭页面丢失)
+      try {
+        await fetch(withToken(`/api/resume-center/${filled.id}`), {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: filled.title, template_key: filled.template_key, sections: filled.sections }),
+        })
+      } catch { /* 静默失败,用户后续编辑自动保存会再写 */ }
+      await loadAll()
     } catch { showToast('网络错误') }
   }
 

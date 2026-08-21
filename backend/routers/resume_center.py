@@ -101,7 +101,7 @@ def resume_generate(req: GenerateReq, token: str = Query(...)):
         for i, (stype, stitle) in enumerate([
             ('personal_info', '个人信息'), ('summary', '个人简介'),
             ('work_experience', '工作经历'), ('education', '教育背景'),
-            ('skills', '专业技能'), ('projects', '项目经历'),
+            ('skills', '技能特长'), ('projects', '项目经历'),
         ]):
             if stype in resume_data and resume_data[stype]:
                 session.add(ResumeSection(
@@ -158,15 +158,49 @@ class CreateReq(BaseModel):
     template_key: str = Field('classic', description='模板 key')
 
 
+# ─── 新建空简历时自动创建的默认区块 ─────────────────────────────────────────────
+# 与前端 types/resume.ts 中的 PersonalInfoContent 等保持一致(空值即可)
+_DEFAULT_SECTION_CONTENT: dict[str, dict] = {
+    'personal_info': {
+        'fullName': '', 'jobTitle': '', 'age': '', 'gender': '', 'politicalStatus': '',
+        'ethnicity': '', 'hometown': '', 'maritalStatus': '', 'yearsOfExperience': '',
+        'educationLevel': '', 'email': '', 'phone': '', 'wechat': '', 'location': '',
+        'website': '', 'linkedin': '', 'github': '',
+    },
+    'summary': {'text': ''},
+    'education': {'items': []},
+    'skills': {'categories': []},
+    'projects': {'items': []},
+}
+
+# 默认简历区块顺序(用户点"新建"时插入这些,与前端 RESUME_MODULE_TYPES 严格对齐,
+# 但工作经历用户可自由从 0 增删,所以不放默认里)
+_DEFAULT_RESUME_SECTIONS: list[tuple[str, str]] = [
+    ('personal_info', '个人信息'),
+    ('summary', '个人简介'),
+    ('education', '教育背景'),
+    ('skills', '技能特长'),
+    ('projects', '项目经历'),
+]
+
+
 @router.post('')
 def resume_create(req: CreateReq, token: str = Query(...)):
-    """新建空简历"""
+    """新建空简历 — 同时插入 5 个默认区块(个人信息/简介/教育/技能/项目)"""
     user_id = _get_user_id(token)
     session = get_session()
     try:
         r = Resume(user_id=user_id, title=req.title, template_key=req.template_key)
         session.add(r); session.commit(); session.refresh(r)
-        return {'success': True, 'data': _resume_to_dict(session, r), 'message': '简历已创建'}
+        # 自动创建默认区块,让简历编辑器侧栏"简历模块"列表非空
+        for i, (stype, stitle) in enumerate(_DEFAULT_RESUME_SECTIONS):
+            session.add(ResumeSection(
+                resume_id=r.id, section_type=stype, title=stitle,
+                content=_DEFAULT_SECTION_CONTENT.get(stype, {}),
+                sort_order=i, visible=1,
+            ))
+        session.commit()
+        return {'success': True, 'data': _resume_to_dict(session, r), 'message': '简历已创建,已初始化 5 个默认模块'}
     except Exception as e:
         session.rollback()
         return _err('CREATE_ERROR', f'创建简历失败: {e}')
