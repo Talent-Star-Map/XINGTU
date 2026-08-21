@@ -54,5 +54,5 @@ export const DEFAULT_SECTION_CONTENT: Record<string, any> = {
 }
 
 /** 哪些 section 是"简历默认模块",哪些是"添加模块"分组 */
-export const RESUME_MODULE_TYPES = ['personal_info', 'summary', 'work_experience', 'education', 'skills', 'projects'] as const
-export const ADD_MODULE_TYPES = ['certifications', 'languages', 'github', 'qr_codes', 'custom'] as const
+export const RESUME_MODULE_TYPES = ['personal_info', 'summary', 'education', 'skills', 'projects'] as const
+export const ADD_MODULE_TYPES = ['work_experience', 'certifications', 'languages', 'github', 'qr_codes', 'custom'] as const
