@@ -16,3 +16,6 @@ python-dotenv>=1.0.0
 # 2026-07-15 验证：0.139.0 路由仅保留 /api/health，其他全部 404
 
 httpx>=0.27
+
+# 简历导出 — Playwright 驱动 Chrome/Edge 渲染 PDF/HTML
+playwright>=1.40

@@ -123,6 +123,53 @@ export default function ResumeCenter() {
   // 当前编辑中的简历（进编辑器）
   const [editing, setEditing] = useState<ResumeItem | null>(null)
 
+  // 导出 loading 状态(避免双击连发)
+  const [exporting, setExporting] = useState(false)
+
+  // 导出处理器 — 调后端 /api/resume-center/{id}/export 拿二进制,触发浏览器下载
+  const handleExport = useCallback(async (
+    format: 'pdf' | 'html' | 'docx' | 'txt' | 'json',
+    fitOnePage: boolean,
+  ) => {
+    if (!editing) return
+    setExporting(true)
+    try {
+      const qs = new URLSearchParams({
+        format,
+        token: getToken(),
+        ...(fitOnePage && { fit_one_page: 'true' }),
+      })
+      const r = await fetch(`/api/resume-center/${editing.id}/export?${qs}`)
+      if (!r.ok) {
+        // 后端错误是 JSON {success:false, error:{message}}
+        const errJson = await r.json().catch(() => null)
+        const msg = errJson?.error?.message || errJson?.message || `HTTP ${r.status}`
+        showToast(`导出失败: ${msg}`)
+        return
+      }
+      // 从响应头拿 Content-Disposition 里的文件名,fallback 到默认
+      const disp = r.headers.get('Content-Disposition') || ''
+      const m = disp.match(/filename="?([^";]+)"?/)
+      const filename = m?.[1] || `${editing.title}-${Date.now()}.${format}`
+
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      // 等浏览器开始下载再 revoke(否则大文件可能下载不完整)
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+      showToast('导出成功')
+    } catch (e: any) {
+      showToast(`导出失败: ${e?.message || e}`)
+    } finally {
+      setExporting(false)
+    }
+  }, [editing])
+
   const showToast = (msg: string) => {
     setToast(msg)
     if (toastTimer) clearTimeout(toastTimer)
@@ -244,6 +291,8 @@ export default function ResumeCenter() {
         onBack={() => setEditing(null)}
         onShare={() => shareResume(editing.id)}
         onPlaceholder={(msg) => showToast(typeof msg === 'string' ? msg : '')}
+        onExport={handleExport}
+        exporting={exporting}
         onSave={async (r) => {
           try {
             const resp = await fetch(withToken(`/api/resume-center/${r.id}`), {

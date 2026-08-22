@@ -24,14 +24,12 @@ services:
     container_name: xingtu-api
     ports:
       - "8081:8081"
-    depends_on:
-      mysql:
-        condition: service_healthy
+    # 注意:不再 depends_on mysql — 直连云库 180.76.227.159:3308
+    # DATABASE_URL / JWT_SECRET / FRONTEND_BASE_URL 全部从 backend/.env 读
+    # (Dockerfile 已 COPY . . 把 .env 拷进容器)
     environment:
-      # Docker 内部走容器名 mysql:3306（不是宿主机 3307）
-      # charset=utf8mb4：强制读写走 UTF-8，防止中文双编码乱码
-      DATABASE_URL: mysql+pymysql://root:Xingtu123@mysql:3306/xingtu?charset=utf8mb4
-      JWT_SECRET: xingtu-prod-secret-key-2026-very-long-and-random
+      # 简历导出 — Playwright 通过容器内 frontend 域名访问前端
+      FRONTEND_BASE_URL: http://frontend
     restart: unless-stopped
 
   frontend:

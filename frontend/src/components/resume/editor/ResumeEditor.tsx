@@ -23,6 +23,8 @@ interface Props {
   onSave: (r: ResumeItem) => Promise<void>  // 父组件传,触发后端 PUT
   onShare: () => void
   onPlaceholder: (key: string) => void
+  onExport?: (format: 'pdf' | 'html' | 'docx' | 'txt' | 'json', fitOnePage: boolean) => void
+  exporting?: boolean
 }
 
 const TOKEN = () => localStorage.getItem('xingtu_token') || ''
@@ -33,7 +35,7 @@ const AUTOSAVE_DEBOUNCE_MS = 800
 const UNDO_STACK_MAX = 50
 
 // ──────────────── 主组件 ────────────────
-export default function ResumeEditor({ resume: initial, templates, onBack, onSave, onShare, onPlaceholder }: Props) {
+export default function ResumeEditor({ resume: initial, templates, onBack, onSave, onShare, onPlaceholder, onExport, exporting }: Props) {
   const [resume, setResume] = useState<ResumeItem>(initial)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     initial.sections[0] ? String(initial.sections[0].id) : null
@@ -282,6 +284,8 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
         onUndo={undo}
         onRedo={redo}
         onPlaceholder={onPlaceholder}
+        onExport={onExport}
+        exporting={exporting}
         language={resume.language || 'zh'}
         onLanguageChange={(lang) => updateLanguage(lang)}
       />
