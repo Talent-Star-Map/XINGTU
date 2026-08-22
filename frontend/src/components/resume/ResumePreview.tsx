@@ -104,6 +104,16 @@ function ResumePreviewImpl({ resume, scale = 1, className = '' }: ResumePreviewP
 
   const language = resume?.language || 'zh'
 
+  // 从 personal_info section 提取头像形状(模板里读 themeConfig.avatarStyle)
+  // avatarShape 值是 'circle' | 'photo1inch',模板期望 'circle' | 'oneInch',做映射
+  const avatarStyle: 'circle' | 'oneInch' = useMemo(() => {
+    const personal = (resume?.sections || []).find((s: any) =>
+      (s.section_type || s.type) === 'personal_info'
+    )
+    const shape = personal?.content?.avatarShape
+    return shape === 'photo1inch' ? 'oneInch' : 'circle'
+  }, [resume?.sections])
+
   // sections 适配 — useMemo 缓存,避免每次 render 都新建对象
   const adaptedSections = useMemo(() =>
     (resume?.sections || []).map((s: any) => ({
@@ -123,13 +133,14 @@ function ResumePreviewImpl({ resume, scale = 1, className = '' }: ResumePreviewP
       primaryColor: '#111827', accentColor: '#3b82f6',
       fontFamily: 'Inter, sans-serif', fontSize: '13px', lineSpacing: 1.4,
       margin: { top: 24, right: 24, bottom: 24, left: 24 }, sectionSpacing: 16,
+      avatarStyle,
     },
     isDefault: false,
     language,
     sections: adaptedSections,
     createdAt: new Date(),
     updatedAt: new Date(),
-  }), [resume?.id, resume?.user_id, resume?.title, resume?.template_key, language, adaptedSections])
+  }), [resume?.id, resume?.user_id, resume?.title, resume?.template_key, language, adaptedSections, avatarStyle])
 
   return (
     <PreviewErrorBoundary>
