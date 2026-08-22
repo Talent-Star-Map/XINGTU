@@ -47,15 +47,22 @@ function PersonalInfoFormImpl({
     reader.readAsDataURL(file)
   }
 
+  // 头像形状对应的视觉样式
+  // - circle: 80×80 圆,等宽高
+  // - photo1inch: 64×88 矩形,1 寸照约 1:1.37 长宽比,稍带圆角
+  const avatarBoxClass = avatarShape === 'circle'
+    ? 'h-20 w-20 rounded-full'
+    : 'h-[88px] w-20 rounded-md'
+
   return (
     <div className="space-y-6">
       {/* ─── 头像区 ─── */}
       <div className="flex items-center gap-4 pb-5 border-b border-zinc-100">
-        {/* 上传框 */}
+        {/* 上传框 — 形状由 avatarShape 决定 */}
         <button
           type="button"
           onClick={onPickFile}
-          className="relative h-20 w-20 rounded-full border-2 border-dashed border-zinc-300 hover:border-blue-400 transition-colors flex items-center justify-center bg-zinc-50 text-zinc-400 overflow-hidden shrink-0"
+          className={`relative ${avatarBoxClass} border-2 border-dashed border-zinc-300 hover:border-blue-400 transition-all flex items-center justify-center bg-zinc-50 text-zinc-400 overflow-hidden shrink-0`}
           title="点击上传头像"
         >
           {c.avatar ? (
