@@ -1,0 +1,60 @@
+# ───── 通用 ─────
+.git
+.gitignore
+.gitattributes
+.dockerignore
+Dockerfile
+docker-compose*.yml
+*.md
+README*
+LICENSE*
+
+# ───── 前端大依赖 / 产物 ─────
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/.cache
+frontend/coverage
+frontend/.npm
+frontend/.next
+frontend/.nuxt
+frontend/.parcel-cache
+
+# ───── 后端缓存 / 虚拟环境 ─────
+backend/__pycache__
+backend/**/__pycache__
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.pytest_cache
+backend/.mypy_cache
+backend/.ruff_cache
+backend/venv
+backend/.venv
+backend/env
+backend/.env.example
+backend/htmlcov
+backend/.tox
+
+# ───── 备份 / 部署包 / IDE ─────
+*.sql
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.bak
+*.log
+*.tmp
+*~
+
+.idea
+.vscode
+.vs
+.DS_Store
+Thumbs.db
+
+# ───── 文档 / 测试快照 ─────
+docs/
+tests/screenshots
+*.png
+!frontend/**/*.png
