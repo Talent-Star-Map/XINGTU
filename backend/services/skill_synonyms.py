@@ -45,7 +45,7 @@ SYNONYM_MAP: dict[str, list[str]] = {
     "架构设计": ["系统架构", "架构", "方案设计"],
     "distributed": ["分布式"],
     "microservices": ["微服务"],
-    "restful": ["rest", "rest api", "restful api"],
+    "restful": ["rest", "rest api", "rest apis", "restful api"],
     "graphql": ["graph ql"],
     "websocket": ["ws", "web socket"],
     "microservice": ["微服务", "microservices"],

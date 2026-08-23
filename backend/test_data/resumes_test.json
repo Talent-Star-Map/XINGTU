@@ -1,0 +1,1543 @@
+[
+  {
+    "id": "resume_000",
+    "category": "DevOps",
+    "text": "姓名：吴婷\n手机：13189460639\n邮箱：resume0@test.com\n学历：本科 · 哈工大\n工作经验：1年 · 科大讯飞 后端开发\n项目经历：CI/CD流水线搭建，使用 AWS, Prometheus, Azure 和 Terraform 等技术栈\n技能：AWS, Networking, Grafana, Prometheus, GCP, Nginx, Kubernetes, Terraform, Docker, Azure, Ansible\n",
+    "skills": [
+      "AWS",
+      "Networking",
+      "Grafana",
+      "Prometheus",
+      "GCP",
+      "Nginx",
+      "Kubernetes",
+      "Terraform",
+      "Docker",
+      "Azure",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "resume_001",
+    "category": "Backend",
+    "text": "姓名：吴婷\n手机：17967180169\n邮箱：resume1@test.com\n学历：硕士 · 中科大\n工作经验：8年 · Shopee 前端开发\n项目经历：数据仓库迁移，使用 Git, Nginx, Microservices 和 PostgreSQL 等技术栈\n技能：Nginx, Java, PostgreSQL, Kubernetes, Django, Microservices, Git, REST APIs, Linux\n",
+    "skills": [
+      "Nginx",
+      "Java",
+      "PostgreSQL",
+      "Kubernetes",
+      "Django",
+      "Microservices",
+      "Git",
+      "REST APIs",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_002",
+    "category": "Cloud",
+    "text": "姓名：黄敏\n手机：13319779167\n邮箱：resume2@test.com\n学历：硕士 · 北京大学\n工作经验：1年 · 字节跳动 后端开发\n项目经历：前端组件库建设，使用 Linux, Kubernetes, IAM, EC2, GCP 和 AWS 等技术栈\n技能：IAM, AWS, Linux, GCP, Kubernetes, EC2\n",
+    "skills": [
+      "IAM",
+      "AWS",
+      "Linux",
+      "GCP",
+      "Kubernetes",
+      "EC2"
+    ]
+  },
+  {
+    "id": "resume_003",
+    "category": "ML Engineering",
+    "text": "姓名：张伟\n手机：15596362049\n邮箱：resume3@test.com\n学历：本科 · 哈工大\n工作经验：8年 · Shopee 算法工程师\n项目经历：云成本优化工具，使用 CUDA, Git 和 ONNX 等技术栈\n技能：Linux, TensorFlow, Git, ONNX, CUDA, Kubernetes, Docker, Feature Store, Kubeflow, Data Pipeline, Python, Model Serving\n",
+    "skills": [
+      "Linux",
+      "TensorFlow",
+      "Git",
+      "ONNX",
+      "CUDA",
+      "Kubernetes",
+      "Docker",
+      "Feature Store",
+      "Kubeflow",
+      "Data Pipeline",
+      "Python",
+      "Model Serving"
+    ]
+  },
+  {
+    "id": "resume_004",
+    "category": "Security",
+    "text": "姓名：陈强\n手机：18335556747\n邮箱：resume4@test.com\n学历：本科 · 西安交大\n工作经验：2年 · 小红书 前端开发\n项目经历：推荐系统优化，使用 SIEM, OWASP, Firewall, Burp Suite 和 Penetration Testing 等技术栈\n技能：Python, Firewall, Burp Suite, SIEM, Penetration Testing, OWASP\n其他：熟悉Burp Suite、Incident Response\n",
+    "skills": [
+      "Python",
+      "Firewall",
+      "Burp Suite",
+      "SIEM",
+      "Penetration Testing",
+      "OWASP"
+    ]
+  },
+  {
+    "id": "resume_005",
+    "category": "Cloud",
+    "text": "姓名：黄敏\n手机：16947771875\n邮箱：resume5@test.com\n学历：本科 · 中科大\n工作经验：6年 · Coinbase 后端开发\n项目经历：自动化测试框架，使用 IAM, Lambda, S3 和 Docker 等技术栈\n技能：IAM, S3, Kubernetes, Serverless, Lambda, Docker\n其他：熟悉Azure、IAM\n",
+    "skills": [
+      "IAM",
+      "S3",
+      "Kubernetes",
+      "Serverless",
+      "Lambda",
+      "Docker"
+    ]
+  },
+  {
+    "id": "resume_006",
+    "category": "Frontend",
+    "text": "姓名：陈强\n手机：17250002648\n邮箱：resume6@test.com\n学历：本科 · 哈工大\n工作经验：5年 · 科大讯飞 前端开发\n项目经历：推荐系统优化，使用 Jest, Cypress 和 Tailwind 等技术栈\n技能：Jest, Tailwind, Vue, HTML, Cypress, Docker, Vite, GraphQL\n其他：熟悉Nginx、Tailwind\n",
+    "skills": [
+      "Jest",
+      "Tailwind",
+      "Vue",
+      "HTML",
+      "Cypress",
+      "Docker",
+      "Vite",
+      "GraphQL"
+    ]
+  },
+  {
+    "id": "resume_007",
+    "category": "DevOps",
+    "text": "姓名：王芳\n手机：17880113424\n邮箱：resume7@test.com\n学历：硕士 · 北航\n工作经验：7年 · Coinbase DevOps\n项目经历：实时数据管道开发，使用 Terraform, Prometheus, Grafana 和 Linux 等技术栈\n技能：Linux, Grafana, Terraform, Prometheus, Bash\n其他：熟悉Prometheus、Python\n",
+    "skills": [
+      "Linux",
+      "Grafana",
+      "Terraform",
+      "Prometheus",
+      "Bash"
+    ]
+  },
+  {
+    "id": "resume_008",
+    "category": "Data Science",
+    "text": "姓名：李明\n手机：18826735991\n邮箱：resume8@test.com\n学历：本科 · 上海交大\n工作经验：6年 · Coinbase 后端开发\n项目经历：实时数据管道开发，使用 SQL, Machine Learning, AWS, Docker, Pandas 和 Data Visualization 等技术栈\n技能：AWS, SQL, Docker, Pandas, Machine Learning, NLP, Data Visualization, NumPy\n",
+    "skills": [
+      "AWS",
+      "SQL",
+      "Docker",
+      "Pandas",
+      "Machine Learning",
+      "NLP",
+      "Data Visualization",
+      "NumPy"
+    ]
+  },
+  {
+    "id": "resume_009",
+    "category": "ML Engineering",
+    "text": "姓名：杨磊\n手机：15035944674\n邮箱：resume9@test.com\n学历：本科 · 华中科技\n工作经验：4年 · 美团 后端开发\n项目经历：内部DevOps平台建设，使用 CUDA, Git 和 Linux 等技术栈\n技能：Git, Data Pipeline, MLflow, CUDA, Docker, Python, PyTorch, Kubernetes, Feature Store, Kubeflow, TensorFlow, Linux\n其他：熟悉PyTorch、Kubernetes\n",
+    "skills": [
+      "Git",
+      "Data Pipeline",
+      "MLflow",
+      "CUDA",
+      "Docker",
+      "Python",
+      "PyTorch",
+      "Kubernetes",
+      "Feature Store",
+      "Kubeflow",
+      "TensorFlow",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_010",
+    "category": "Cloud",
+    "text": "姓名：王芳\n手机：13165875337\n邮箱：resume10@test.com\n学历：硕士 · 北航\n工作经验：4年 · 蚂蚁集团 算法工程师\n项目经历：容器化迁移项目，使用 CloudWatch, AWS, Serverless 和 Kubernetes 等技术栈\n技能：CloudWatch, AWS, Terraform, Python, CloudFormation, Kubernetes, Docker, S3, Serverless, IAM\n其他：熟悉AWS、Serverless\n",
+    "skills": [
+      "CloudWatch",
+      "AWS",
+      "Terraform",
+      "Python",
+      "CloudFormation",
+      "Kubernetes",
+      "Docker",
+      "S3",
+      "Serverless",
+      "IAM"
+    ]
+  },
+  {
+    "id": "resume_011",
+    "category": "Security",
+    "text": "姓名：王芳\n手机：16719959293\n邮箱：resume11@test.com\n学历：硕士 · 北航\n工作经验：5年 · 腾讯 DevOps\n项目经历：内部DevOps平台建设，使用 IDS/IPS, Penetration Testing 和 Python 等技术栈\n技能：Firewall, IDS/IPS, Penetration Testing, Git, Cryptography, Nmap, Python\n",
+    "skills": [
+      "Firewall",
+      "IDS/IPS",
+      "Penetration Testing",
+      "Git",
+      "Cryptography",
+      "Nmap",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_012",
+    "category": "Cloud",
+    "text": "姓名：李明\n手机：19121923374\n邮箱：resume12@test.com\n学历：硕士 · 清华大学\n工作经验：3年 · 滴滴 全栈开发\n项目经历：电商平台后端微服务重构，使用 IAM, GCP, Azure 和 Serverless 等技术栈\n技能：CloudWatch, GCP, CloudFormation, VPC, Kubernetes, Serverless, IAM, Python, Azure\n其他：熟悉GCP、AWS\n",
+    "skills": [
+      "CloudWatch",
+      "GCP",
+      "CloudFormation",
+      "VPC",
+      "Kubernetes",
+      "Serverless",
+      "IAM",
+      "Python",
+      "Azure"
+    ]
+  },
+  {
+    "id": "resume_013",
+    "category": "ML Engineering",
+    "text": "姓名：陈强\n手机：18456643041\n邮箱：resume13@test.com\n学历：硕士 · 西安交大\n工作经验：2年 · 蚂蚁集团 全栈开发\n项目经历：API网关开发，使用 CUDA, TensorFlow 和 Linux 等技术栈\n技能：Python, Linux, Feature Store, PyTorch, ONNX, Kubeflow, Docker, CUDA, Data Pipeline, TensorFlow, Kubernetes\n其他：熟悉Kubernetes、MLflow\n",
+    "skills": [
+      "Python",
+      "Linux",
+      "Feature Store",
+      "PyTorch",
+      "ONNX",
+      "Kubeflow",
+      "Docker",
+      "CUDA",
+      "Data Pipeline",
+      "TensorFlow",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "resume_014",
+    "category": "DevOps",
+    "text": "姓名：刘洋\n手机：14633106432\n邮箱：resume14@test.com\n学历：本科 · 复旦\n工作经验：2年 · 华为 全栈开发\n项目经历：实时数据管道开发，使用 Nginx, GCP, Linux, Terraform 和 Docker 等技术栈\n技能：Docker, Networking, GCP, Linux, Grafana, Python, Terraform, Prometheus, Nginx, Ansible\n其他：熟悉Azure、GitLab CI\n",
+    "skills": [
+      "Docker",
+      "Networking",
+      "GCP",
+      "Linux",
+      "Grafana",
+      "Python",
+      "Terraform",
+      "Prometheus",
+      "Nginx",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "resume_015",
+    "category": "Mobile",
+    "text": "姓名：周杰\n手机：17025715733\n邮箱：resume15@test.com\n学历：本科 · 中科大\n工作经验：4年 · 小红书 后端开发\n项目经历：自动化测试框架，使用 Push Notifications, REST APIs 和 React Native 等技术栈\n技能：React Native, Swift, REST APIs, Core Data, Push Notifications, Flutter, Android, Firebase, SQLite\n其他：熟悉Flutter、Swift\n",
+    "skills": [
+      "React Native",
+      "Swift",
+      "REST APIs",
+      "Core Data",
+      "Push Notifications",
+      "Flutter",
+      "Android",
+      "Firebase",
+      "SQLite"
+    ]
+  },
+  {
+    "id": "resume_016",
+    "category": "ML Engineering",
+    "text": "姓名：李明\n手机：13317728820\n邮箱：resume16@test.com\n学历：大专 · 北京大学\n工作经验：1年 · 小红书 DevOps\n项目经历：自动化测试框架，使用 Data Pipeline, PyTorch, ONNX, Feature Store, MLflow 和 Python 等技术栈\n技能：Kubeflow, ONNX, PyTorch, Model Serving, Data Pipeline, Docker, TensorFlow, Feature Store, MLflow, Python\n其他：熟悉Kubeflow、Data Pipeline\n",
+    "skills": [
+      "Kubeflow",
+      "ONNX",
+      "PyTorch",
+      "Model Serving",
+      "Data Pipeline",
+      "Docker",
+      "TensorFlow",
+      "Feature Store",
+      "MLflow",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_017",
+    "category": "Frontend",
+    "text": "姓名：陈强\n手机：16283908541\n邮箱：resume17@test.com\n学历：本科 · 中科大\n工作经验：6年 · 小红书 后端开发\n项目经历：推荐系统优化，使用 Nginx, Cypress, Redux, GraphQL, Jest 和 Tailwind 等技术栈\n技能：GraphQL, Webpack, Nginx, Cypress, Docker, Redux, Jest, Tailwind, React\n",
+    "skills": [
+      "GraphQL",
+      "Webpack",
+      "Nginx",
+      "Cypress",
+      "Docker",
+      "Redux",
+      "Jest",
+      "Tailwind",
+      "React"
+    ]
+  },
+  {
+    "id": "resume_018",
+    "category": "Data Science",
+    "text": "姓名：黄敏\n手机：18833537814\n邮箱：resume18@test.com\n学历：本科 · 中科大\n工作经验：5年 · 蚂蚁集团 数据工程师\n项目经历：容器化迁移项目，使用 Deep Learning, Scikit-learn 和 Machine Learning 等技术栈\n技能：Docker, Machine Learning, Git, Scikit-learn, Deep Learning, Jupyter, NumPy\n其他：熟悉Docker、Scikit-learn\n",
+    "skills": [
+      "Docker",
+      "Machine Learning",
+      "Git",
+      "Scikit-learn",
+      "Deep Learning",
+      "Jupyter",
+      "NumPy"
+    ]
+  },
+  {
+    "id": "resume_019",
+    "category": "Backend",
+    "text": "姓名：吴婷\n手机：13743301824\n邮箱：resume19@test.com\n学历：大专 · 西安交大\n工作经验：7年 · Coinbase 算法工程师\n项目经历：API网关开发，使用 Redis, Python 和 Docker 等技术栈\n技能：PostgreSQL, Python, RabbitMQ, GraphQL, Nginx, AWS, Redis, Docker, REST APIs\n其他：熟悉AWS、Git\n",
+    "skills": [
+      "PostgreSQL",
+      "Python",
+      "RabbitMQ",
+      "GraphQL",
+      "Nginx",
+      "AWS",
+      "Redis",
+      "Docker",
+      "REST APIs"
+    ]
+  },
+  {
+    "id": "resume_020",
+    "category": "Backend",
+    "text": "姓名：王芳\n手机：16649885585\n邮箱：resume20@test.com\n学历：本科 · 复旦\n工作经验：7年 · 腾讯 前端开发\n项目经历：数据仓库迁移，使用 CI/CD, Go, Java 和 Docker 等技术栈\n技能：Spring Boot, CI/CD, Docker, PostgreSQL, REST APIs, Go, Java\n",
+    "skills": [
+      "Spring Boot",
+      "CI/CD",
+      "Docker",
+      "PostgreSQL",
+      "REST APIs",
+      "Go",
+      "Java"
+    ]
+  },
+  {
+    "id": "resume_021",
+    "category": "Cloud",
+    "text": "姓名：吴婷\n手机：13072043578\n邮箱：resume21@test.com\n学历：大专 · 西安交大\n工作经验：2年 · 滴滴 前端开发\n项目经历：移动端跨平台应用，使用 VPC, Docker, CloudWatch, Lambda, Azure 和 S3 等技术栈\n技能：Docker, CloudWatch, Lambda, Azure, VPC, S3\n其他：熟悉Serverless、CloudWatch\n",
+    "skills": [
+      "Docker",
+      "CloudWatch",
+      "Lambda",
+      "Azure",
+      "VPC",
+      "S3"
+    ]
+  },
+  {
+    "id": "resume_022",
+    "category": "ML Engineering",
+    "text": "姓名：吴婷\n手机：18534844203\n邮箱：resume22@test.com\n学历：本科 · 浙江大学\n工作经验：2年 · Databricks 前端开发\n项目经历：安全审计平台，使用 Git, TensorFlow, CUDA, ONNX 和 Kubernetes 等技术栈\n技能：Docker, Data Pipeline, Kubeflow, CUDA, ONNX, Kubernetes, TensorFlow, Linux, Python, Git\n",
+    "skills": [
+      "Docker",
+      "Data Pipeline",
+      "Kubeflow",
+      "CUDA",
+      "ONNX",
+      "Kubernetes",
+      "TensorFlow",
+      "Linux",
+      "Python",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_023",
+    "category": "Data Science",
+    "text": "姓名：张伟\n手机：15157168021\n邮箱：resume23@test.com\n学历：本科 · 北航\n工作经验：1年 · 腾讯 算法工程师\n项目经历：电商平台后端微服务重构，使用 Machine Learning, TensorFlow, Git, Scikit-learn, NLP 和 PyTorch 等技术栈\n技能：Git, PyTorch, Python, NLP, AWS, Jupyter, Scikit-learn, Data Visualization, NumPy, TensorFlow, Machine Learning\n",
+    "skills": [
+      "Git",
+      "PyTorch",
+      "Python",
+      "NLP",
+      "AWS",
+      "Jupyter",
+      "Scikit-learn",
+      "Data Visualization",
+      "NumPy",
+      "TensorFlow",
+      "Machine Learning"
+    ]
+  },
+  {
+    "id": "resume_024",
+    "category": "Security",
+    "text": "姓名：周杰\n手机：17857322745\n邮箱：resume24@test.com\n学历：本科 · 北航\n工作经验：8年 · 百度 算法工程师\n项目经历：推荐系统优化，使用 Penetration Testing, Nmap, Linux 和 Firewall 等技术栈\n技能：Nmap, Metasploit, SIEM, Firewall, Penetration Testing, Linux\n其他：熟悉Wireshark、Docker\n",
+    "skills": [
+      "Nmap",
+      "Metasploit",
+      "SIEM",
+      "Firewall",
+      "Penetration Testing",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_025",
+    "category": "Cloud",
+    "text": "姓名：周杰\n手机：14182082139\n邮箱：resume25@test.com\n学历：大专 · 上海交大\n工作经验：1年 · 小红书 全栈开发\n项目经历：容器化迁移项目，使用 Linux, Docker 和 Terraform 等技术栈\n技能：Azure, Terraform, S3, Linux, EC2, Docker, GCP\n其他：熟悉IAM、AWS\n",
+    "skills": [
+      "Azure",
+      "Terraform",
+      "S3",
+      "Linux",
+      "EC2",
+      "Docker",
+      "GCP"
+    ]
+  },
+  {
+    "id": "resume_026",
+    "category": "Cloud",
+    "text": "姓名：杨磊\n手机：17268789860\n邮箱：resume26@test.com\n学历：硕士 · 西安交大\n工作经验：1年 · Stripe 前端开发\n项目经历：内部DevOps平台建设，使用 GCP, Kubernetes 和 Linux 等技术栈\n技能：Linux, AWS, VPC, CloudWatch, Azure, EC2, Lambda, Terraform, Python, Kubernetes, GCP\n",
+    "skills": [
+      "Linux",
+      "AWS",
+      "VPC",
+      "CloudWatch",
+      "Azure",
+      "EC2",
+      "Lambda",
+      "Terraform",
+      "Python",
+      "Kubernetes",
+      "GCP"
+    ]
+  },
+  {
+    "id": "resume_027",
+    "category": "DevOps",
+    "text": "姓名：陈强\n手机：17871425302\n邮箱：resume27@test.com\n学历：硕士 · 浙江大学\n工作经验：2年 · Stripe 全栈开发\n项目经历：API网关开发，使用 Docker, Azure, Linux 和 Networking 等技术栈\n技能：Jenkins, Linux, Grafana, ELK, Networking, Ansible, Docker, AWS, Azure\n其他：熟悉Kubernetes、Nginx\n",
+    "skills": [
+      "Jenkins",
+      "Linux",
+      "Grafana",
+      "ELK",
+      "Networking",
+      "Ansible",
+      "Docker",
+      "AWS",
+      "Azure"
+    ]
+  },
+  {
+    "id": "resume_028",
+    "category": "ML Engineering",
+    "text": "姓名：李明\n手机：19211880500\n邮箱：resume28@test.com\n学历：本科 · 华中科技\n工作经验：3年 · 京东 全栈开发\n项目经历：推荐系统优化，使用 PyTorch, Model Serving, Docker 和 ONNX 等技术栈\n技能：Python, Kubeflow, PyTorch, Model Serving, ONNX, MLflow, Docker, Git, CUDA, Linux\n",
+    "skills": [
+      "Python",
+      "Kubeflow",
+      "PyTorch",
+      "Model Serving",
+      "ONNX",
+      "MLflow",
+      "Docker",
+      "Git",
+      "CUDA",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_029",
+    "category": "Mobile",
+    "text": "姓名：杨磊\n手机：13390376725\n邮箱：resume29@test.com\n学历：大专 · 清华大学\n工作经验：4年 · 蚂蚁集团 DevOps\n项目经历：内部DevOps平台建设，使用 Kotlin, Firebase, React Native 和 iOS 等技术栈\n技能：iOS, Flutter, React Native, Core Data, SQLite, Firebase, App Store, Kotlin\n",
+    "skills": [
+      "iOS",
+      "Flutter",
+      "React Native",
+      "Core Data",
+      "SQLite",
+      "Firebase",
+      "App Store",
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "resume_030",
+    "category": "Data Science",
+    "text": "姓名：吴婷\n手机：18689600984\n邮箱：resume30@test.com\n学历：硕士 · 中科大\n工作经验：8年 · 商汤 DevOps\n项目经历：实时数据管道开发，使用 Python, Git, Jupyter, Deep Learning 和 AWS 等技术栈\n技能：Scikit-learn, AWS, Deep Learning, NumPy, Git, TensorFlow, Jupyter, NLP, Python\n其他：熟悉Scikit-learn、Deep Learning\n",
+    "skills": [
+      "Scikit-learn",
+      "AWS",
+      "Deep Learning",
+      "NumPy",
+      "Git",
+      "TensorFlow",
+      "Jupyter",
+      "NLP",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_031",
+    "category": "Data Science",
+    "text": "姓名：王芳\n手机：19484386380\n邮箱：resume31@test.com\n学历：本科 · 清华大学\n工作经验：4年 · 百度 数据工程师\n项目经历：用户画像系统，使用 Python, Scikit-learn, SQL, Docker, TensorFlow 和 Git 等技术栈\n技能：Scikit-learn, Docker, Pandas, Machine Learning, Python, TensorFlow, Git, SQL\n其他：熟悉PyTorch、Data Visualization\n",
+    "skills": [
+      "Scikit-learn",
+      "Docker",
+      "Pandas",
+      "Machine Learning",
+      "Python",
+      "TensorFlow",
+      "Git",
+      "SQL"
+    ]
+  },
+  {
+    "id": "resume_032",
+    "category": "Frontend",
+    "text": "姓名：李明\n手机：17433032710\n邮箱：resume32@test.com\n学历：硕士 · 华中科技\n工作经验：5年 · 科大讯飞 数据工程师\n项目经历：数据仓库迁移，使用 Responsive Design, CSS, Cypress, Jest, Git 和 Vue 等技术栈\n技能：Cypress, Jest, TypeScript, CSS, Vue, React, Responsive Design, Vite, Git, JavaScript\n",
+    "skills": [
+      "Cypress",
+      "Jest",
+      "TypeScript",
+      "CSS",
+      "Vue",
+      "React",
+      "Responsive Design",
+      "Vite",
+      "Git",
+      "JavaScript"
+    ]
+  },
+  {
+    "id": "resume_033",
+    "category": "ML Engineering",
+    "text": "姓名：黄敏\n手机：18214817654\n邮箱：resume33@test.com\n学历：大专 · 上海交大\n工作经验：8年 · 美团 DevOps\n项目经历：前端组件库建设，使用 Linux, Kubernetes, CUDA, Data Pipeline 和 TensorFlow 等技术栈\n技能：Feature Store, Python, ONNX, Kubeflow, Data Pipeline, CUDA, TensorFlow, Linux, Kubernetes\n",
+    "skills": [
+      "Feature Store",
+      "Python",
+      "ONNX",
+      "Kubeflow",
+      "Data Pipeline",
+      "CUDA",
+      "TensorFlow",
+      "Linux",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "resume_034",
+    "category": "Security",
+    "text": "姓名：吴婷\n手机：19652863191\n邮箱：resume34@test.com\n学历：本科 · 华中科技\n工作经验：8年 · Zoom 算法工程师\n项目经历：安全审计平台，使用 Burp Suite, Firewall, Penetration Testing, OWASP, Git 和 IDS/IPS 等技术栈\n技能：OWASP, Penetration Testing, Firewall, Burp Suite, IDS/IPS, Git\n其他：熟悉Docker、Incident Response\n",
+    "skills": [
+      "OWASP",
+      "Penetration Testing",
+      "Firewall",
+      "Burp Suite",
+      "IDS/IPS",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_035",
+    "category": "Mobile",
+    "text": "姓名：李明\n手机：18425394172\n邮箱：resume35@test.com\n学历：硕士 · 复旦\n工作经验：7年 · 蚂蚁集团 全栈开发\n项目经历：安全审计平台，使用 iOS, Push Notifications, Flutter, App Store, Firebase 和 React Native 等技术栈\n技能：iOS, React Native, Core Data, App Store, Swift, Push Notifications, SQLite, Android, Kotlin, Flutter, Firebase\n其他：熟悉Push Notifications、REST APIs\n",
+    "skills": [
+      "iOS",
+      "React Native",
+      "Core Data",
+      "App Store",
+      "Swift",
+      "Push Notifications",
+      "SQLite",
+      "Android",
+      "Kotlin",
+      "Flutter",
+      "Firebase"
+    ]
+  },
+  {
+    "id": "resume_036",
+    "category": "DevOps",
+    "text": "姓名：周杰\n手机：14325373768\n邮箱：resume36@test.com\n学历：本科 · 哈工大\n工作经验：1年 · 网易 全栈开发\n项目经历：实时数据管道开发，使用 Linux, Docker, Grafana, Ansible, Bash 和 Nginx 等技术栈\n技能：Docker, Grafana, Ansible, Linux, Bash, Nginx, GCP\n其他：熟悉Nginx、GitLab CI\n",
+    "skills": [
+      "Docker",
+      "Grafana",
+      "Ansible",
+      "Linux",
+      "Bash",
+      "Nginx",
+      "GCP"
+    ]
+  },
+  {
+    "id": "resume_037",
+    "category": "Cloud",
+    "text": "姓名：杨磊\n手机：15712680788\n邮箱：resume37@test.com\n学历：大专 · 北航\n工作经验：2年 · 百度 全栈开发\n项目经历：云成本优化工具，使用 Linux, Docker 和 IAM 等技术栈\n技能：EC2, Linux, Python, S3, Docker, IAM, VPC, GCP, CloudFormation, Lambda, Kubernetes, Azure\n",
+    "skills": [
+      "EC2",
+      "Linux",
+      "Python",
+      "S3",
+      "Docker",
+      "IAM",
+      "VPC",
+      "GCP",
+      "CloudFormation",
+      "Lambda",
+      "Kubernetes",
+      "Azure"
+    ]
+  },
+  {
+    "id": "resume_038",
+    "category": "Cloud",
+    "text": "姓名：张伟\n手机：17463632236\n邮箱：resume38@test.com\n学历：本科 · 北航\n工作经验：7年 · Zoom 全栈开发\n项目经历：API网关开发，使用 Lambda, Terraform, IAM, S3 和 Docker 等技术栈\n技能：Lambda, CloudFormation, Linux, IAM, Docker, S3, AWS, Terraform\n其他：熟悉Kubernetes、GCP\n",
+    "skills": [
+      "Lambda",
+      "CloudFormation",
+      "Linux",
+      "IAM",
+      "Docker",
+      "S3",
+      "AWS",
+      "Terraform"
+    ]
+  },
+  {
+    "id": "resume_039",
+    "category": "ML Engineering",
+    "text": "姓名：黄敏\n手机：17960612861\n邮箱：resume39@test.com\n学历：本科 · 华中科技\n工作经验：2年 · 华为 算法工程师\n项目经历：实时数据管道开发，使用 Linux, PyTorch, CUDA, Model Serving 和 Kubeflow 等技术栈\n技能：TensorFlow, PyTorch, Feature Store, CUDA, Docker, Kubeflow, ONNX, Git, Linux, Model Serving, Data Pipeline\n",
+    "skills": [
+      "TensorFlow",
+      "PyTorch",
+      "Feature Store",
+      "CUDA",
+      "Docker",
+      "Kubeflow",
+      "ONNX",
+      "Git",
+      "Linux",
+      "Model Serving",
+      "Data Pipeline"
+    ]
+  },
+  {
+    "id": "resume_040",
+    "category": "ML Engineering",
+    "text": "姓名：杨磊\n手机：18513648696\n邮箱：resume40@test.com\n学历：本科 · 华中科技\n工作经验：6年 · Stripe 算法工程师\n项目经历：日志分析平台，使用 ONNX, Docker 和 PyTorch 等技术栈\n技能：PyTorch, Model Serving, Git, Linux, Docker, ONNX\n",
+    "skills": [
+      "PyTorch",
+      "Model Serving",
+      "Git",
+      "Linux",
+      "Docker",
+      "ONNX"
+    ]
+  },
+  {
+    "id": "resume_041",
+    "category": "DevOps",
+    "text": "姓名：张伟\n手机：18128909065\n邮箱：resume41@test.com\n学历：本科 · 清华大学\n工作经验：7年 · Shopee 前端开发\n项目经历：API网关开发，使用 Kubernetes, Grafana, Docker, Ansible, Terraform 和 GCP 等技术栈\n技能：Networking, Grafana, Prometheus, Ansible, Kubernetes, Linux, Docker, Azure, GCP, Terraform\n",
+    "skills": [
+      "Networking",
+      "Grafana",
+      "Prometheus",
+      "Ansible",
+      "Kubernetes",
+      "Linux",
+      "Docker",
+      "Azure",
+      "GCP",
+      "Terraform"
+    ]
+  },
+  {
+    "id": "resume_042",
+    "category": "Frontend",
+    "text": "姓名：杨磊\n手机：19366999076\n邮箱：resume42@test.com\n学历：大专 · 哈工大\n工作经验：4年 · 京东 DevOps\n项目经历：自动化测试框架，使用 Git, Docker, CSS 和 Responsive Design 等技术栈\n技能：Jest, Webpack, Docker, HTML, Redux, Vue, TypeScript, Responsive Design, CSS, Git\n其他：熟悉Docker、Git\n",
+    "skills": [
+      "Jest",
+      "Webpack",
+      "Docker",
+      "HTML",
+      "Redux",
+      "Vue",
+      "TypeScript",
+      "Responsive Design",
+      "CSS",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_043",
+    "category": "Mobile",
+    "text": "姓名：赵丽\n手机：19446697519\n邮箱：resume43@test.com\n学历：大专 · 哈工大\n工作经验：4年 · 百度 数据工程师\n项目经历：自动化测试框架，使用 Flutter, Firebase, Core Data, REST APIs, Android 和 React Native 等技术栈\n技能：iOS, Swift, Core Data, REST APIs, React Native, SQLite, Firebase, Flutter, Android\n其他：熟悉Android、Flutter\n",
+    "skills": [
+      "iOS",
+      "Swift",
+      "Core Data",
+      "REST APIs",
+      "React Native",
+      "SQLite",
+      "Firebase",
+      "Flutter",
+      "Android"
+    ]
+  },
+  {
+    "id": "resume_044",
+    "category": "Backend",
+    "text": "姓名：吴婷\n手机：17628538659\n邮箱：resume44@test.com\n学历：本科 · 复旦\n工作经验：3年 · B站 后端开发\n项目经历：电商平台后端微服务重构，使用 Redis, Kubernetes, Spring Boot, Microservices 和 Java 等技术栈\n技能：Java, Docker, Spring Boot, Python, Kubernetes, Git, Redis, Microservices, PostgreSQL, CI/CD, AWS\n",
+    "skills": [
+      "Java",
+      "Docker",
+      "Spring Boot",
+      "Python",
+      "Kubernetes",
+      "Git",
+      "Redis",
+      "Microservices",
+      "PostgreSQL",
+      "CI/CD",
+      "AWS"
+    ]
+  },
+  {
+    "id": "resume_045",
+    "category": "Security",
+    "text": "姓名：黄敏\n手机：17255644754\n邮箱：resume45@test.com\n学历：硕士 · 华中科技\n工作经验：4年 · 华为 算法工程师\n项目经历：内部DevOps平台建设，使用 Nmap, OWASP, Penetration Testing, Python 和 Burp Suite 等技术栈\n技能：Penetration Testing, Burp Suite, Nmap, OWASP, Python\n其他：熟悉Linux、SIEM\n",
+    "skills": [
+      "Penetration Testing",
+      "Burp Suite",
+      "Nmap",
+      "OWASP",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_046",
+    "category": "DevOps",
+    "text": "姓名：赵丽\n手机：13311354164\n邮箱：resume46@test.com\n学历：本科 · 浙江大学\n工作经验：6年 · Zoom 前端开发\n项目经历：日志分析平台，使用 Grafana, ELK, Nginx, Ansible 和 Prometheus 等技术栈\n技能：ELK, Ansible, Grafana, Nginx, Prometheus\n其他：熟悉Grafana、Prometheus\n",
+    "skills": [
+      "ELK",
+      "Ansible",
+      "Grafana",
+      "Nginx",
+      "Prometheus"
+    ]
+  },
+  {
+    "id": "resume_047",
+    "category": "Data Science",
+    "text": "姓名：周杰\n手机：19794581294\n邮箱：resume47@test.com\n学历：本科 · 复旦\n工作经验：2年 · Databricks 后端开发\n项目经历：API网关开发，使用 PyTorch, Pandas, Jupyter 和 AWS 等技术栈\n技能：Scikit-learn, Jupyter, NumPy, Pandas, Data Visualization, Docker, Machine Learning, SQL, AWS, PyTorch, Git\n",
+    "skills": [
+      "Scikit-learn",
+      "Jupyter",
+      "NumPy",
+      "Pandas",
+      "Data Visualization",
+      "Docker",
+      "Machine Learning",
+      "SQL",
+      "AWS",
+      "PyTorch",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_048",
+    "category": "Mobile",
+    "text": "姓名：赵丽\n手机：15098215698\n邮箱：resume48@test.com\n学历：本科 · 西安交大\n工作经验：2年 · 腾讯 算法工程师\n项目经历：前端组件库建设，使用 Flutter, iOS, CI/CD 和 Git 等技术栈\n技能：CI/CD, Flutter, Push Notifications, SQLite, App Store, REST APIs, Kotlin, Swift, iOS, Git, Core Data\n其他：熟悉Git、Swift\n",
+    "skills": [
+      "CI/CD",
+      "Flutter",
+      "Push Notifications",
+      "SQLite",
+      "App Store",
+      "REST APIs",
+      "Kotlin",
+      "Swift",
+      "iOS",
+      "Git",
+      "Core Data"
+    ]
+  },
+  {
+    "id": "resume_049",
+    "category": "Security",
+    "text": "姓名：吴婷\n手机：15031086735\n邮箱：resume49@test.com\n学历：硕士 · 复旦\n工作经验：5年 · Coinbase 后端开发\n项目经历：数据仓库迁移，使用 Metasploit, IDS/IPS 和 Penetration Testing 等技术栈\n技能：Burp Suite, Penetration Testing, IDS/IPS, Git, Nmap, Metasploit\n其他：熟悉Burp Suite、SIEM\n",
+    "skills": [
+      "Burp Suite",
+      "Penetration Testing",
+      "IDS/IPS",
+      "Git",
+      "Nmap",
+      "Metasploit"
+    ]
+  },
+  {
+    "id": "resume_050",
+    "category": "Mobile",
+    "text": "姓名：李明\n手机：14724537292\n邮箱：resume50@test.com\n学历：大专 · 浙江大学\n工作经验：4年 · 百度 DevOps\n项目经历：自动化测试框架，使用 SQLite, iOS, Push Notifications, Kotlin, REST APIs 和 App Store 等技术栈\n技能：App Store, CI/CD, SQLite, REST APIs, React Native, iOS, Git, Android, Push Notifications, Kotlin\n其他：熟悉Flutter、Git\n",
+    "skills": [
+      "App Store",
+      "CI/CD",
+      "SQLite",
+      "REST APIs",
+      "React Native",
+      "iOS",
+      "Git",
+      "Android",
+      "Push Notifications",
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "resume_051",
+    "category": "Security",
+    "text": "姓名：赵丽\n手机：19180718602\n邮箱：resume51@test.com\n学历：本科 · 北航\n工作经验：5年 · 快手 全栈开发\n项目经历：推荐系统优化，使用 Git, Incident Response, Firewall, Burp Suite 和 SIEM 等技术栈\n技能：Firewall, Python, Git, Docker, OWASP, Incident Response, Linux, Wireshark, Burp Suite, SIEM\n其他：熟悉Penetration Testing、IDS/IPS\n",
+    "skills": [
+      "Firewall",
+      "Python",
+      "Git",
+      "Docker",
+      "OWASP",
+      "Incident Response",
+      "Linux",
+      "Wireshark",
+      "Burp Suite",
+      "SIEM"
+    ]
+  },
+  {
+    "id": "resume_052",
+    "category": "Security",
+    "text": "姓名：李明\n手机：14553012356\n邮箱：resume52@test.com\n学历：本科 · 复旦\n工作经验：1年 · B站 DevOps\n项目经历：容器化迁移项目，使用 OWASP, Metasploit, Python 和 Linux 等技术栈\n技能：OWASP, Cryptography, Linux, Metasploit, Python, Incident Response\n",
+    "skills": [
+      "OWASP",
+      "Cryptography",
+      "Linux",
+      "Metasploit",
+      "Python",
+      "Incident Response"
+    ]
+  },
+  {
+    "id": "resume_053",
+    "category": "Security",
+    "text": "姓名：刘洋\n手机：14712314644\n邮箱：resume53@test.com\n学历：本科 · 西安交大\n工作经验：3年 · 华为 全栈开发\n项目经历：安全审计平台，使用 Nmap, Linux, Metasploit, Burp Suite, OWASP 和 Firewall 等技术栈\n技能：Metasploit, Incident Response, Firewall, Nmap, Docker, Burp Suite, Linux, IDS/IPS, SIEM, Python, OWASP, Git\n其他：熟悉Docker、Metasploit\n",
+    "skills": [
+      "Metasploit",
+      "Incident Response",
+      "Firewall",
+      "Nmap",
+      "Docker",
+      "Burp Suite",
+      "Linux",
+      "IDS/IPS",
+      "SIEM",
+      "Python",
+      "OWASP",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_054",
+    "category": "Data Science",
+    "text": "姓名：周杰\n手机：14069243633\n邮箱：resume54@test.com\n学历：硕士 · 华中科技\n工作经验：7年 · 字节跳动 DevOps\n项目经历：电商平台后端微服务重构，使用 NLP, TensorFlow, Deep Learning 和 Pandas 等技术栈\n技能：Pandas, Scikit-learn, SQL, Deep Learning, TensorFlow, NLP, Data Visualization, Python\n",
+    "skills": [
+      "Pandas",
+      "Scikit-learn",
+      "SQL",
+      "Deep Learning",
+      "TensorFlow",
+      "NLP",
+      "Data Visualization",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_055",
+    "category": "DevOps",
+    "text": "姓名：赵丽\n手机：16115055413\n邮箱：resume55@test.com\n学历：硕士 · 上海交大\n工作经验：3年 · 美团 DevOps\n项目经历：安全审计平台，使用 Jenkins, Terraform, Prometheus 和 Networking 等技术栈\n技能：Python, Jenkins, Prometheus, Bash, Terraform, Networking\n",
+    "skills": [
+      "Python",
+      "Jenkins",
+      "Prometheus",
+      "Bash",
+      "Terraform",
+      "Networking"
+    ]
+  },
+  {
+    "id": "resume_056",
+    "category": "Security",
+    "text": "姓名：吴婷\n手机：16462910383\n邮箱：resume56@test.com\n学历：本科 · 复旦\n工作经验：7年 · 美团 DevOps\n项目经历：实时数据管道开发，使用 Python, SIEM, Cryptography, Linux 和 Nmap 等技术栈\n技能：Cryptography, Linux, Git, SIEM, Metasploit, Python, Nmap, OWASP, Incident Response, Penetration Testing, Burp Suite, Docker\n",
+    "skills": [
+      "Cryptography",
+      "Linux",
+      "Git",
+      "SIEM",
+      "Metasploit",
+      "Python",
+      "Nmap",
+      "OWASP",
+      "Incident Response",
+      "Penetration Testing",
+      "Burp Suite",
+      "Docker"
+    ]
+  },
+  {
+    "id": "resume_057",
+    "category": "Backend",
+    "text": "姓名：王芳\n手机：16910966461\n邮箱：resume57@test.com\n学历：大专 · 复旦\n工作经验：5年 · 快手 算法工程师\n项目经历：数据仓库迁移，使用 MySQL, FastAPI, RabbitMQ 和 PostgreSQL 等技术栈\n技能：Linux, FastAPI, Python, RabbitMQ, Nginx, AWS, Redis, Microservices, PostgreSQL, MySQL, Java, Spring Boot\n",
+    "skills": [
+      "Linux",
+      "FastAPI",
+      "Python",
+      "RabbitMQ",
+      "Nginx",
+      "AWS",
+      "Redis",
+      "Microservices",
+      "PostgreSQL",
+      "MySQL",
+      "Java",
+      "Spring Boot"
+    ]
+  },
+  {
+    "id": "resume_058",
+    "category": "Cloud",
+    "text": "姓名：周杰\n手机：13252519582\n邮箱：resume58@test.com\n学历：本科 · 西安交大\n工作经验：6年 · 滴滴 DevOps\n项目经历：安全审计平台，使用 Azure, Linux, Kubernetes, IAM, Python 和 Lambda 等技术栈\n技能：Kubernetes, IAM, Azure, Linux, Lambda, Python\n",
+    "skills": [
+      "Kubernetes",
+      "IAM",
+      "Azure",
+      "Linux",
+      "Lambda",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_059",
+    "category": "Data Science",
+    "text": "姓名：周杰\n手机：19099066855\n邮箱：resume59@test.com\n学历：本科 · 清华大学\n工作经验：6年 · Coinbase 后端开发\n项目经历：内部DevOps平台建设，使用 Machine Learning, Python, NLP, Docker, AWS 和 PyTorch 等技术栈\n技能：Docker, Machine Learning, NLP, AWS, Python, Scikit-learn, PyTorch\n其他：熟悉Git、Pandas\n",
+    "skills": [
+      "Docker",
+      "Machine Learning",
+      "NLP",
+      "AWS",
+      "Python",
+      "Scikit-learn",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "resume_060",
+    "category": "ML Engineering",
+    "text": "姓名：陈强\n手机：18760317458\n邮箱：resume60@test.com\n学历：本科 · 清华大学\n工作经验：1年 · 蚂蚁集团 前端开发\n项目经历：数据仓库迁移，使用 MLflow, Data Pipeline, Kubeflow, CUDA 和 Docker 等技术栈\n技能：MLflow, Linux, Docker, CUDA, Kubeflow, PyTorch, Data Pipeline\n其他：熟悉PyTorch、Docker\n",
+    "skills": [
+      "MLflow",
+      "Linux",
+      "Docker",
+      "CUDA",
+      "Kubeflow",
+      "PyTorch",
+      "Data Pipeline"
+    ]
+  },
+  {
+    "id": "resume_061",
+    "category": "Frontend",
+    "text": "姓名：李明\n手机：15146670408\n邮箱：resume61@test.com\n学历：本科 · 清华大学\n工作经验：7年 · 京东 后端开发\n项目经历：前端组件库建设，使用 CSS, Vue, Nginx, JavaScript 和 Jest 等技术栈\n技能：Jest, Responsive Design, GraphQL, HTML, CSS, JavaScript, Nginx, Vue, Next.js, Cypress\n",
+    "skills": [
+      "Jest",
+      "Responsive Design",
+      "GraphQL",
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "Nginx",
+      "Vue",
+      "Next.js",
+      "Cypress"
+    ]
+  },
+  {
+    "id": "resume_062",
+    "category": "Cloud",
+    "text": "姓名：周杰\n手机：16379304514\n邮箱：resume62@test.com\n学历：硕士 · 浙江大学\n工作经验：2年 · B站 前端开发\n项目经历：容器化迁移项目，使用 AWS, CloudFormation, S3 和 VPC 等技术栈\n技能：Linux, CloudFormation, S3, Terraform, VPC, Azure, AWS, Python\n",
+    "skills": [
+      "Linux",
+      "CloudFormation",
+      "S3",
+      "Terraform",
+      "VPC",
+      "Azure",
+      "AWS",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_063",
+    "category": "Security",
+    "text": "姓名：黄敏\n手机：19459482437\n邮箱：resume63@test.com\n学历：本科 · 复旦\n工作经验：4年 · 京东 前端开发\n项目经历：用户画像系统，使用 Firewall, Cryptography, Python 和 Penetration Testing 等技术栈\n技能：Firewall, IDS/IPS, Python, Incident Response, Penetration Testing, Nmap, OWASP, Cryptography\n",
+    "skills": [
+      "Firewall",
+      "IDS/IPS",
+      "Python",
+      "Incident Response",
+      "Penetration Testing",
+      "Nmap",
+      "OWASP",
+      "Cryptography"
+    ]
+  },
+  {
+    "id": "resume_064",
+    "category": "Security",
+    "text": "姓名：吴婷\n手机：13594166217\n邮箱：resume64@test.com\n学历：大专 · 西安交大\n工作经验：8年 · 腾讯 全栈开发\n项目经历：内部DevOps平台建设，使用 Burp Suite, Git, Cryptography 和 Python 等技术栈\n技能：Python, Docker, Linux, Burp Suite, Cryptography, Git\n",
+    "skills": [
+      "Python",
+      "Docker",
+      "Linux",
+      "Burp Suite",
+      "Cryptography",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_065",
+    "category": "DevOps",
+    "text": "姓名：李明\n手机：18063176326\n邮箱：resume65@test.com\n学历：本科 · 华中科技\n工作经验：3年 · 蚂蚁集团 算法工程师\n项目经历：用户画像系统，使用 Networking, GCP, ELK, Kubernetes, Bash 和 Terraform 等技术栈\n技能：Kubernetes, ELK, Linux, Jenkins, Ansible, Terraform, GCP, Networking, Bash\n",
+    "skills": [
+      "Kubernetes",
+      "ELK",
+      "Linux",
+      "Jenkins",
+      "Ansible",
+      "Terraform",
+      "GCP",
+      "Networking",
+      "Bash"
+    ]
+  },
+  {
+    "id": "resume_066",
+    "category": "ML Engineering",
+    "text": "姓名：陈强\n手机：14021209838\n邮箱：resume66@test.com\n学历：本科 · 复旦\n工作经验：4年 · 蚂蚁集团 DevOps\n项目经历：安全审计平台，使用 Kubeflow, Model Serving 和 PyTorch 等技术栈\n技能：Kubeflow, CUDA, Model Serving, TensorFlow, Python, PyTorch\n其他：熟悉Linux、Python\n",
+    "skills": [
+      "Kubeflow",
+      "CUDA",
+      "Model Serving",
+      "TensorFlow",
+      "Python",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "resume_067",
+    "category": "Data Science",
+    "text": "姓名：张伟\n手机：18416918235\n邮箱：resume67@test.com\n学历：本科 · 哈工大\n工作经验：3年 · 网易 数据工程师\n项目经历：实时数据管道开发，使用 TensorFlow, Git 和 Pandas 等技术栈\n技能：Pandas, Docker, Machine Learning, Scikit-learn, Git, SQL, TensorFlow\n",
+    "skills": [
+      "Pandas",
+      "Docker",
+      "Machine Learning",
+      "Scikit-learn",
+      "Git",
+      "SQL",
+      "TensorFlow"
+    ]
+  },
+  {
+    "id": "resume_068",
+    "category": "DevOps",
+    "text": "姓名：黄敏\n手机：15411414149\n邮箱：resume68@test.com\n学历：本科 · 清华大学\n工作经验：5年 · Shopee 全栈开发\n项目经历：推荐系统优化，使用 Jenkins, Ansible, Kubernetes, Grafana, GitLab CI 和 Prometheus 等技术栈\n技能：Jenkins, Prometheus, Ansible, GCP, GitLab CI, Bash, Kubernetes, Grafana, Terraform, Linux\n",
+    "skills": [
+      "Jenkins",
+      "Prometheus",
+      "Ansible",
+      "GCP",
+      "GitLab CI",
+      "Bash",
+      "Kubernetes",
+      "Grafana",
+      "Terraform",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_069",
+    "category": "Frontend",
+    "text": "姓名：刘洋\n手机：13120983949\n邮箱：resume69@test.com\n学历：大专 · 上海交大\n工作经验：7年 · B站 全栈开发\n项目经历：云成本优化工具，使用 TypeScript, Vite, Git 和 Nginx 等技术栈\n技能：Nginx, React, Next.js, HTML, Vite, Jest, GraphQL, JavaScript, TypeScript, Git\n",
+    "skills": [
+      "Nginx",
+      "React",
+      "Next.js",
+      "HTML",
+      "Vite",
+      "Jest",
+      "GraphQL",
+      "JavaScript",
+      "TypeScript",
+      "Git"
+    ]
+  },
+  {
+    "id": "resume_070",
+    "category": "Security",
+    "text": "姓名：王芳\n手机：14224663247\n邮箱：resume70@test.com\n学历：本科 · 清华大学\n工作经验：7年 · Databricks 数据工程师\n项目经历：移动端跨平台应用，使用 OWASP, Firewall, SIEM 和 Python 等技术栈\n技能：Python, Penetration Testing, Firewall, OWASP, Git, SIEM, Wireshark, Linux\n其他：熟悉Metasploit、Git\n",
+    "skills": [
+      "Python",
+      "Penetration Testing",
+      "Firewall",
+      "OWASP",
+      "Git",
+      "SIEM",
+      "Wireshark",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_071",
+    "category": "Frontend",
+    "text": "姓名：吴婷\n手机：15224156490\n邮箱：resume71@test.com\n学历：硕士 · 浙江大学\n工作经验：7年 · 百度 DevOps\n项目经历：推荐系统优化，使用 Docker, CSS 和 HTML 等技术栈\n技能：HTML, CSS, Redux, Docker, Nginx, Cypress, Responsive Design, Vite\n其他：熟悉GraphQL、Vite\n",
+    "skills": [
+      "HTML",
+      "CSS",
+      "Redux",
+      "Docker",
+      "Nginx",
+      "Cypress",
+      "Responsive Design",
+      "Vite"
+    ]
+  },
+  {
+    "id": "resume_072",
+    "category": "Data Science",
+    "text": "姓名：王芳\n手机：18533603421\n邮箱：resume72@test.com\n学历：本科 · 上海交大\n工作经验：7年 · 网易 前端开发\n项目经历：CI/CD流水线搭建，使用 Machine Learning, PyTorch 和 Data Visualization 等技术栈\n技能：SQL, Scikit-learn, Data Visualization, AWS, PyTorch, Python, Machine Learning, NumPy, Deep Learning\n",
+    "skills": [
+      "SQL",
+      "Scikit-learn",
+      "Data Visualization",
+      "AWS",
+      "PyTorch",
+      "Python",
+      "Machine Learning",
+      "NumPy",
+      "Deep Learning"
+    ]
+  },
+  {
+    "id": "resume_073",
+    "category": "Frontend",
+    "text": "姓名：杨磊\n手机：17765588454\n邮箱：resume73@test.com\n学历：大专 · 上海交大\n工作经验：5年 · 快手 全栈开发\n项目经历：API网关开发，使用 JavaScript, CSS 和 Next.js 等技术栈\n技能：TypeScript, CSS, JavaScript, Next.js, Redux\n其他：熟悉Tailwind、React\n",
+    "skills": [
+      "TypeScript",
+      "CSS",
+      "JavaScript",
+      "Next.js",
+      "Redux"
+    ]
+  },
+  {
+    "id": "resume_074",
+    "category": "Mobile",
+    "text": "姓名：王芳\n手机：15797305512\n邮箱：resume74@test.com\n学历：硕士 · 华中科技\n工作经验：3年 · 快手 数据工程师\n项目经历：用户画像系统，使用 SQLite, Kotlin, iOS, Git 和 Flutter 等技术栈\n技能：Kotlin, Git, Flutter, SQLite, Swift, iOS\n其他：熟悉Swift、Git\n",
+    "skills": [
+      "Kotlin",
+      "Git",
+      "Flutter",
+      "SQLite",
+      "Swift",
+      "iOS"
+    ]
+  },
+  {
+    "id": "resume_075",
+    "category": "Backend",
+    "text": "姓名：黄敏\n手机：14679893428\n邮箱：resume75@test.com\n学历：硕士 · 北航\n工作经验：3年 · 阿里巴巴 前端开发\n项目经历：内部DevOps平台建设，使用 Kafka, CI/CD 和 REST APIs 等技术栈\n技能：AWS, Go, CI/CD, REST APIs, Kafka, MongoDB\n其他：熟悉REST APIs、AWS\n",
+    "skills": [
+      "AWS",
+      "Go",
+      "CI/CD",
+      "REST APIs",
+      "Kafka",
+      "MongoDB"
+    ]
+  },
+  {
+    "id": "resume_076",
+    "category": "Mobile",
+    "text": "姓名：黄敏\n手机：17640043832\n邮箱：resume76@test.com\n学历：本科 · 哈工大\n工作经验：3年 · 科大讯飞 DevOps\n项目经历：内部DevOps平台建设，使用 Swift, iOS 和 Push Notifications 等技术栈\n技能：Core Data, Flutter, Push Notifications, CI/CD, App Store, iOS, Swift\n",
+    "skills": [
+      "Core Data",
+      "Flutter",
+      "Push Notifications",
+      "CI/CD",
+      "App Store",
+      "iOS",
+      "Swift"
+    ]
+  },
+  {
+    "id": "resume_077",
+    "category": "Frontend",
+    "text": "姓名：杨磊\n手机：18162857999\n邮箱：resume77@test.com\n学历：本科 · 华中科技\n工作经验：2年 · B站 数据工程师\n项目经历：移动端跨平台应用，使用 Vue, Next.js, TypeScript, Redux 和 HTML 等技术栈\n技能：TypeScript, JavaScript, Nginx, Vue, Redux, HTML, Jest, Next.js, GraphQL\n其他：熟悉Responsive Design、Git\n",
+    "skills": [
+      "TypeScript",
+      "JavaScript",
+      "Nginx",
+      "Vue",
+      "Redux",
+      "HTML",
+      "Jest",
+      "Next.js",
+      "GraphQL"
+    ]
+  },
+  {
+    "id": "resume_078",
+    "category": "Frontend",
+    "text": "姓名：赵丽\n手机：17890075488\n邮箱：resume78@test.com\n学历：本科 · 上海交大\n工作经验：6年 · 小红书 算法工程师\n项目经历：用户画像系统，使用 GraphQL, Redux, Tailwind, Vite, JavaScript 和 Docker 等技术栈\n技能：Docker, CSS, Jest, JavaScript, Tailwind, Nginx, Vite, React, Redux, GraphQL, HTML, Webpack\n",
+    "skills": [
+      "Docker",
+      "CSS",
+      "Jest",
+      "JavaScript",
+      "Tailwind",
+      "Nginx",
+      "Vite",
+      "React",
+      "Redux",
+      "GraphQL",
+      "HTML",
+      "Webpack"
+    ]
+  },
+  {
+    "id": "resume_079",
+    "category": "Mobile",
+    "text": "姓名：吴婷\n手机：18026823498\n邮箱：resume79@test.com\n学历：硕士 · 清华大学\n工作经验：1年 · 百度 数据工程师\n项目经历：云成本优化工具，使用 Firebase, Core Data, React Native 和 Flutter 等技术栈\n技能：Flutter, React Native, CI/CD, Firebase, Core Data, App Store\n",
+    "skills": [
+      "Flutter",
+      "React Native",
+      "CI/CD",
+      "Firebase",
+      "Core Data",
+      "App Store"
+    ]
+  },
+  {
+    "id": "resume_080",
+    "category": "DevOps",
+    "text": "姓名：周杰\n手机：17918639294\n邮箱：resume80@test.com\n学历：大专 · 哈工大\n工作经验：5年 · 华为 算法工程师\n项目经历：消息推送平台，使用 ELK, GCP 和 Ansible 等技术栈\n技能：Grafana, Networking, Ansible, GitLab CI, GCP, Azure, Terraform, ELK\n其他：熟悉Python、GitLab CI\n",
+    "skills": [
+      "Grafana",
+      "Networking",
+      "Ansible",
+      "GitLab CI",
+      "GCP",
+      "Azure",
+      "Terraform",
+      "ELK"
+    ]
+  },
+  {
+    "id": "resume_081",
+    "category": "Security",
+    "text": "姓名：王芳\n手机：13394743412\n邮箱：resume81@test.com\n学历：大专 · 北京大学\n工作经验：1年 · Zoom 后端开发\n项目经历：安全审计平台，使用 Linux, Python, Cryptography, Docker, SIEM 和 Metasploit 等技术栈\n技能：Metasploit, Nmap, Linux, SIEM, Incident Response, Wireshark, Git, Cryptography, Docker, Python\n",
+    "skills": [
+      "Metasploit",
+      "Nmap",
+      "Linux",
+      "SIEM",
+      "Incident Response",
+      "Wireshark",
+      "Git",
+      "Cryptography",
+      "Docker",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_082",
+    "category": "ML Engineering",
+    "text": "姓名：王芳\n手机：17899659771\n邮箱：resume82@test.com\n学历：硕士 · 西安交大\n工作经验：6年 · 小红书 后端开发\n项目经历：云成本优化工具，使用 Data Pipeline, Python, ONNX 和 TensorFlow 等技术栈\n技能：Data Pipeline, TensorFlow, ONNX, Python, Feature Store\n其他：熟悉Git、Docker\n",
+    "skills": [
+      "Data Pipeline",
+      "TensorFlow",
+      "ONNX",
+      "Python",
+      "Feature Store"
+    ]
+  },
+  {
+    "id": "resume_083",
+    "category": "Cloud",
+    "text": "姓名：杨磊\n手机：13728376762\n邮箱：resume83@test.com\n学历：本科 · 西安交大\n工作经验：5年 · 百度 前端开发\n项目经历：电商平台后端微服务重构，使用 VPC, Docker, CloudWatch, AWS 和 EC2 等技术栈\n技能：EC2, VPC, AWS, Azure, Docker, CloudWatch\n",
+    "skills": [
+      "EC2",
+      "VPC",
+      "AWS",
+      "Azure",
+      "Docker",
+      "CloudWatch"
+    ]
+  },
+  {
+    "id": "resume_084",
+    "category": "Security",
+    "text": "姓名：王芳\n手机：14728234641\n邮箱：resume84@test.com\n学历：本科 · 西安交大\n工作经验：6年 · 网易 全栈开发\n项目经历：消息推送平台，使用 OWASP, Docker, IDS/IPS, SIEM, Firewall 和 Python 等技术栈\n技能：Firewall, Cryptography, Penetration Testing, Linux, SIEM, Python, IDS/IPS, Wireshark, Nmap, OWASP, Docker, Incident Response\n",
+    "skills": [
+      "Firewall",
+      "Cryptography",
+      "Penetration Testing",
+      "Linux",
+      "SIEM",
+      "Python",
+      "IDS/IPS",
+      "Wireshark",
+      "Nmap",
+      "OWASP",
+      "Docker",
+      "Incident Response"
+    ]
+  },
+  {
+    "id": "resume_085",
+    "category": "DevOps",
+    "text": "姓名：刘洋\n手机：18114855755\n邮箱：resume85@test.com\n学历：本科 · 西安交大\n工作经验：4年 · 百度 DevOps\n项目经历：自动化测试框架，使用 Bash, Ansible 和 AWS 等技术栈\n技能：AWS, Docker, Bash, Ansible, GitLab CI, Python, Networking\n其他：熟悉AWS、Jenkins\n",
+    "skills": [
+      "AWS",
+      "Docker",
+      "Bash",
+      "Ansible",
+      "GitLab CI",
+      "Python",
+      "Networking"
+    ]
+  },
+  {
+    "id": "resume_086",
+    "category": "Cloud",
+    "text": "姓名：刘洋\n手机：16733038318\n邮箱：resume86@test.com\n学历：大专 · 清华大学\n工作经验：6年 · 科大讯飞 DevOps\n项目经历：移动端跨平台应用，使用 EC2, Docker, Serverless 和 VPC 等技术栈\n技能：AWS, VPC, Serverless, GCP, Kubernetes, Docker, EC2, Azure\n",
+    "skills": [
+      "AWS",
+      "VPC",
+      "Serverless",
+      "GCP",
+      "Kubernetes",
+      "Docker",
+      "EC2",
+      "Azure"
+    ]
+  },
+  {
+    "id": "resume_087",
+    "category": "Data Science",
+    "text": "姓名：王芳\n手机：13570165898\n邮箱：resume87@test.com\n学历：大专 · 西安交大\n工作经验：4年 · Zoom 全栈开发\n项目经历：日志分析平台，使用 NumPy, AWS, Python, PyTorch 和 Deep Learning 等技术栈\n技能：Git, PyTorch, NumPy, AWS, Deep Learning, Python\n",
+    "skills": [
+      "Git",
+      "PyTorch",
+      "NumPy",
+      "AWS",
+      "Deep Learning",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_088",
+    "category": "Backend",
+    "text": "姓名：张伟\n手机：19895063338\n邮箱：resume88@test.com\n学历：本科 · 复旦\n工作经验：4年 · 百度 后端开发\n项目经历：日志分析平台，使用 Python, MongoDB, RabbitMQ, Git 和 REST APIs 等技术栈\n技能：Java, Spring Boot, MongoDB, Microservices, Git, REST APIs, Python, RabbitMQ, Go\n",
+    "skills": [
+      "Java",
+      "Spring Boot",
+      "MongoDB",
+      "Microservices",
+      "Git",
+      "REST APIs",
+      "Python",
+      "RabbitMQ",
+      "Go"
+    ]
+  },
+  {
+    "id": "resume_089",
+    "category": "Cloud",
+    "text": "姓名：李明\n手机：16871687761\n邮箱：resume89@test.com\n学历：本科 · 北京大学\n工作经验：5年 · 百度 数据工程师\n项目经历：自动化测试框架，使用 Python, Terraform, CloudFormation, Lambda 和 AWS 等技术栈\n技能：AWS, S3, IAM, Terraform, Lambda, Python, CloudFormation\n其他：熟悉EC2、VPC\n",
+    "skills": [
+      "AWS",
+      "S3",
+      "IAM",
+      "Terraform",
+      "Lambda",
+      "Python",
+      "CloudFormation"
+    ]
+  },
+  {
+    "id": "resume_090",
+    "category": "Frontend",
+    "text": "姓名：赵丽\n手机：13019999060\n邮箱：resume90@test.com\n学历：硕士 · 北航\n工作经验：2年 · 小红书 算法工程师\n项目经历：容器化迁移项目，使用 React, HTML, Vue, Vite, JavaScript 和 Git 等技术栈\n技能：CSS, JavaScript, HTML, Vite, GraphQL, Git, React, Next.js, Vue, Jest\n",
+    "skills": [
+      "CSS",
+      "JavaScript",
+      "HTML",
+      "Vite",
+      "GraphQL",
+      "Git",
+      "React",
+      "Next.js",
+      "Vue",
+      "Jest"
+    ]
+  },
+  {
+    "id": "resume_091",
+    "category": "Frontend",
+    "text": "姓名：陈强\n手机：18947009518\n邮箱：resume91@test.com\n学历：硕士 · 清华大学\n工作经验：2年 · Zoom DevOps\n项目经历：CI/CD流水线搭建，使用 Vue, Tailwind, Vite, Webpack, CSS 和 Responsive Design 等技术栈\n技能：Vite, Webpack, Responsive Design, Vue, Jest, Tailwind, CSS\n其他：熟悉Vite、TypeScript\n",
+    "skills": [
+      "Vite",
+      "Webpack",
+      "Responsive Design",
+      "Vue",
+      "Jest",
+      "Tailwind",
+      "CSS"
+    ]
+  },
+  {
+    "id": "resume_092",
+    "category": "Cloud",
+    "text": "姓名：李明\n手机：16788044088\n邮箱：resume92@test.com\n学历：本科 · 复旦\n工作经验：2年 · 华为 数据工程师\n项目经历：安全审计平台，使用 S3, Docker, Lambda, CloudWatch 和 Python 等技术栈\n技能：Python, Lambda, EC2, Docker, VPC, S3, Kubernetes, Terraform, CloudWatch\n其他：熟悉Linux、GCP\n",
+    "skills": [
+      "Python",
+      "Lambda",
+      "EC2",
+      "Docker",
+      "VPC",
+      "S3",
+      "Kubernetes",
+      "Terraform",
+      "CloudWatch"
+    ]
+  },
+  {
+    "id": "resume_093",
+    "category": "ML Engineering",
+    "text": "姓名：吴婷\n手机：19227923606\n邮箱：resume93@test.com\n学历：本科 · 清华大学\n工作经验：1年 · Shopee 全栈开发\n项目经历：消息推送平台，使用 Docker, TensorFlow, Model Serving 和 Linux 等技术栈\n技能：PyTorch, Model Serving, Docker, Feature Store, Git, CUDA, Linux, TensorFlow, Python\n",
+    "skills": [
+      "PyTorch",
+      "Model Serving",
+      "Docker",
+      "Feature Store",
+      "Git",
+      "CUDA",
+      "Linux",
+      "TensorFlow",
+      "Python"
+    ]
+  },
+  {
+    "id": "resume_094",
+    "category": "Security",
+    "text": "姓名：周杰\n手机：19157699470\n邮箱：resume94@test.com\n学历：硕士 · 华中科技\n工作经验：8年 · 网易 数据工程师\n项目经历：自动化测试框架，使用 Wireshark, Git, Incident Response, Firewall 和 Python 等技术栈\n技能：Wireshark, Incident Response, Python, Git, Firewall\n",
+    "skills": [
+      "Wireshark",
+      "Incident Response",
+      "Python",
+      "Git",
+      "Firewall"
+    ]
+  },
+  {
+    "id": "resume_095",
+    "category": "ML Engineering",
+    "text": "姓名：周杰\n手机：16037931672\n邮箱：resume95@test.com\n学历：本科 · 中科大\n工作经验：3年 · 百度 算法工程师\n项目经历：CI/CD流水线搭建，使用 PyTorch, ONNX, Docker, Kubeflow 和 Linux 等技术栈\n技能：Docker, Feature Store, ONNX, CUDA, Kubeflow, Git, PyTorch, MLflow, Linux\n其他：熟悉Git、TensorFlow\n",
+    "skills": [
+      "Docker",
+      "Feature Store",
+      "ONNX",
+      "CUDA",
+      "Kubeflow",
+      "Git",
+      "PyTorch",
+      "MLflow",
+      "Linux"
+    ]
+  },
+  {
+    "id": "resume_096",
+    "category": "ML Engineering",
+    "text": "姓名：周杰\n手机：18349245242\n邮箱：resume96@test.com\n学历：本科 · 哈工大\n工作经验：4年 · B站 全栈开发\n项目经历：容器化迁移项目，使用 Python, Model Serving 和 Git 等技术栈\n技能：Git, Model Serving, Python, Feature Store, ONNX\n",
+    "skills": [
+      "Git",
+      "Model Serving",
+      "Python",
+      "Feature Store",
+      "ONNX"
+    ]
+  },
+  {
+    "id": "resume_097",
+    "category": "Data Science",
+    "text": "姓名：张伟\n手机：19579169454\n邮箱：resume97@test.com\n学历：本科 · 北京大学\n工作经验：4年 · 京东 数据工程师\n项目经历：实时数据管道开发，使用 SQL, TensorFlow 和 Python 等技术栈\n技能：SQL, Python, Jupyter, TensorFlow, NumPy, PyTorch\n其他：熟悉Machine Learning、PyTorch\n",
+    "skills": [
+      "SQL",
+      "Python",
+      "Jupyter",
+      "TensorFlow",
+      "NumPy",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "resume_098",
+    "category": "Security",
+    "text": "姓名：黄敏\n手机：18066058545\n邮箱：resume98@test.com\n学历：硕士 · 北京大学\n工作经验：1年 · 美团 数据工程师\n项目经历：电商平台后端微服务重构，使用 Wireshark, Docker 和 Burp Suite 等技术栈\n技能：Wireshark, SIEM, Linux, Cryptography, Firewall, Metasploit, Nmap, Python, Burp Suite, Penetration Testing, Docker\n",
+    "skills": [
+      "Wireshark",
+      "SIEM",
+      "Linux",
+      "Cryptography",
+      "Firewall",
+      "Metasploit",
+      "Nmap",
+      "Python",
+      "Burp Suite",
+      "Penetration Testing",
+      "Docker"
+    ]
+  },
+  {
+    "id": "resume_099",
+    "category": "DevOps",
+    "text": "姓名：杨磊\n手机：16361254804\n邮箱：resume99@test.com\n学历：硕士 · 哈工大\n工作经验：2年 · Databricks 全栈开发\n项目经历：用户画像系统，使用 GitLab CI, Python, AWS, Prometheus, Nginx 和 GCP 等技术栈\n技能：Nginx, AWS, Networking, Grafana, Docker, Ansible, GCP, Prometheus, Jenkins, Python, Bash, GitLab CI\n",
+    "skills": [
+      "Nginx",
+      "AWS",
+      "Networking",
+      "Grafana",
+      "Docker",
+      "Ansible",
+      "GCP",
+      "Prometheus",
+      "Jenkins",
+      "Python",
+      "Bash",
+      "GitLab CI"
+    ]
+  }
+]

@@ -1,0 +1,1426 @@
+[
+  {
+    "id": "jd_000",
+    "title": "Software Engineer",
+    "skills": [
+      "Agile",
+      "Java",
+      "Git",
+      "Python",
+      "Microservices",
+      "Redis",
+      "REST APIs",
+      "PostgreSQL",
+      "Docker"
+    ]
+  },
+  {
+    "id": "jd_001",
+    "title": "Software Engineer",
+    "skills": [
+      "Microservices",
+      "Agile",
+      "Code Review",
+      "Java",
+      "Docker",
+      "Git"
+    ]
+  },
+  {
+    "id": "jd_002",
+    "title": "Software Engineer",
+    "skills": [
+      "Code Review",
+      "Unit Testing",
+      "Redis",
+      "PostgreSQL",
+      "Microservices",
+      "Kubernetes",
+      "Python",
+      "Docker",
+      "REST APIs"
+    ]
+  },
+  {
+    "id": "jd_003",
+    "title": "Software Engineer",
+    "skills": [
+      "Java",
+      "Docker",
+      "Microservices",
+      "REST APIs",
+      "PostgreSQL",
+      "Go",
+      "Redis",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_004",
+    "title": "Software Engineer",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "Microservices",
+      "Go",
+      "Java",
+      "System Design",
+      "CI/CD",
+      "Agile"
+    ]
+  },
+  {
+    "id": "jd_005",
+    "title": "Software Engineer",
+    "skills": [
+      "Python",
+      "Docker",
+      "CI/CD",
+      "Agile",
+      "Microservices",
+      "Kubernetes",
+      "REST APIs",
+      "Code Review"
+    ]
+  },
+  {
+    "id": "jd_006",
+    "title": "Software Engineer",
+    "skills": [
+      "Kubernetes",
+      "System Design",
+      "Unit Testing",
+      "CI/CD",
+      "Go",
+      "Java",
+      "Redis",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_007",
+    "title": "Software Engineer",
+    "skills": [
+      "PostgreSQL",
+      "REST APIs",
+      "CI/CD",
+      "Code Review",
+      "Docker",
+      "Git",
+      "System Design"
+    ]
+  },
+  {
+    "id": "jd_010",
+    "title": "Data Scientist",
+    "skills": [
+      "A/B Testing",
+      "Machine Learning",
+      "Deep Learning",
+      "Data Visualization",
+      "Feature Engineering",
+      "TensorFlow",
+      "NLP"
+    ]
+  },
+  {
+    "id": "jd_011",
+    "title": "Data Scientist",
+    "skills": [
+      "Feature Engineering",
+      "Deep Learning",
+      "TensorFlow",
+      "SQL",
+      "A/B Testing",
+      "Statistical Analysis",
+      "Python",
+      "Machine Learning",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "jd_012",
+    "title": "Data Scientist",
+    "skills": [
+      "Machine Learning",
+      "Feature Engineering",
+      "Data Visualization",
+      "NLP",
+      "PyTorch",
+      "SQL",
+      "A/B Testing",
+      "Statistical Analysis",
+      "TensorFlow",
+      "Pandas"
+    ]
+  },
+  {
+    "id": "jd_013",
+    "title": "Data Scientist",
+    "skills": [
+      "A/B Testing",
+      "Pandas",
+      "NLP",
+      "Deep Learning",
+      "Python",
+      "PyTorch",
+      "TensorFlow",
+      "Machine Learning",
+      "Statistical Analysis",
+      "SQL"
+    ]
+  },
+  {
+    "id": "jd_014",
+    "title": "Data Scientist",
+    "skills": [
+      "Statistical Analysis",
+      "NLP",
+      "Python",
+      "PyTorch",
+      "Feature Engineering",
+      "TensorFlow",
+      "Deep Learning"
+    ]
+  },
+  {
+    "id": "jd_015",
+    "title": "Data Scientist",
+    "skills": [
+      "A/B Testing",
+      "Data Visualization",
+      "SQL",
+      "Deep Learning",
+      "Pandas",
+      "NLP",
+      "PyTorch",
+      "Statistical Analysis",
+      "Feature Engineering",
+      "TensorFlow"
+    ]
+  },
+  {
+    "id": "jd_016",
+    "title": "Data Scientist",
+    "skills": [
+      "NLP",
+      "Data Visualization",
+      "Pandas",
+      "TensorFlow",
+      "SQL",
+      "Statistical Analysis",
+      "A/B Testing",
+      "Machine Learning",
+      "PyTorch",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_017",
+    "title": "Data Scientist",
+    "skills": [
+      "Data Visualization",
+      "Python",
+      "Feature Engineering",
+      "Pandas",
+      "Deep Learning",
+      "Statistical Analysis",
+      "TensorFlow"
+    ]
+  },
+  {
+    "id": "jd_020",
+    "title": "Frontend Developer",
+    "skills": [
+      "Webpack",
+      "Performance Optimization",
+      "Next.js",
+      "GraphQL",
+      "HTML",
+      "Redux"
+    ]
+  },
+  {
+    "id": "jd_021",
+    "title": "Frontend Developer",
+    "skills": [
+      "Redux",
+      "Jest",
+      "Next.js",
+      "JavaScript",
+      "GraphQL",
+      "React",
+      "Webpack",
+      "Responsive Design"
+    ]
+  },
+  {
+    "id": "jd_022",
+    "title": "Frontend Developer",
+    "skills": [
+      "HTML",
+      "GraphQL",
+      "Webpack",
+      "React",
+      "Performance Optimization",
+      "Responsive Design",
+      "JavaScript",
+      "Next.js",
+      "TypeScript",
+      "Redux"
+    ]
+  },
+  {
+    "id": "jd_023",
+    "title": "Frontend Developer",
+    "skills": [
+      "Jest",
+      "HTML",
+      "CSS",
+      "Redux",
+      "Performance Optimization",
+      "Webpack"
+    ]
+  },
+  {
+    "id": "jd_024",
+    "title": "Frontend Developer",
+    "skills": [
+      "TypeScript",
+      "JavaScript",
+      "Redux",
+      "Webpack",
+      "CSS",
+      "GraphQL",
+      "Responsive Design",
+      "React",
+      "Performance Optimization",
+      "Next.js"
+    ]
+  },
+  {
+    "id": "jd_025",
+    "title": "Frontend Developer",
+    "skills": [
+      "Redux",
+      "TypeScript",
+      "Responsive Design",
+      "GraphQL",
+      "CSS",
+      "HTML",
+      "JavaScript",
+      "Webpack",
+      "React"
+    ]
+  },
+  {
+    "id": "jd_026",
+    "title": "Frontend Developer",
+    "skills": [
+      "CSS",
+      "React",
+      "HTML",
+      "Responsive Design",
+      "Performance Optimization",
+      "TypeScript",
+      "Jest",
+      "Next.js",
+      "Redux",
+      "GraphQL"
+    ]
+  },
+  {
+    "id": "jd_027",
+    "title": "Frontend Developer",
+    "skills": [
+      "Next.js",
+      "Redux",
+      "HTML",
+      "Responsive Design",
+      "GraphQL",
+      "TypeScript",
+      "CSS"
+    ]
+  },
+  {
+    "id": "jd_030",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Grafana",
+      "Linux",
+      "Networking",
+      "Python",
+      "Bash",
+      "Terraform"
+    ]
+  },
+  {
+    "id": "jd_031",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Bash",
+      "CI/CD",
+      "Python",
+      "Terraform",
+      "Grafana",
+      "Security",
+      "Prometheus"
+    ]
+  },
+  {
+    "id": "jd_032",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Linux",
+      "Prometheus",
+      "Security",
+      "Python",
+      "Terraform",
+      "AWS",
+      "Grafana",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "jd_033",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Bash",
+      "CI/CD",
+      "Terraform",
+      "Jenkins",
+      "Ansible",
+      "Linux",
+      "AWS"
+    ]
+  },
+  {
+    "id": "jd_034",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Python",
+      "Terraform",
+      "Security",
+      "Prometheus",
+      "Docker",
+      "AWS",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "jd_035",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Python",
+      "Ansible",
+      "Kubernetes",
+      "Jenkins",
+      "Prometheus",
+      "Security",
+      "Terraform",
+      "Docker"
+    ]
+  },
+  {
+    "id": "jd_036",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Networking",
+      "Linux",
+      "Prometheus",
+      "Jenkins",
+      "Terraform",
+      "Security",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "jd_037",
+    "title": "DevOps Engineer",
+    "skills": [
+      "Prometheus",
+      "Networking",
+      "AWS",
+      "Grafana",
+      "Jenkins",
+      "Kubernetes",
+      "CI/CD",
+      "Terraform",
+      "Linux",
+      "Ansible"
+    ]
+  },
+  {
+    "id": "jd_040",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "ONNX",
+      "PyTorch",
+      "Data Pipeline",
+      "MLOps",
+      "TensorFlow",
+      "Python",
+      "Kubernetes",
+      "Distributed Training",
+      "CUDA"
+    ]
+  },
+  {
+    "id": "jd_041",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "CUDA",
+      "Feature Store",
+      "Data Pipeline",
+      "ONNX",
+      "Distributed Training",
+      "TensorFlow",
+      "PyTorch",
+      "MLOps"
+    ]
+  },
+  {
+    "id": "jd_042",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "MLOps",
+      "Docker",
+      "ONNX",
+      "Python",
+      "Model Serving",
+      "Data Pipeline"
+    ]
+  },
+  {
+    "id": "jd_043",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "Model Serving",
+      "Kubernetes",
+      "Feature Store",
+      "TensorFlow",
+      "Python",
+      "Docker",
+      "PyTorch",
+      "MLOps"
+    ]
+  },
+  {
+    "id": "jd_044",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "ONNX",
+      "CUDA",
+      "Python",
+      "Docker",
+      "TensorFlow",
+      "Distributed Training",
+      "Data Pipeline",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "jd_045",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "Docker",
+      "Model Serving",
+      "PyTorch",
+      "ONNX",
+      "CUDA",
+      "Data Pipeline",
+      "Python",
+      "Feature Store",
+      "Distributed Training"
+    ]
+  },
+  {
+    "id": "jd_046",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "Data Pipeline",
+      "ONNX",
+      "Feature Store",
+      "MLOps",
+      "Model Serving",
+      "Python",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "jd_047",
+    "title": "Machine Learning Engineer",
+    "skills": [
+      "CUDA",
+      "ONNX",
+      "PyTorch",
+      "Data Pipeline",
+      "Feature Store",
+      "TensorFlow"
+    ]
+  },
+  {
+    "id": "jd_050",
+    "title": "Backend Developer",
+    "skills": [
+      "Docker",
+      "Spring Boot",
+      "Redis",
+      "Microservices",
+      "Python",
+      "OAuth"
+    ]
+  },
+  {
+    "id": "jd_051",
+    "title": "Backend Developer",
+    "skills": [
+      "Spring Boot",
+      "Kafka",
+      "System Design",
+      "Performance Tuning",
+      "Redis",
+      "Python",
+      "CI/CD",
+      "gRPC"
+    ]
+  },
+  {
+    "id": "jd_052",
+    "title": "Backend Developer",
+    "skills": [
+      "Java",
+      "Kafka",
+      "REST APIs",
+      "PostgreSQL",
+      "System Design",
+      "gRPC",
+      "Microservices",
+      "Performance Tuning",
+      "OAuth"
+    ]
+  },
+  {
+    "id": "jd_053",
+    "title": "Backend Developer",
+    "skills": [
+      "CI/CD",
+      "Performance Tuning",
+      "Python",
+      "Kafka",
+      "OAuth",
+      "PostgreSQL",
+      "Redis"
+    ]
+  },
+  {
+    "id": "jd_054",
+    "title": "Backend Developer",
+    "skills": [
+      "Kafka",
+      "Spring Boot",
+      "CI/CD",
+      "PostgreSQL",
+      "Performance Tuning",
+      "OAuth",
+      "Redis",
+      "REST APIs"
+    ]
+  },
+  {
+    "id": "jd_055",
+    "title": "Backend Developer",
+    "skills": [
+      "Java",
+      "Docker",
+      "Performance Tuning",
+      "PostgreSQL",
+      "OAuth",
+      "System Design",
+      "gRPC"
+    ]
+  },
+  {
+    "id": "jd_056",
+    "title": "Backend Developer",
+    "skills": [
+      "gRPC",
+      "Java",
+      "REST APIs",
+      "Redis",
+      "OAuth",
+      "Docker",
+      "CI/CD"
+    ]
+  },
+  {
+    "id": "jd_057",
+    "title": "Backend Developer",
+    "skills": [
+      "Performance Tuning",
+      "Docker",
+      "System Design",
+      "gRPC",
+      "Microservices",
+      "CI/CD",
+      "PostgreSQL",
+      "Kafka",
+      "Redis",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_060",
+    "title": "Cloud Architect",
+    "skills": [
+      "Docker",
+      "VPN",
+      "Load Balancing",
+      "Serverless",
+      "Kubernetes",
+      "Cost Optimization"
+    ]
+  },
+  {
+    "id": "jd_061",
+    "title": "Cloud Architect",
+    "skills": [
+      "VPN",
+      "GCP",
+      "AWS",
+      "Kubernetes",
+      "Auto Scaling",
+      "Serverless"
+    ]
+  },
+  {
+    "id": "jd_062",
+    "title": "Cloud Architect",
+    "skills": [
+      "Azure",
+      "Security Groups",
+      "Auto Scaling",
+      "IAM",
+      "VPN",
+      "Load Balancing",
+      "GCP"
+    ]
+  },
+  {
+    "id": "jd_063",
+    "title": "Cloud Architect",
+    "skills": [
+      "Load Balancing",
+      "Terraform",
+      "Azure",
+      "VPN",
+      "GCP",
+      "Serverless",
+      "Auto Scaling"
+    ]
+  },
+  {
+    "id": "jd_064",
+    "title": "Cloud Architect",
+    "skills": [
+      "Security Groups",
+      "Auto Scaling",
+      "Azure",
+      "Serverless",
+      "VPN",
+      "GCP",
+      "Kubernetes",
+      "Load Balancing",
+      "AWS",
+      "Docker"
+    ]
+  },
+  {
+    "id": "jd_065",
+    "title": "Cloud Architect",
+    "skills": [
+      "VPN",
+      "Kubernetes",
+      "IAM",
+      "AWS",
+      "Terraform",
+      "Azure",
+      "Cost Optimization"
+    ]
+  },
+  {
+    "id": "jd_066",
+    "title": "Cloud Architect",
+    "skills": [
+      "Auto Scaling",
+      "Kubernetes",
+      "GCP",
+      "Load Balancing",
+      "AWS",
+      "Cost Optimization",
+      "VPN",
+      "IAM",
+      "Docker",
+      "Azure"
+    ]
+  },
+  {
+    "id": "jd_067",
+    "title": "Cloud Architect",
+    "skills": [
+      "Serverless",
+      "Load Balancing",
+      "GCP",
+      "Kubernetes",
+      "Cost Optimization",
+      "IAM",
+      "Auto Scaling",
+      "Security Groups"
+    ]
+  },
+  {
+    "id": "jd_070",
+    "title": "Security Engineer",
+    "skills": [
+      "Linux",
+      "OWASP",
+      "IDS/IPS",
+      "Risk Assessment",
+      "Cryptography",
+      "Penetration Testing",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_071",
+    "title": "Security Engineer",
+    "skills": [
+      "Firewall",
+      "Python",
+      "Wireshark",
+      "Risk Assessment",
+      "Penetration Testing",
+      "Linux",
+      "Cryptography",
+      "SIEM",
+      "IDS/IPS",
+      "OWASP"
+    ]
+  },
+  {
+    "id": "jd_072",
+    "title": "Security Engineer",
+    "skills": [
+      "Python",
+      "OWASP",
+      "Firewall",
+      "Nmap",
+      "Incident Response",
+      "Risk Assessment",
+      "Cryptography",
+      "Linux",
+      "Wireshark",
+      "Penetration Testing"
+    ]
+  },
+  {
+    "id": "jd_073",
+    "title": "Security Engineer",
+    "skills": [
+      "Incident Response",
+      "Cryptography",
+      "OWASP",
+      "Firewall",
+      "Penetration Testing",
+      "Nmap",
+      "Wireshark",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_074",
+    "title": "Security Engineer",
+    "skills": [
+      "Risk Assessment",
+      "Cryptography",
+      "Linux",
+      "IDS/IPS",
+      "Wireshark",
+      "Incident Response",
+      "Firewall",
+      "Nmap"
+    ]
+  },
+  {
+    "id": "jd_075",
+    "title": "Security Engineer",
+    "skills": [
+      "Nmap",
+      "IDS/IPS",
+      "Cryptography",
+      "Linux",
+      "Burp Suite",
+      "Wireshark",
+      "SIEM",
+      "Incident Response",
+      "Python",
+      "Penetration Testing"
+    ]
+  },
+  {
+    "id": "jd_076",
+    "title": "Security Engineer",
+    "skills": [
+      "Wireshark",
+      "Firewall",
+      "Cryptography",
+      "IDS/IPS",
+      "OWASP",
+      "SIEM",
+      "Nmap",
+      "Penetration Testing"
+    ]
+  },
+  {
+    "id": "jd_077",
+    "title": "Security Engineer",
+    "skills": [
+      "Python",
+      "Incident Response",
+      "SIEM",
+      "Risk Assessment",
+      "Burp Suite",
+      "Firewall",
+      "Cryptography"
+    ]
+  },
+  {
+    "id": "jd_080",
+    "title": "Mobile Developer",
+    "skills": [
+      "Mobile UI Design",
+      "React Native",
+      "Core Data",
+      "Firebase",
+      "Push Notifications",
+      "iOS",
+      "Kotlin",
+      "Flutter",
+      "App Store"
+    ]
+  },
+  {
+    "id": "jd_081",
+    "title": "Mobile Developer",
+    "skills": [
+      "Core Data",
+      "React Native",
+      "Mobile UI Design",
+      "Flutter",
+      "Push Notifications",
+      "REST APIs",
+      "Android",
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "jd_082",
+    "title": "Mobile Developer",
+    "skills": [
+      "Firebase",
+      "Swift",
+      "REST APIs",
+      "iOS",
+      "React Native",
+      "Android"
+    ]
+  },
+  {
+    "id": "jd_083",
+    "title": "Mobile Developer",
+    "skills": [
+      "Core Data",
+      "React Native",
+      "Swift",
+      "Firebase",
+      "Mobile UI Design",
+      "Android",
+      "iOS",
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "jd_084",
+    "title": "Mobile Developer",
+    "skills": [
+      "Kotlin",
+      "Flutter",
+      "App Store",
+      "Android",
+      "iOS",
+      "Core Data",
+      "Firebase",
+      "Mobile UI Design",
+      "REST APIs",
+      "Swift"
+    ]
+  },
+  {
+    "id": "jd_085",
+    "title": "Mobile Developer",
+    "skills": [
+      "REST APIs",
+      "iOS",
+      "Swift",
+      "Firebase",
+      "Flutter",
+      "Mobile UI Design",
+      "Push Notifications",
+      "React Native"
+    ]
+  },
+  {
+    "id": "jd_086",
+    "title": "Mobile Developer",
+    "skills": [
+      "Android",
+      "Flutter",
+      "Swift",
+      "REST APIs",
+      "Push Notifications",
+      "Mobile UI Design",
+      "Firebase",
+      "iOS"
+    ]
+  },
+  {
+    "id": "jd_087",
+    "title": "Mobile Developer",
+    "skills": [
+      "Mobile UI Design",
+      "REST APIs",
+      "Push Notifications",
+      "Swift",
+      "React Native",
+      "Firebase"
+    ]
+  },
+  {
+    "id": "jd_090",
+    "title": "QA Engineer",
+    "skills": [
+      "Selenium",
+      "Cypress",
+      "API Testing",
+      "SQL",
+      "Regression Testing",
+      "TDD",
+      "BDD"
+    ]
+  },
+  {
+    "id": "jd_091",
+    "title": "QA Engineer",
+    "skills": [
+      "Python",
+      "Regression Testing",
+      "SQL",
+      "Test Automation",
+      "Selenium",
+      "TDD",
+      "Jenkins"
+    ]
+  },
+  {
+    "id": "jd_092",
+    "title": "QA Engineer",
+    "skills": [
+      "Jenkins",
+      "BDD",
+      "Cypress",
+      "JMeter",
+      "Regression Testing",
+      "SQL",
+      "Performance Testing",
+      "API Testing"
+    ]
+  },
+  {
+    "id": "jd_093",
+    "title": "QA Engineer",
+    "skills": [
+      "Python",
+      "BDD",
+      "API Testing",
+      "Performance Testing",
+      "JMeter",
+      "JIRA",
+      "Cypress"
+    ]
+  },
+  {
+    "id": "jd_094",
+    "title": "QA Engineer",
+    "skills": [
+      "Performance Testing",
+      "Python",
+      "API Testing",
+      "Regression Testing",
+      "Jenkins",
+      "Selenium",
+      "Test Automation",
+      "BDD",
+      "JMeter"
+    ]
+  },
+  {
+    "id": "jd_095",
+    "title": "QA Engineer",
+    "skills": [
+      "API Testing",
+      "Python",
+      "Jenkins",
+      "Performance Testing",
+      "SQL",
+      "BDD",
+      "Cypress"
+    ]
+  },
+  {
+    "id": "jd_096",
+    "title": "QA Engineer",
+    "skills": [
+      "Cypress",
+      "API Testing",
+      "JMeter",
+      "Regression Testing",
+      "JIRA",
+      "Python"
+    ]
+  },
+  {
+    "id": "jd_097",
+    "title": "QA Engineer",
+    "skills": [
+      "Jenkins",
+      "BDD",
+      "JMeter",
+      "Cypress",
+      "Python",
+      "Test Automation",
+      "JIRA",
+      "Performance Testing"
+    ]
+  },
+  {
+    "id": "jd_100",
+    "title": "Database Administrator",
+    "skills": [
+      "Shell Scripting",
+      "Performance Tuning",
+      "Backup Recovery",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Query Optimization",
+      "MySQL"
+    ]
+  },
+  {
+    "id": "jd_101",
+    "title": "Database Administrator",
+    "skills": [
+      "Performance Tuning",
+      "Replication",
+      "MySQL",
+      "Shell Scripting",
+      "Linux",
+      "Backup Recovery",
+      "PostgreSQL",
+      "Redis"
+    ]
+  },
+  {
+    "id": "jd_102",
+    "title": "Database Administrator",
+    "skills": [
+      "Redis",
+      "Query Optimization",
+      "Linux",
+      "PostgreSQL",
+      "Shell Scripting",
+      "Replication"
+    ]
+  },
+  {
+    "id": "jd_103",
+    "title": "Database Administrator",
+    "skills": [
+      "Performance Tuning",
+      "PostgreSQL",
+      "High Availability",
+      "Replication",
+      "Shell Scripting",
+      "Backup Recovery",
+      "Query Optimization",
+      "MongoDB",
+      "Redis"
+    ]
+  },
+  {
+    "id": "jd_104",
+    "title": "Database Administrator",
+    "skills": [
+      "Backup Recovery",
+      "PostgreSQL",
+      "Performance Tuning",
+      "Redis",
+      "Replication",
+      "MySQL",
+      "High Availability",
+      "Linux"
+    ]
+  },
+  {
+    "id": "jd_105",
+    "title": "Database Administrator",
+    "skills": [
+      "Shell Scripting",
+      "MongoDB",
+      "Redis",
+      "Linux",
+      "MySQL",
+      "Query Optimization",
+      "Performance Tuning",
+      "Backup Recovery",
+      "Replication"
+    ]
+  },
+  {
+    "id": "jd_106",
+    "title": "Database Administrator",
+    "skills": [
+      "Performance Tuning",
+      "Query Optimization",
+      "Backup Recovery",
+      "PostgreSQL",
+      "MongoDB",
+      "Replication",
+      "Redis",
+      "Linux",
+      "High Availability",
+      "Shell Scripting"
+    ]
+  },
+  {
+    "id": "jd_107",
+    "title": "Database Administrator",
+    "skills": [
+      "Query Optimization",
+      "Performance Tuning",
+      "MongoDB",
+      "MySQL",
+      "PostgreSQL",
+      "High Availability",
+      "Backup Recovery"
+    ]
+  },
+  {
+    "id": "jd_110",
+    "title": "Product Manager",
+    "skills": [
+      "A/B Testing",
+      "Roadmap Planning",
+      "Wireframing",
+      "User Research",
+      "Stakeholder Management",
+      "JIRA",
+      "Competitive Analysis",
+      "Agile Scrum",
+      "Data Analysis",
+      "SQL"
+    ]
+  },
+  {
+    "id": "jd_111",
+    "title": "Product Manager",
+    "skills": [
+      "A/B Testing",
+      "KPI Definition",
+      "Wireframing",
+      "Roadmap Planning",
+      "Data Analysis",
+      "Agile Scrum",
+      "SQL"
+    ]
+  },
+  {
+    "id": "jd_112",
+    "title": "Product Manager",
+    "skills": [
+      "Roadmap Planning",
+      "SQL",
+      "User Research",
+      "Competitive Analysis",
+      "A/B Testing",
+      "Stakeholder Management",
+      "KPI Definition",
+      "Wireframing",
+      "Agile Scrum",
+      "Data Analysis"
+    ]
+  },
+  {
+    "id": "jd_113",
+    "title": "Product Manager",
+    "skills": [
+      "KPI Definition",
+      "Wireframing",
+      "Agile Scrum",
+      "User Research",
+      "JIRA",
+      "Stakeholder Management",
+      "Data Analysis",
+      "Competitive Analysis",
+      "SQL"
+    ]
+  },
+  {
+    "id": "jd_114",
+    "title": "Product Manager",
+    "skills": [
+      "SQL",
+      "Data Analysis",
+      "User Research",
+      "Wireframing",
+      "JIRA",
+      "Roadmap Planning"
+    ]
+  },
+  {
+    "id": "jd_115",
+    "title": "Product Manager",
+    "skills": [
+      "Roadmap Planning",
+      "SQL",
+      "Data Analysis",
+      "KPI Definition",
+      "Competitive Analysis",
+      "Wireframing",
+      "Agile Scrum",
+      "User Research",
+      "JIRA"
+    ]
+  },
+  {
+    "id": "jd_116",
+    "title": "Product Manager",
+    "skills": [
+      "A/B Testing",
+      "Agile Scrum",
+      "Competitive Analysis",
+      "User Research",
+      "Roadmap Planning",
+      "JIRA"
+    ]
+  },
+  {
+    "id": "jd_117",
+    "title": "Product Manager",
+    "skills": [
+      "KPI Definition",
+      "Agile Scrum",
+      "Wireframing",
+      "Stakeholder Management",
+      "SQL",
+      "User Research",
+      "Roadmap Planning"
+    ]
+  },
+  {
+    "id": "db_1269",
+    "title": "软件开发",
+    "skills": [
+      "elasticsearch",
+      "mysql",
+      "redis",
+      "微服务"
+    ]
+  },
+  {
+    "id": "db_1268",
+    "title": "科技管培生",
+    "skills": [
+      "ci/cd",
+      "java",
+      "spring boot"
+    ]
+  },
+  {
+    "id": "db_1265",
+    "title": "初级java开发工程师",
+    "skills": [
+      "grpc",
+      "java",
+      "kafka",
+      "mysql",
+      "redis",
+      "rocketmq",
+      "分布式"
+    ]
+  },
+  {
+    "id": "db_1252",
+    "title": "软件开发实习生",
+    "skills": [
+      "c++",
+      "mysql",
+      "oracle",
+      "sql"
+    ]
+  },
+  {
+    "id": "db_1245",
+    "title": "后/前端开发、测试【24/25/无经验也可投】接受java、c＋＋、js不限语言",
+    "skills": [
+      "linux",
+      "mysql",
+      "redis"
+    ]
+  },
+  {
+    "id": "db_1241",
+    "title": "软件开发工程师",
+    "skills": [
+      "elasticsearch",
+      "java",
+      "mybatis",
+      "nacos",
+      "redis",
+      "spring boot",
+      "sql"
+    ]
+  },
+  {
+    "id": "db_1233",
+    "title": "JAVA",
+    "skills": [
+      "java",
+      "mysql",
+      "spring boot",
+      "sql"
+    ]
+  },
+  {
+    "id": "db_1231",
+    "title": "JAVA开发工程师5000+",
+    "skills": [
+      "java",
+      "mybatis",
+      "mysql",
+      "redis",
+      "spring boot",
+      "spring cloud"
+    ]
+  }
+]
