@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
@@ -30,7 +30,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
 const JobseekerManagePage = () => <AdminUserManage role="jobseeker" />
 const EnterpriseManagePage = () => <AdminUserManage role="enterprise" />
 
-const pages: Record<Page, () => JSX.Element> = {
+const pages: Record<Page, () => ReactNode> = {
   jobseekers: JobseekerManagePage,
   enterprises: EnterpriseManagePage,
   jobs: AdminJobManage,

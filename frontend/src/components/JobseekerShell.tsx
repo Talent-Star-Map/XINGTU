@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
@@ -31,7 +31,7 @@ import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
 import QualityDashboard from '../pages/enterprise/QualityDashboard'
 import TutuChat from './TutuChat'
 
-const pages: Record<Page, () => JSX.Element> = {
+const pages: Record<Page, () => ReactNode> = {
   dashboard: JSDashboard, 'skill-graph': JSSkillGraph,
   resume: JSResume, 'resume-center': JSResumeCenter, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
   'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph, quality: QualityDashboard,
@@ -55,8 +55,8 @@ export default function JobseekerShell({ onLogout }: Props) {
   const userData = userStr ? JSON.parse(userStr) : null
   const avatarText = (() => {
     const account = userData?.email || userData?.phone || ''
-    const digits = account.replace(/\D/g, '')
-    return digits ? digits.slice(-3) : account.slice(-3) || '?'
+    const name = userData?.username || userData?.real_name || ''
+    return (name[0] || account[0] || '?').toUpperCase()
   })()
 
   return (

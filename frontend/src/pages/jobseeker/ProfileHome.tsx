@@ -28,6 +28,7 @@ export default function ProfileHome() {
   const [errors, setErrors] = useState<string[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
   const avatarRef = useRef<HTMLInputElement>(null)
   const resumeRef = useRef<HTMLInputElement>(null)
 
@@ -140,11 +141,11 @@ export default function ProfileHome() {
               {/* 头像 */}
               <div className="relative shrink-0 group">
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 shadow-sm" style={{ borderColor: 'var(--color-surface)' }}>
-                  {p.avatar ? (
-                    <img src={p.avatar.startsWith('http') ? p.avatar : `http://localhost:8083${p.avatar}`} alt="" className="w-full h-full object-cover" />
+                  {p.avatar && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(p.avatar) && !avatarError ? (
+                    <img src={p.avatar} onError={() => setAvatarError(true)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--color-surface-variant)' }}>
-                      <User className="h-12 w-12" style={{ color: 'var(--color-on-surface-variant)' }} />
+                      <span className="text-3xl font-bold" style={{ color: 'var(--color-on-surface-variant)' }}>{(name || '?').slice(0, 1)}</span>
                     </div>
                   )}
                 </div>
