@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
@@ -24,7 +24,7 @@ import EPMarket from '../pages/enterprise/MarketInsight'
 import EPIndustry from '../pages/enterprise/IndustryReport'
 import EPCompany from '../pages/enterprise/CompanyProfile'
 
-const pages: Record<Page, () => JSX.Element> = {
+const pages: Record<Page, () => ReactNode> = {
   dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
   market: EPMarket, industry: EPIndustry, company: EPCompany,
 }

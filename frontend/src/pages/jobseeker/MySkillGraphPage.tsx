@@ -138,7 +138,6 @@ export default function MySkillGraphPage() {
                             style={{
                               background: selectedSkill === s ? cat.color : `${cat.color}10`,
                               color: selectedSkill === s ? 'var(--color-on-primary)' : cat.color,
-                              ringColor: cat.color,
                             }}>
                             {s}
                           </button>
