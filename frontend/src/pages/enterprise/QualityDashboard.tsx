@@ -12,6 +12,7 @@ export default function QualityDashboard() {
   const [jdResult, setJdResult] = useState<any>(null)
   const [matchResult, setMatchResult] = useState<any>(null)
   const [resumeResult, setResumeResult] = useState<any>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const [panelLoading, setPanelLoading] = useState(false)
 
@@ -46,6 +47,9 @@ export default function QualityDashboard() {
       if (type === 'jd') setJdResult(d.data)
       else if (type === 'match') setMatchResult(d.data)
       else if (type === 'resume') setResumeResult(d.data)
+      setErrors(prev => { const n = { ...prev }; delete n[type]; return n })
+    } else {
+      setErrors(prev => ({ ...prev, [type]: d.message || '测试运行失败' }))
     }
     setTesting(prev => { const n = new Set(prev); n.delete(type); return n })
   }
@@ -54,6 +58,7 @@ export default function QualityDashboard() {
     setJdResult(null)
     setMatchResult(null)
     setResumeResult(null)
+    setErrors({})
     loadReport()
   }
 
@@ -98,6 +103,7 @@ export default function QualityDashboard() {
           <TestCard
             icon={Crosshair} label="JD解析精确率" testType="jd"
             result={jdResult} testing={testing} onTest={runTest}
+            error={errors['jd']}
             value={jdResult ? `${(jdResult.avg_precision * 100).toFixed(1)}%` : null}
             sub={jdResult ? `${jdResult.total_samples}条JD · F1 ${(jdResult.avg_f1 * 100).toFixed(1)}% · 召回 ${(jdResult.avg_recall * 100).toFixed(0)}%` : '赛题要求精确率≥90%，基于DeepSeek+标准答案'}
             pass={jdResult ? jdResult.avg_precision >= 0.9 : false}
@@ -108,6 +114,7 @@ export default function QualityDashboard() {
           <TestCard
             icon={FileText} label="简历提取精确率" testType="resume"
             result={resumeResult} testing={testing} onTest={runTest}
+            error={errors['resume']}
             value={resumeResult ? `${(resumeResult.avg_precision * 100).toFixed(1)}%` : null}
             sub={resumeResult ? `${resumeResult.total_samples}份简历 · F1 ${(resumeResult.avg_f1 * 100).toFixed(1)}% · 召回 ${(resumeResult.avg_recall * 100).toFixed(0)}%` : '100份标注简历 · DeepSeek提取+标准答案对比'}
             pass={resumePass}
@@ -118,6 +125,7 @@ export default function QualityDashboard() {
           <TestCard
             icon={Users} label="人岗匹配准确率" testType="match"
             result={matchResult} testing={testing} onTest={runTest}
+            error={errors['match']}
             value={matchResult ? `${matchResult.accuracy}%` : null}
             sub={matchResult ? `${matchResult.total_pairs}组配对 · ${matchResult.correct_count}组正确` : '简历技能 vs 岗位技能匹配'}
             pass={matchPass}
@@ -153,7 +161,7 @@ export default function QualityDashboard() {
                 {panelLoading ? <Loader2 className="h-3 w-3 animate-spin inline" /> : null} 刷新检测
               </button>
               <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
-                {cv?.total_unique_skills ?? 0} 项唯一技能
+                {cv?.total_skills ?? 0} 项唯一技能
               </span>
             </div>
           </div>
@@ -247,9 +255,9 @@ export default function QualityDashboard() {
   )
 }
 
-function TestCard({ icon: Icon, label, testType, result, testing, onTest, value, sub, pass, passLabel, slow }: {
+function TestCard({ icon: Icon, label, testType, result, testing, onTest, error, value, sub, pass, passLabel, slow }: {
   icon: any; label: string; testType: string; result: any; testing: Set<string>
-  onTest: (t: string) => void; value: string | null; sub: string; pass: boolean; passLabel: string; slow?: boolean
+  onTest: (t: string) => void; error?: string; value: string | null; sub: string; pass: boolean; passLabel: string; slow?: boolean
 }) {
   const isTesting = testing.has(testType)
   return (
@@ -274,6 +282,7 @@ function TestCard({ icon: Icon, label, testType, result, testing, onTest, value,
             style={{ background: 'var(--accent-purple)', color: 'var(--color-on-primary)' }}>
             {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : slow ? '运行测试（较慢）' : '运行测试'}
           </button>
+          {error && <p className="text-[10px] mt-2 px-1 text-left" style={{ color: 'var(--accent-red)' }}>{error}</p>}
         </>
       )}
     </div>

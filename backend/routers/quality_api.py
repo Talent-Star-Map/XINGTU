@@ -41,38 +41,95 @@ def require_admin(token: str = Query(...)):
 # 路由级依赖：注册到此 router 的所有接口都自动应用 require_admin 鉴权
 router = APIRouter(prefix='/api/quality', tags=['quality'], dependencies=[Depends(require_admin)])
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'test_data')
 os.makedirs(TEST_DATA_DIR, exist_ok=True)
+
+
+def _load_db_source_skills():
+    """从爬虫主表按来源聚合技能（真实数据驱动交叉验证）。
+
+    对原始 skill_tags 做技能词典归一与噪声过滤：只有命中技能词典/同义词表的
+    标签才参与统计，其余计入 noise_filtered（作为"数据噪声检测"的量化结果）。
+    返回 ([(source, [canonical_skill])], noise_filtered_count)。
+    """
+    from collections import defaultdict
+    from services.resume_parser import _JD_SKILLS
+    from services.skill_synonyms import SYNONYM_MAP
+    _dict_lower = {s.lower() for s in _JD_SKILLS}
+
+    def _canon(tag):
+        t = str(tag).strip().lower()
+        if not t:
+            return None
+        for std, syns in SYNONYM_MAP.items():
+            if t == std or t in syns:
+                return std
+        return t if t in _dict_lower else None
+
+    session = get_session()
+    noise = 0
+    try:
+        rows = (session.query(CrawledJob.source, CrawledJob.skill_tags)
+                .filter(CrawledJob.data_type == 1).all())
+        source_skills = defaultdict(list)
+        for source, tags in rows:
+            if not tags:
+                continue
+            for tag in tags:
+                canon = _canon(tag)
+                if canon:
+                    source_skills[source or 'unknown'].append(canon)
+                else:
+                    noise += 1
+        return [(s, v) for s, v in source_skills.items()], noise
+    finally:
+        session.close()
+
+
+def _source_skills_for_cross_validation():
+    """优先真实数据库多来源；数据不足时回退种子文件。返回 (skills_per_source, mode, noise)。"""
+    db, noise = _load_db_source_skills()
+    distinct = {s for s, _ in db}
+    if len(distinct) >= 2:
+        return db, 'database', noise
+    expanded = os.path.join(os.path.dirname(__file__), '..', 'test_data', 'expanded_jobs.json')
+    if os.path.exists(expanded):
+        from collections import defaultdict
+        with open(expanded, 'r', encoding='utf-8') as f:
+            jobs = json.load(f)
+        agg = defaultdict(list)
+        for j in jobs:
+            agg[j.get('source', 'unknown')].extend(j.get('skills', []))
+        return [(s, v) for s, v in agg.items()], 'seed_file', noise
+    return db, 'database', noise
 
 
 @router.get('/report')
 def get_quality_report():
-    from collections import defaultdict
-    source_skills = defaultdict(list)
     jobs = _load_jobs()
-    for j in jobs:
-        source_skills[j['source']].extend(j.get('skills', []))
-    skills_per_source = [(src, skills) for src, skills in source_skills.items()]
+    skills_per_source, _mode, noise = _source_skills_for_cross_validation()
     report = full_quality_report(jobs, skills_per_source)
+    report['data_noise'] = {
+        'filtered_tags': noise,
+        'note': '原始 skill_tags 中命中技能词典/同义词表之外的噪声标签数，'
+                '已从多源交叉验证中过滤（数据噪声检测结果）。',
+    }
     return {'success': True, 'data': report}
 
 
 @router.get('/cross-validate')
 def api_cross_validate():
-    from collections import defaultdict
-    source_skills = defaultdict(list)
-    jobs = _load_jobs()
-    for j in jobs:
-        source_skills[j['source']].extend(j.get('skills', []))
-    skills_per_source = [(src, skills) for src, skills in source_skills.items()]
+    skills_per_source, mode, noise = _source_skills_for_cross_validation()
     result = cross_validate(skills_per_source)
     verified = {k: v for k, v in result.items() if v['verified']}
     unconfirmed = {k: v for k, v in result.items() if not v['verified']}
     return {
         'success': True,
         'data': {
-            'total_sources': len(source_skills),
+            'total_sources': len(skills_per_source),
+            'data_mode': mode,
             'total_unique_skills': len(result),
+            'noise_filtered': noise,
             'verified_count': len(verified),
             'unconfirmed_count': len(unconfirmed),
             'verified': verified,
@@ -95,29 +152,29 @@ def api_inflation():
 
 @router.get('/accuracy-test')
 def run_accuracy_test():
+    """JD 解析准确率测评。
+
+    口径（对齐赛题与看板）：准确率 = 平均精确率，pass = 精确率 ≥ 0.9；
+    召回率与 F1 作为参考指标一并返回。技能匹配按同义词归一后判定。
+    数据集缺失时返回明确错误，不再静默回退到不具代表性的兜底样本。
+    """
     jd_path = os.path.join(TEST_DATA_DIR, 'scraped_jds.json')
     ans_path = os.path.join(TEST_DATA_DIR, 'standard_answers.json')
-    if not os.path.exists(jd_path):
-        jd_path = os.path.join(TEST_DATA_DIR, 'sample_jds.json')
-
     if not os.path.exists(jd_path) or not os.path.exists(ans_path):
-        jobs = _load_jobs()
-        samples = []
-        answers = []
-        for j in jobs[:10]:
-            samples.append({'id': j['id'], 'title': j['title'], 'description': j.get('description', '')})
-            answers.append({'id': j['id'], 'skills': j.get('skills', [])})
-        with open(jd_path, 'w', encoding='utf-8') as f:
-            json.dump(samples, f, ensure_ascii=False, indent=2)
-        with open(ans_path, 'w', encoding='utf-8') as f:
-            json.dump(answers, f, ensure_ascii=False, indent=2)
+        return {'success': False,
+                'message': '测试数据集缺失：需要 backend/test_data/scraped_jds.json 与 '
+                           'standard_answers.json（标准标注集随部署打包，见软件测试说明附录 A）。'}
 
     with open(jd_path, 'r', encoding='utf-8') as f:
         samples = json.load(f)
     with open(ans_path, 'r', encoding='utf-8') as f:
         answers = json.load(f)
 
-    from services.resume_parser import parse_resume
+    from services.resume_parser import extract_jd_skills
+    from services.skill_synonyms import is_synonym
+
+    def _match(pred: str, gold: set) -> bool:
+        return any(is_synonym(pred, g) for g in gold)
 
     total_precision = 0
     total_recall = 0
@@ -125,19 +182,15 @@ def run_accuracy_test():
     details = []
 
     for sample, answer in zip(samples, answers):
-        full_text = f"Job: {sample['title']}\nCompany: {sample.get('company','')}\n{sample['description']}"
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-            f.write(full_text)
-            tmp = f.name
-        result = parse_resume(tmp)
-        os.unlink(tmp)
-        extracted = result.get('data', {})
-        pred_skills = set(s.lower() for s in extracted.get('skills', []))
-        true_skills = set(s.lower() for s in answer.get('skills', []))
+        # 技能提取只用标题+正文，排除公司名等元信息，避免"Oracle 公司"之类的误报
+        full_text = f"{sample['title']}\n{sample['description']}"
+        result = extract_jd_skills(full_text)
+        pred_skills = result.get('skills', [])
+        true_skills = [s.lower() for s in answer.get('skills', [])]
 
-        tp = len(pred_skills & true_skills)
-        fp = len(pred_skills - true_skills)
-        fn = len(true_skills - pred_skills)
+        tp = sum(1 for p in pred_skills if _match(p, true_skills))
+        fp = len(pred_skills) - tp
+        fn = sum(1 for g in true_skills if not any(is_synonym(p, g) for p in pred_skills))
 
         precision = tp / max(tp + fp, 1)
         recall = tp / max(tp + fn, 1)
@@ -158,17 +211,22 @@ def run_accuracy_test():
         })
 
     n = max(len(samples), 1)
+    avg_precision = round(total_precision / n, 3)
+    avg_recall = round(total_recall / n, 3)
+    avg_f1 = round(total_f1 / n, 3)
     return {
         'success': True,
         'data': {
             'total_samples': n,
-            'avg_precision': round(total_precision / n, 3),
-            'avg_recall': round(total_recall / n, 3),
-            'avg_f1': round(total_f1 / n, 3),
-            'accuracy': round(total_f1 / n * 100, 1),
-            'pass': (total_f1 / n) >= 0.9,
+            'avg_precision': avg_precision,
+            'avg_recall': avg_recall,
+            'avg_f1': avg_f1,
+            'accuracy': round(avg_precision * 100, 1),
+            'pass': avg_precision >= 0.9,
             'details': details,
-            'note': f'Based on {n} seed JD test data.',
+            'metric': 'precision',
+            'note': f'口径：准确率=平均精确率（赛题“解析准确率”），共 {n} 条标注 JD；'
+                    f'召回 {avg_recall}、F1 {avg_f1} 为参考。',
         }
     }
 
@@ -182,14 +240,18 @@ def run_match_test():
     with open(match_path, 'r', encoding='utf-8') as f:
         pairs = json.load(f)
 
+    from services.skill_synonyms import is_synonym
+
     def calc_match(resume_skills, jd_skills):
-        r_set = set(s.lower() for s in resume_skills)
-        j_set = set(s.lower() for s in jd_skills)
-        overlap = r_set & j_set
+        r_set = [s.lower() for s in resume_skills]
+        j_set = [s.lower() for s in jd_skills]
+        overlap = [s for s in j_set if any(is_synonym(s, r) for r in r_set)]
         skill_score = len(overlap) / max(len(j_set), 1)
-        coverage = len(overlap) / max(len(r_set), 1)
+        coverage = len(set(s for s in r_set if any(is_synonym(s, j) for j in j_set))) / max(len(r_set), 1)
         final = round(skill_score * 0.6 + coverage * 0.4, 3)
-        return {'score': final, 'matched': list(overlap), 'missing': list(j_set - r_set), 'extra': list(r_set - j_set)}
+        missing = [s for s in j_set if not any(is_synonym(s, r) for r in r_set)]
+        extra = [s for s in r_set if not any(is_synonym(s, j) for j in j_set)]
+        return {'score': final, 'matched': overlap, 'missing': missing, 'extra': extra}
 
     errors = []
     details = []
@@ -238,6 +300,7 @@ def run_resume_test():
         resumes = json.load(f)
 
     from services.resume_parser import parse_resume
+    from services.skill_synonyms import is_synonym
 
     total_precision = 0
     total_recall = 0
@@ -251,12 +314,12 @@ def run_resume_test():
         result = parse_resume(tmp)
         os.unlink(tmp)
         extracted = result.get('data', {})
-        pred_skills = set(s.lower() for s in extracted.get('skills', []))
-        true_skills = set(s.lower() for s in resume['skills'])
+        pred_skills = [s.lower() for s in extracted.get('skills', [])]
+        true_skills = [s.lower() for s in resume['skills']]
 
-        tp = len(pred_skills & true_skills)
-        fp = len(pred_skills - true_skills)
-        fn = len(true_skills - pred_skills)
+        tp = sum(1 for p in pred_skills if any(is_synonym(p, t) for t in true_skills))
+        fp = len(pred_skills) - tp
+        fn = sum(1 for t in true_skills if not any(is_synonym(p, t) for p in pred_skills))
 
         precision = tp / max(tp + fp, 1)
         recall = tp / max(tp + fn, 1)
@@ -269,24 +332,28 @@ def run_resume_test():
         details.append({
             'id': resume['id'],
             'category': resume['category'],
-            'extracted': list(pred_skills)[:8],
-            'expected': list(true_skills)[:8],
+            'extracted': pred_skills[:8],
+            'expected': true_skills[:8],
             'precision': round(precision, 3),
             'recall': round(recall, 3),
             'f1': round(f1, 3),
         })
 
     n = max(len(resumes), 1)
+    avg_precision = round(total_precision / n, 3)
+    avg_recall = round(total_recall / n, 3)
+    avg_f1 = round(total_f1 / n, 3)
     return {
         'success': True,
         'data': {
             'total_samples': n,
-            'avg_precision': round(total_precision / n, 3),
-            'avg_recall': round(total_recall / n, 3),
-            'avg_f1': round(total_f1 / n, 3),
-            'accuracy': round(total_f1 / n * 100, 1),
-            'pass': (total_precision / n) >= 0.9,
+            'avg_precision': avg_precision,
+            'avg_recall': avg_recall,
+            'avg_f1': avg_f1,
+            'accuracy': round(avg_precision * 100, 1),
+            'pass': avg_precision >= 0.9,
             'details': details[:3],
-            'note': f'{n} annotated resumes, DeepSeek extraction + gold standard comparison.',
+            'metric': 'precision',
+            'note': f'口径：准确率=平均精确率，共 {n} 份标注简历；召回 {avg_recall}、F1 {avg_f1} 为参考。',
         }
     }

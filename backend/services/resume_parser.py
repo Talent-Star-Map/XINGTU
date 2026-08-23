@@ -226,3 +226,169 @@ def parse_resume(file_path: str) -> dict:
             },
         }
     }
+
+
+# ================= JD 专用技能提取（幻觉防控口径，@owner: 佳豪） =================
+
+_JD_SKILLS = [
+    'a/b testing', 'agent', 'agile', 'agile scrum', 'airflow', 'android', 'angular', 'ansible',
+    'api testing', 'app store', 'auto scaling', 'aws', 'azure', 'backup recovery', 'bash', 'bdd',
+    'burp suite', 'c#', 'c++', 'cassandra', 'ci/cd', 'clickhouse', 'code review', 'competitive analysis',
+    'core data', 'cost optimization', 'cryptography', 'css', 'cuda', 'cypress', 'data analysis', 'data pipeline',
+    'data visualization', 'deep learning', 'distributed', 'distributed training', 'django', 'docker', 'dubbo', 'dynamodb',
+    'elasticsearch', 'electron', 'express', 'fastapi', 'feature engineering', 'feature store', 'firebase', 'firewall',
+    'flask', 'flink', 'flutter', 'gcp', 'gin', 'git', 'go', 'gradle',
+    'grafana', 'graphql', 'grpc', 'hadoop', 'helm', 'hibernate', 'high availability', 'high concurrency',
+    'hive', 'html', 'iam', 'ids/ips', 'incident response', 'ios', 'istio', 'java',
+    'javascript', 'jenkins', 'jest', 'jira', 'jmeter', 'jquery', 'junit', 'jvm',
+    'k8s', 'kafka', 'kotlin', 'kpi definition', 'kubernetes', 'langchain', 'linux', 'llm',
+    'load balancing', 'lora', 'machine learning', 'maven', 'microservices', 'mlops', 'mobile ui design', 'model serving',
+    'mongodb', 'mybatis', 'mybatis-plus', 'mysql', 'nacos', 'neo4j', 'netty', 'networking',
+    'next.js', 'nginx', 'nlp', 'nmap', 'node.js', 'numpy', 'oauth', 'onnx',
+    'opencv', 'oracle', 'owasp', 'pandas', 'penetration testing', 'performance optimization', 'performance testing', 'performance tuning',
+    'php', 'postgresql', 'postman', 'presto', 'prometheus', 'prompt engineering', 'push notifications', 'python',
+    'pytorch', 'query optimization', 'rabbitmq', 'rag', 'react', 'react native', 'redis', 'redux',
+    'regression testing', 'replication', 'responsive design', 'rest', 'rest api', 'rest apis', 'risk assessment', 'roadmap planning',
+    'rocketmq', 'ruby', 'rust', 'scala', 'scrum', 'security', 'security groups', 'selenium',
+    'sentinel', 'serverless', 'shell', 'shell scripting', 'siem', 'spark', 'spring boot', 'spring cloud',
+    'spring security', 'sql', 'sqlite', 'stakeholder management', 'statistical analysis', 'svelte', 'swift', 'system design',
+    'tailwind css', 'tdd', 'tensorflow', 'terraform', 'test automation', 'transformer', 'trino', 'typescript',
+    'unit testing', 'user research', 'vite', 'vpn', 'vue', 'webpack', 'websocket', 'whisper',
+    'wireframing', 'wireshark', '分布式', '大模型', '微服务', '高并发',
+]
+
+_AMBIGUOUS = {'go', 'c', 'r'}
+
+
+def _term_patterns(skill: str):
+    """返回 (pattern, flags) 列表；短词 'Go/C/R' 走大小写敏感匹配避免误报。"""
+    cl = skill.strip().lower()
+    if cl in _AMBIGUOUS:
+        return [(r'(?<![a-zA-Z])' + re.escape(skill.strip()) + r'(?![a-zA-Z])', 0)]
+    return [(r'(?<![a-zA-Z0-9])' + re.escape(cl) + r'(?![a-zA-Z0-9])', re.IGNORECASE)]
+
+
+def _evidence_sentences(skill: str, text: str) -> list[str]:
+    from services.skill_synonyms import normalize_skill
+    sentences = [s.strip() for s in re.split(r'[。；;.\n]', text) if s.strip()]
+    variants = {skill.strip().lower()} | {v.lower() for v in normalize_skill(skill)}
+    out = []
+    for sent in sentences:
+        for v in variants:
+            if len(v) < 2:
+                continue
+            if v in _AMBIGUOUS:
+                hit = re.search(r'(?<![a-zA-Z])' + re.escape(v) + r'(?![a-zA-Z])', sent)
+            else:
+                hit = re.search(r'(?<![a-zA-Z0-9])' + re.escape(v) + r'(?![a-zA-Z0-9])', sent, re.IGNORECASE)
+            if hit:
+                out.append(sent)
+                break
+    return out[:2] or ['(原文未找到明确提及)']
+
+
+def _jd_rule_extract(text: str) -> list[tuple[str, list[str]]]:
+    """规则词典扫描：只收正文明确出现（词边界）的技能，附原文句子。"""
+    from services.skill_synonyms import SYNONYM_MAP
+    found: list[tuple[str, list[str]]] = []
+    seen: set[str] = set()
+    for c in _JD_SKILLS:
+        hit = any(re.search(p, text, flags) for p, flags in _term_patterns(c))
+        if not hit:
+            continue
+        canonical = c.strip().lower()
+        for std, syns in SYNONYM_MAP.items():
+            if canonical == std or canonical in syns:
+                canonical = std
+                break
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        found.append((canonical, _evidence_sentences(c, text)))
+    return found
+
+
+def _jd_llm_extract(text: str):
+    """JD 专用 LLM 提取：强制逐条返回原文证据。"""
+    api_key = os.getenv('DEEPSEEK_API_KEY', '')
+    if not api_key:
+        return []
+    try:
+        import requests
+        resp = requests.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': 'deepseek-chat',
+                'messages': [
+                    {'role': 'system', 'content':
+                     '你是岗位描述（JD）技能解析器。只提取正文中明确出现的技术技能、编程语言、框架、工具、平台。'
+                     '禁止推测、禁止补充正文没有的技能。返回 JSON：'
+                     '{"skills":[{"skill":"技能名","evidence":"包含该技能的原文句子"}]}'},
+                    {'role': 'user', 'content': f'岗位描述：\n{text[:6000]}'},
+                ],
+                'temperature': 0.0, 'max_tokens': 1500,
+            },
+            timeout=60,
+        )
+        raw = resp.json()['choices'][0]['message']['content'].strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('\n```', 1)[0]
+        data = json.loads(raw)
+        return data.get('skills', [])
+    except Exception:
+        return []
+
+
+def extract_jd_skills(text: str) -> dict:
+    """JD 技能提取主入口：规则 + LLM，全部经"原文证据"硬过滤，返回规范技能名与证据。"""
+    from services.skill_synonyms import SYNONYM_MAP
+    rule_items = _jd_rule_extract(text)
+    llm_items = _jd_llm_extract(text)
+    _dict_lower = {s.lower() for s in _JD_SKILLS}
+
+    merged: list[dict] = []
+    seen: set[str] = set()
+
+    def _has_evidence(skill: str) -> bool:
+        return any(re.search(p, text, flags) for p, flags in _term_patterns(skill)) or \
+               bool(_evidence_sentences(skill, text)[0] != '(原文未找到明确提及)')
+
+    for it in llm_items:
+        s = str(it.get('skill', '')).strip()
+        if not s or not _has_evidence(s):
+            continue  # 幻觉过滤：无原文证据即剔除
+        canonical = s.lower()
+        for std, syns in SYNONYM_MAP.items():
+            if s.lower() == std or s.lower() in syns:
+                canonical = std
+                break
+        # 词典约束：只保留技能词典/同义词表内的技能，避免 LLM 输出领域外词汇
+        if canonical not in _dict_lower and canonical not in SYNONYM_MAP:
+            continue
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        ev = str(it.get('evidence', '')).strip()
+        merged.append({'skill': canonical, 'evidence': [ev] if ev else _evidence_sentences(s, text)})
+
+    for canon, ev in rule_items:
+        if canon not in seen:
+            seen.add(canon)
+            merged.append({'skill': canon, 'evidence': ev})
+
+    # 重叠词去重：优先保留更长/更具体的技能（如 agile scrum 优先于 agile，
+    # javascript 优先于 java），降低规则扫描的冗余误报。
+    final_items = []
+    accepted: list[str] = []
+    for m in sorted(merged, key=lambda x: -len(x['skill'])):
+        sk = m['skill']
+        if any(sk != a and sk in a for a in accepted):
+            continue
+        accepted.append(sk)
+        final_items.append(m)
+
+    skills = [m['skill'] for m in final_items]
+    evidence = {m['skill']: m['evidence'] for m in final_items}
+    return {'skills': skills, 'evidence': evidence,
+            'method': 'llm+rule' if llm_items else 'rule'}

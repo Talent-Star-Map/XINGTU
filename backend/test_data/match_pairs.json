@@ -1,0 +1,2344 @@
+[
+  {
+    "id": 1,
+    "resume_skills": [
+      "TensorFlow",
+      "Python",
+      "Data Pipeline",
+      "Git"
+    ],
+    "jd_title": "Security Engineer",
+    "jd_skills": [
+      "Linux",
+      "OWASP",
+      "IDS/IPS",
+      "Risk Assessment",
+      "Cryptography",
+      "Penetration Testing",
+      "Python"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 2,
+    "resume_skills": [
+      "Docker",
+      "TensorFlow",
+      "NLP",
+      "SQL",
+      "Deep Learning",
+      "Data Visualization",
+      "Statistical Analysis",
+      "Machine Learning"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Python",
+      "Regression Testing",
+      "SQL",
+      "Test Automation",
+      "Selenium",
+      "TDD",
+      "Jenkins"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 3,
+    "resume_skills": [
+      "Git",
+      "Python",
+      "Linux"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "PostgreSQL",
+      "REST APIs",
+      "CI/CD",
+      "Code Review",
+      "Docker",
+      "Git",
+      "System Design"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 4,
+    "resume_skills": [
+      "Linux",
+      "REST APIs",
+      "Git",
+      "CSS",
+      "Python"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Linux",
+      "Prometheus",
+      "Security",
+      "Python",
+      "Terraform",
+      "AWS",
+      "Grafana",
+      "Ansible"
+    ],
+    "match_score": 0.25
+  },
+  {
+    "id": 5,
+    "resume_skills": [
+      "Python",
+      "OWASP",
+      "Linux",
+      "Firewall",
+      "Nmap",
+      "Wireshark",
+      "Burp Suite"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "Roadmap Planning",
+      "SQL",
+      "Data Analysis",
+      "KPI Definition",
+      "Competitive Analysis",
+      "Wireframing",
+      "Agile Scrum",
+      "User Research",
+      "JIRA"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 6,
+    "resume_skills": [
+      "Data Visualization",
+      "Linux",
+      "Python",
+      "Statistical Analysis",
+      "SQL",
+      "Machine Learning"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "Machine Learning",
+      "Feature Engineering",
+      "Data Visualization",
+      "NLP",
+      "PyTorch",
+      "SQL",
+      "A/B Testing",
+      "Statistical Analysis",
+      "TensorFlow",
+      "Pandas"
+    ],
+    "match_score": 0.4
+  },
+  {
+    "id": 7,
+    "resume_skills": [
+      "Next.js",
+      "Redux",
+      "Docker",
+      "JavaScript",
+      "Git",
+      "Jest",
+      "CSS",
+      "GraphQL",
+      "HTML",
+      "React"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Kubernetes",
+      "System Design",
+      "Unit Testing",
+      "CI/CD",
+      "Go",
+      "Java",
+      "Redis",
+      "Python"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 8,
+    "resume_skills": [
+      "Flutter",
+      "Kotlin",
+      "JavaScript",
+      "Git",
+      "REST APIs",
+      "Swift",
+      "React Native",
+      "iOS"
+    ],
+    "jd_title": "Security Engineer",
+    "jd_skills": [
+      "Wireshark",
+      "Firewall",
+      "Cryptography",
+      "IDS/IPS",
+      "OWASP",
+      "SIEM",
+      "Nmap",
+      "Penetration Testing"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 9,
+    "resume_skills": [
+      "Python",
+      "HTML",
+      "Java",
+      "JavaScript",
+      "MySQL",
+      "Docker",
+      "Linux",
+      "Git",
+      "REST APIs"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Performance Tuning",
+      "Docker",
+      "System Design",
+      "gRPC",
+      "Microservices",
+      "CI/CD",
+      "PostgreSQL",
+      "Kafka",
+      "Redis",
+      "Python"
+    ],
+    "match_score": 0.2
+  },
+  {
+    "id": 10,
+    "resume_skills": [
+      "Pandas",
+      "Linux",
+      "Data Visualization"
+    ],
+    "jd_title": "Machine Learning Engineer",
+    "jd_skills": [
+      "Model Serving",
+      "Kubernetes",
+      "Feature Store",
+      "TensorFlow",
+      "Python",
+      "Docker",
+      "PyTorch",
+      "MLOps"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 11,
+    "resume_skills": [
+      "MLOps",
+      "Git",
+      "CUDA",
+      "Docker",
+      "Kubernetes",
+      "Data Pipeline",
+      "NLP"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Pandas",
+      "NLP",
+      "Deep Learning",
+      "Python",
+      "PyTorch",
+      "TensorFlow",
+      "Machine Learning",
+      "Statistical Analysis",
+      "SQL"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 12,
+    "resume_skills": [
+      "Machine Learning",
+      "TensorFlow",
+      "Data Visualization",
+      "Docker"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Security Groups",
+      "Auto Scaling",
+      "Azure",
+      "Serverless",
+      "VPN",
+      "GCP",
+      "Kubernetes",
+      "Load Balancing",
+      "AWS",
+      "Docker"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 13,
+    "resume_skills": [
+      "Docker",
+      "Python",
+      "NLP",
+      "TensorFlow",
+      "Data Visualization",
+      "Statistical Analysis"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Load Balancing",
+      "Terraform",
+      "Azure",
+      "VPN",
+      "GCP",
+      "Serverless",
+      "Auto Scaling"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 14,
+    "resume_skills": [
+      "Kubernetes",
+      "Redis",
+      "CI/CD",
+      "Agile",
+      "Microservices",
+      "AWS"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "Webpack",
+      "Performance Optimization",
+      "Next.js",
+      "GraphQL",
+      "HTML",
+      "Redux"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 15,
+    "resume_skills": [
+      "JavaScript",
+      "REST APIs",
+      "Swift",
+      "iOS",
+      "React Native",
+      "Git",
+      "Firebase",
+      "Flutter",
+      "Android",
+      "Kotlin"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Kubernetes",
+      "System Design",
+      "Unit Testing",
+      "CI/CD",
+      "Go",
+      "Java",
+      "Redis",
+      "Python"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 16,
+    "resume_skills": [
+      "Redis",
+      "Kafka",
+      "System Design",
+      "Java",
+      "Spring Boot",
+      "Code Review",
+      "Docker"
+    ],
+    "jd_title": "Mobile Developer",
+    "jd_skills": [
+      "Core Data",
+      "React Native",
+      "Swift",
+      "Firebase",
+      "Mobile UI Design",
+      "Android",
+      "iOS",
+      "Kotlin"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 17,
+    "resume_skills": [
+      "TensorFlow",
+      "Linux",
+      "CUDA",
+      "Docker",
+      "Git"
+    ],
+    "jd_title": "Security Engineer",
+    "jd_skills": [
+      "Wireshark",
+      "Firewall",
+      "Cryptography",
+      "IDS/IPS",
+      "OWASP",
+      "SIEM",
+      "Nmap",
+      "Penetration Testing"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 18,
+    "resume_skills": [
+      "Redux",
+      "Next.js",
+      "HTML",
+      "React",
+      "Git",
+      "JavaScript"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Bash",
+      "CI/CD",
+      "Python",
+      "Terraform",
+      "Grafana",
+      "Security",
+      "Prometheus"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 19,
+    "resume_skills": [
+      "REST APIs",
+      "Docker",
+      "MySQL",
+      "Python",
+      "JavaScript",
+      "Java",
+      "Git",
+      "HTML"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "VPN",
+      "GCP",
+      "AWS",
+      "Kubernetes",
+      "Auto Scaling",
+      "Serverless"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 20,
+    "resume_skills": [
+      "SQL",
+      "JavaScript",
+      "CSS",
+      "Python"
+    ],
+    "jd_title": "Security Engineer",
+    "jd_skills": [
+      "Incident Response",
+      "Cryptography",
+      "OWASP",
+      "Firewall",
+      "Penetration Testing",
+      "Nmap",
+      "Wireshark",
+      "Python"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 21,
+    "resume_skills": [
+      "Java",
+      "Linux",
+      "Docker",
+      "Git",
+      "CSS",
+      "HTML",
+      "REST APIs",
+      "JavaScript",
+      "Python"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "NLP",
+      "Data Visualization",
+      "Pandas",
+      "TensorFlow",
+      "SQL",
+      "Statistical Analysis",
+      "A/B Testing",
+      "Machine Learning",
+      "PyTorch",
+      "Python"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 22,
+    "resume_skills": [
+      "OWASP",
+      "Burp Suite",
+      "Penetration Testing",
+      "Linux",
+      "SIEM",
+      "Wireshark",
+      "Python",
+      "Firewall",
+      "Docker",
+      "Git"
+    ],
+    "jd_title": "Mobile Developer",
+    "jd_skills": [
+      "Android",
+      "Flutter",
+      "Swift",
+      "REST APIs",
+      "Push Notifications",
+      "Mobile UI Design",
+      "Firebase",
+      "iOS"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 23,
+    "resume_skills": [
+      "REST APIs",
+      "MySQL",
+      "Git",
+      "JavaScript",
+      "HTML",
+      "Docker",
+      "CSS",
+      "Linux"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Code Review",
+      "Unit Testing",
+      "Redis",
+      "PostgreSQL",
+      "Microservices",
+      "Kubernetes",
+      "Python",
+      "Docker",
+      "REST APIs"
+    ],
+    "match_score": 0.222
+  },
+  {
+    "id": 24,
+    "resume_skills": [
+      "Grafana",
+      "Terraform",
+      "Git",
+      "AWS",
+      "Python",
+      "Kubernetes",
+      "Ansible",
+      "CI/CD",
+      "Prometheus",
+      "Docker"
+    ],
+    "jd_title": "Machine Learning Engineer",
+    "jd_skills": [
+      "MLOps",
+      "Docker",
+      "ONNX",
+      "Python",
+      "Model Serving",
+      "Data Pipeline"
+    ],
+    "match_score": 0.333
+  },
+  {
+    "id": 25,
+    "resume_skills": [
+      "JavaScript",
+      "SQL",
+      "HTML"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "A/B Testing",
+      "Agile Scrum",
+      "Competitive Analysis",
+      "User Research",
+      "Roadmap Planning",
+      "JIRA"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 26,
+    "resume_skills": [
+      "Git",
+      "Python",
+      "HTML",
+      "SQL",
+      "CSS"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Java",
+      "Kafka",
+      "REST APIs",
+      "PostgreSQL",
+      "System Design",
+      "gRPC",
+      "Microservices",
+      "Performance Tuning",
+      "OAuth"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 27,
+    "resume_skills": [
+      "JavaScript",
+      "Python",
+      "Git"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "Machine Learning",
+      "Feature Engineering",
+      "Data Visualization",
+      "NLP",
+      "PyTorch",
+      "SQL",
+      "A/B Testing",
+      "Statistical Analysis",
+      "TensorFlow",
+      "Pandas"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 28,
+    "resume_skills": [
+      "Docker",
+      "MySQL",
+      "HTML",
+      "Python",
+      "REST APIs",
+      "Java",
+      "JavaScript",
+      "Git"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Code Review",
+      "Unit Testing",
+      "Redis",
+      "PostgreSQL",
+      "Microservices",
+      "Kubernetes",
+      "Python",
+      "Docker",
+      "REST APIs"
+    ],
+    "match_score": 0.333
+  },
+  {
+    "id": 29,
+    "resume_skills": [
+      "Git",
+      "HTML",
+      "JavaScript",
+      "SQL"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "Next.js",
+      "Redux",
+      "HTML",
+      "Responsive Design",
+      "GraphQL",
+      "TypeScript",
+      "CSS"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 30,
+    "resume_skills": [
+      "Git",
+      "Linux",
+      "Pandas"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Python",
+      "BDD",
+      "API Testing",
+      "Performance Testing",
+      "JMeter",
+      "JIRA",
+      "Cypress"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 31,
+    "resume_skills": [
+      "Git",
+      "CSS",
+      "SQL",
+      "Python",
+      "HTML"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Kafka",
+      "Spring Boot",
+      "CI/CD",
+      "PostgreSQL",
+      "Performance Tuning",
+      "OAuth",
+      "Redis",
+      "REST APIs"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 32,
+    "resume_skills": [
+      "Linux",
+      "Wireshark",
+      "Penetration Testing",
+      "Docker"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Prometheus",
+      "Networking",
+      "AWS",
+      "Grafana",
+      "Jenkins",
+      "Kubernetes",
+      "CI/CD",
+      "Terraform",
+      "Linux",
+      "Ansible"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 33,
+    "resume_skills": [
+      "CI/CD",
+      "Bash",
+      "Git",
+      "Kubernetes",
+      "AWS",
+      "Terraform",
+      "Prometheus",
+      "Docker",
+      "Linux"
+    ],
+    "jd_title": "Machine Learning Engineer",
+    "jd_skills": [
+      "Model Serving",
+      "Kubernetes",
+      "Feature Store",
+      "TensorFlow",
+      "Python",
+      "Docker",
+      "PyTorch",
+      "MLOps"
+    ],
+    "match_score": 0.25
+  },
+  {
+    "id": 34,
+    "resume_skills": [
+      "JavaScript",
+      "Flutter",
+      "REST APIs",
+      "Git",
+      "Firebase",
+      "Android",
+      "Swift",
+      "Kotlin",
+      "React Native"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Spring Boot",
+      "Kafka",
+      "System Design",
+      "Performance Tuning",
+      "Redis",
+      "Python",
+      "CI/CD",
+      "gRPC"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 35,
+    "resume_skills": [
+      "PyTorch",
+      "Data Pipeline",
+      "Git",
+      "Docker",
+      "NLP",
+      "TensorFlow",
+      "Deep Learning",
+      "Linux",
+      "CUDA",
+      "MLOps"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Java",
+      "Docker",
+      "Microservices",
+      "REST APIs",
+      "PostgreSQL",
+      "Go",
+      "Redis",
+      "Python"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 36,
+    "resume_skills": [
+      "HTML",
+      "REST APIs",
+      "Git",
+      "Python",
+      "Docker",
+      "Linux",
+      "Java",
+      "CSS",
+      "MySQL"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "gRPC",
+      "Java",
+      "REST APIs",
+      "Redis",
+      "OAuth",
+      "Docker",
+      "CI/CD"
+    ],
+    "match_score": 0.429
+  },
+  {
+    "id": 37,
+    "resume_skills": [
+      "Git",
+      "Python",
+      "CSS",
+      "HTML",
+      "SQL"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Docker",
+      "Kubernetes",
+      "Microservices",
+      "Go",
+      "Java",
+      "System Design",
+      "CI/CD",
+      "Agile"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 38,
+    "resume_skills": [
+      "HTML",
+      "Docker",
+      "React",
+      "GraphQL",
+      "Git",
+      "Next.js",
+      "TypeScript",
+      "JavaScript",
+      "CSS",
+      "Redux"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Python",
+      "BDD",
+      "API Testing",
+      "Performance Testing",
+      "JMeter",
+      "JIRA",
+      "Cypress"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 39,
+    "resume_skills": [
+      "Ansible",
+      "Docker",
+      "Prometheus",
+      "Terraform",
+      "AWS",
+      "CI/CD",
+      "Linux",
+      "Bash",
+      "Python"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "Statistical Analysis",
+      "NLP",
+      "Python",
+      "PyTorch",
+      "Feature Engineering",
+      "TensorFlow",
+      "Deep Learning"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 40,
+    "resume_skills": [
+      "Linux",
+      "Grafana",
+      "AWS",
+      "Ansible",
+      "Jenkins",
+      "Terraform",
+      "Prometheus",
+      "Kubernetes",
+      "Git",
+      "CI/CD"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "gRPC",
+      "Java",
+      "REST APIs",
+      "Redis",
+      "OAuth",
+      "Docker",
+      "CI/CD"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 41,
+    "resume_skills": [
+      "Firebase",
+      "iOS",
+      "JavaScript",
+      "REST APIs",
+      "Swift",
+      "Git",
+      "React Native",
+      "Android",
+      "Kotlin",
+      "Flutter"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "A/B Testing",
+      "Agile Scrum",
+      "Competitive Analysis",
+      "User Research",
+      "Roadmap Planning",
+      "JIRA"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 42,
+    "resume_skills": [
+      "Git",
+      "JavaScript",
+      "HTML",
+      "Python"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Performance Testing",
+      "Python",
+      "API Testing",
+      "Regression Testing",
+      "Jenkins",
+      "Selenium",
+      "Test Automation",
+      "BDD",
+      "JMeter"
+    ],
+    "match_score": 0.111
+  },
+  {
+    "id": 43,
+    "resume_skills": [
+      "Redis",
+      "Kafka",
+      "CI/CD",
+      "Microservices",
+      "PostgreSQL"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "CSS",
+      "React",
+      "HTML",
+      "Responsive Design",
+      "Performance Optimization",
+      "TypeScript",
+      "Jest",
+      "Next.js",
+      "Redux",
+      "GraphQL"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 44,
+    "resume_skills": [
+      "Wireshark",
+      "OWASP",
+      "Docker",
+      "SIEM",
+      "Python",
+      "Penetration Testing",
+      "Git",
+      "Nmap",
+      "Burp Suite"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "A/B Testing",
+      "Agile Scrum",
+      "Competitive Analysis",
+      "User Research",
+      "Roadmap Planning",
+      "JIRA"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 45,
+    "resume_skills": [
+      "JavaScript",
+      "Git",
+      "CSS",
+      "Python",
+      "SQL",
+      "HTML"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "KPI Definition",
+      "Wireframing",
+      "Agile Scrum",
+      "User Research",
+      "JIRA",
+      "Stakeholder Management",
+      "Data Analysis",
+      "Competitive Analysis",
+      "SQL"
+    ],
+    "match_score": 0.111
+  },
+  {
+    "id": 46,
+    "resume_skills": [
+      "Linux",
+      "PyTorch",
+      "CUDA",
+      "Python",
+      "Git",
+      "MLOps",
+      "TensorFlow",
+      "Deep Learning"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Performance Tuning",
+      "PostgreSQL",
+      "High Availability",
+      "Replication",
+      "Shell Scripting",
+      "Backup Recovery",
+      "Query Optimization",
+      "MongoDB",
+      "Redis"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 47,
+    "resume_skills": [
+      "Terraform",
+      "Bash",
+      "Linux",
+      "CI/CD",
+      "Jenkins",
+      "Git",
+      "Kubernetes",
+      "Prometheus"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Shell Scripting",
+      "Performance Tuning",
+      "Backup Recovery",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Query Optimization",
+      "MySQL"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 48,
+    "resume_skills": [
+      "Python",
+      "Statistical Analysis",
+      "Data Visualization"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Bash",
+      "CI/CD",
+      "Terraform",
+      "Jenkins",
+      "Ansible",
+      "Linux",
+      "AWS"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 49,
+    "resume_skills": [
+      "Git",
+      "Android",
+      "JavaScript"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Selenium",
+      "Cypress",
+      "API Testing",
+      "SQL",
+      "Regression Testing",
+      "TDD",
+      "BDD"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 50,
+    "resume_skills": [
+      "Git",
+      "CUDA",
+      "PyTorch",
+      "TensorFlow",
+      "Docker",
+      "Kubernetes",
+      "Linux",
+      "NLP"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Query Optimization",
+      "Performance Tuning",
+      "MongoDB",
+      "MySQL",
+      "PostgreSQL",
+      "High Availability",
+      "Backup Recovery"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 51,
+    "resume_skills": [
+      "Responsive Design",
+      "React",
+      "TypeScript",
+      "Next.js",
+      "Git",
+      "CSS",
+      "Docker",
+      "GraphQL",
+      "Redux",
+      "JavaScript"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Kafka",
+      "Spring Boot",
+      "CI/CD",
+      "PostgreSQL",
+      "Performance Tuning",
+      "OAuth",
+      "Redis",
+      "REST APIs"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 52,
+    "resume_skills": [
+      "HTML",
+      "Git",
+      "Responsive Design",
+      "Next.js",
+      "Docker",
+      "Redux",
+      "React",
+      "CSS",
+      "GraphQL",
+      "TypeScript"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Data Visualization",
+      "SQL",
+      "Deep Learning",
+      "Pandas",
+      "NLP",
+      "PyTorch",
+      "Statistical Analysis",
+      "Feature Engineering",
+      "TensorFlow"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 53,
+    "resume_skills": [
+      "Prometheus",
+      "Linux",
+      "Git"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "A/B Testing",
+      "Roadmap Planning",
+      "Wireframing",
+      "User Research",
+      "Stakeholder Management",
+      "JIRA",
+      "Competitive Analysis",
+      "Agile Scrum",
+      "Data Analysis",
+      "SQL"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 54,
+    "resume_skills": [
+      "Git",
+      "SQL",
+      "Python",
+      "CSS",
+      "JavaScript",
+      "HTML"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Data Visualization",
+      "SQL",
+      "Deep Learning",
+      "Pandas",
+      "NLP",
+      "PyTorch",
+      "Statistical Analysis",
+      "Feature Engineering",
+      "TensorFlow"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 55,
+    "resume_skills": [
+      "Machine Learning",
+      "Deep Learning",
+      "TensorFlow",
+      "NLP",
+      "Linux",
+      "Data Visualization",
+      "Python",
+      "Docker",
+      "SQL"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "CSS",
+      "React",
+      "HTML",
+      "Responsive Design",
+      "Performance Optimization",
+      "TypeScript",
+      "Jest",
+      "Next.js",
+      "Redux",
+      "GraphQL"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 56,
+    "resume_skills": [
+      "Kotlin",
+      "Flutter",
+      "iOS"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Docker",
+      "Spring Boot",
+      "Redis",
+      "Microservices",
+      "Python",
+      "OAuth"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 57,
+    "resume_skills": [
+      "Kubernetes",
+      "CI/CD",
+      "Python",
+      "Ansible",
+      "Prometheus",
+      "Jenkins",
+      "Git",
+      "AWS",
+      "Bash"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "VPN",
+      "GCP",
+      "AWS",
+      "Kubernetes",
+      "Auto Scaling",
+      "Serverless"
+    ],
+    "match_score": 0.333
+  },
+  {
+    "id": 58,
+    "resume_skills": [
+      "HTML",
+      "JavaScript",
+      "Git"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Machine Learning",
+      "Deep Learning",
+      "Data Visualization",
+      "Feature Engineering",
+      "TensorFlow",
+      "NLP"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 59,
+    "resume_skills": [
+      "Pandas",
+      "NLP",
+      "Machine Learning",
+      "SQL",
+      "Deep Learning",
+      "Data Visualization",
+      "Statistical Analysis",
+      "Docker",
+      "Python"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Serverless",
+      "Load Balancing",
+      "GCP",
+      "Kubernetes",
+      "Cost Optimization",
+      "IAM",
+      "Auto Scaling",
+      "Security Groups"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 60,
+    "resume_skills": [
+      "Linux",
+      "Prometheus",
+      "Ansible",
+      "Git"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Redis",
+      "Query Optimization",
+      "Linux",
+      "PostgreSQL",
+      "Shell Scripting",
+      "Replication"
+    ],
+    "match_score": 0.167
+  },
+  {
+    "id": 61,
+    "resume_skills": [
+      "HTML",
+      "CSS",
+      "Python",
+      "JavaScript",
+      "SQL",
+      "Git"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Cypress",
+      "API Testing",
+      "JMeter",
+      "Regression Testing",
+      "JIRA",
+      "Python"
+    ],
+    "match_score": 0.167
+  },
+  {
+    "id": 62,
+    "resume_skills": [
+      "Docker",
+      "CSS",
+      "Python"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "PostgreSQL",
+      "REST APIs",
+      "CI/CD",
+      "Code Review",
+      "Docker",
+      "Git",
+      "System Design"
+    ],
+    "match_score": 0.143
+  },
+  {
+    "id": 63,
+    "resume_skills": [
+      "Git",
+      "CSS",
+      "Python",
+      "Docker",
+      "HTML",
+      "JavaScript",
+      "MySQL"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Networking",
+      "Linux",
+      "Prometheus",
+      "Jenkins",
+      "Terraform",
+      "Security",
+      "Ansible"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 64,
+    "resume_skills": [
+      "Burp Suite",
+      "Python",
+      "Penetration Testing",
+      "Wireshark",
+      "Firewall",
+      "Linux",
+      "Nmap",
+      "SIEM",
+      "Docker",
+      "OWASP"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Data Visualization",
+      "SQL",
+      "Deep Learning",
+      "Pandas",
+      "NLP",
+      "PyTorch",
+      "Statistical Analysis",
+      "Feature Engineering",
+      "TensorFlow"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 65,
+    "resume_skills": [
+      "REST APIs",
+      "JavaScript",
+      "React Native",
+      "iOS",
+      "Android",
+      "Firebase",
+      "Flutter"
+    ],
+    "jd_title": "Mobile Developer",
+    "jd_skills": [
+      "REST APIs",
+      "iOS",
+      "Swift",
+      "Firebase",
+      "Flutter",
+      "Mobile UI Design",
+      "Push Notifications",
+      "React Native"
+    ],
+    "match_score": 0.625
+  },
+  {
+    "id": 66,
+    "resume_skills": [
+      "Git",
+      "Docker",
+      "CSS"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "Data Visualization",
+      "Python",
+      "Feature Engineering",
+      "Pandas",
+      "Deep Learning",
+      "Statistical Analysis",
+      "TensorFlow"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 67,
+    "resume_skills": [
+      "Docker",
+      "Redux",
+      "Next.js"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Security Groups",
+      "Auto Scaling",
+      "Azure",
+      "Serverless",
+      "VPN",
+      "GCP",
+      "Kubernetes",
+      "Load Balancing",
+      "AWS",
+      "Docker"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 68,
+    "resume_skills": [
+      "HTML",
+      "Git",
+      "CSS",
+      "JavaScript",
+      "SQL"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Python",
+      "Ansible",
+      "Kubernetes",
+      "Jenkins",
+      "Prometheus",
+      "Security",
+      "Terraform",
+      "Docker"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 69,
+    "resume_skills": [
+      "Git",
+      "JavaScript",
+      "Android",
+      "iOS",
+      "Flutter",
+      "Swift"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "gRPC",
+      "Java",
+      "REST APIs",
+      "Redis",
+      "OAuth",
+      "Docker",
+      "CI/CD"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 70,
+    "resume_skills": [
+      "Linux",
+      "Java",
+      "HTML"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "Roadmap Planning",
+      "SQL",
+      "User Research",
+      "Competitive Analysis",
+      "A/B Testing",
+      "Stakeholder Management",
+      "KPI Definition",
+      "Wireframing",
+      "Agile Scrum",
+      "Data Analysis"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 71,
+    "resume_skills": [
+      "System Design",
+      "Microservices",
+      "Python"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Auto Scaling",
+      "Kubernetes",
+      "GCP",
+      "Load Balancing",
+      "AWS",
+      "Cost Optimization",
+      "VPN",
+      "IAM",
+      "Docker",
+      "Azure"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 72,
+    "resume_skills": [
+      "AWS",
+      "Grafana",
+      "Jenkins",
+      "Prometheus",
+      "Ansible",
+      "Git",
+      "Docker",
+      "Linux"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Python",
+      "Docker",
+      "CI/CD",
+      "Agile",
+      "Microservices",
+      "Kubernetes",
+      "REST APIs",
+      "Code Review"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 73,
+    "resume_skills": [
+      "Android",
+      "Swift",
+      "Git",
+      "REST APIs",
+      "Flutter",
+      "iOS",
+      "JavaScript"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Backup Recovery",
+      "PostgreSQL",
+      "Performance Tuning",
+      "Redis",
+      "Replication",
+      "MySQL",
+      "High Availability",
+      "Linux"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 74,
+    "resume_skills": [
+      "Python",
+      "NLP",
+      "Git",
+      "Machine Learning",
+      "Deep Learning"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Docker",
+      "VPN",
+      "Load Balancing",
+      "Serverless",
+      "Kubernetes",
+      "Cost Optimization"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 75,
+    "resume_skills": [
+      "CI/CD",
+      "Docker",
+      "Linux",
+      "AWS",
+      "Git",
+      "Bash"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Jenkins",
+      "BDD",
+      "Cypress",
+      "JMeter",
+      "Regression Testing",
+      "SQL",
+      "Performance Testing",
+      "API Testing"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 76,
+    "resume_skills": [
+      "CSS",
+      "Git",
+      "HTML"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Kafka",
+      "Spring Boot",
+      "CI/CD",
+      "PostgreSQL",
+      "Performance Tuning",
+      "OAuth",
+      "Redis",
+      "REST APIs"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 77,
+    "resume_skills": [
+      "HTML",
+      "CSS",
+      "SQL",
+      "Python",
+      "Git"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "HTML",
+      "GraphQL",
+      "Webpack",
+      "React",
+      "Performance Optimization",
+      "Responsive Design",
+      "JavaScript",
+      "Next.js",
+      "TypeScript",
+      "Redux"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 78,
+    "resume_skills": [
+      "CSS",
+      "HTML",
+      "Git",
+      "JavaScript"
+    ],
+    "jd_title": "Mobile Developer",
+    "jd_skills": [
+      "REST APIs",
+      "iOS",
+      "Swift",
+      "Firebase",
+      "Flutter",
+      "Mobile UI Design",
+      "Push Notifications",
+      "React Native"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 79,
+    "resume_skills": [
+      "Code Review",
+      "Java",
+      "Agile",
+      "CI/CD",
+      "System Design",
+      "Redis",
+      "Kubernetes",
+      "Docker",
+      "Kafka",
+      "Python"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Shell Scripting",
+      "Performance Tuning",
+      "Backup Recovery",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Query Optimization",
+      "MySQL"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 80,
+    "resume_skills": [
+      "Data Visualization",
+      "Pandas",
+      "SQL",
+      "Python",
+      "Machine Learning",
+      "TensorFlow"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "HTML",
+      "GraphQL",
+      "Webpack",
+      "React",
+      "Performance Optimization",
+      "Responsive Design",
+      "JavaScript",
+      "Next.js",
+      "TypeScript",
+      "Redux"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 81,
+    "resume_skills": [
+      "TypeScript",
+      "Jest",
+      "Git",
+      "GraphQL",
+      "Docker",
+      "Next.js",
+      "CSS",
+      "JavaScript",
+      "React"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Docker",
+      "Spring Boot",
+      "Redis",
+      "Microservices",
+      "Python",
+      "OAuth"
+    ],
+    "match_score": 0.167
+  },
+  {
+    "id": 82,
+    "resume_skills": [
+      "OWASP",
+      "Firewall",
+      "Docker",
+      "Penetration Testing",
+      "SIEM",
+      "Burp Suite",
+      "Wireshark",
+      "Nmap",
+      "Linux"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Backup Recovery",
+      "PostgreSQL",
+      "Performance Tuning",
+      "Redis",
+      "Replication",
+      "MySQL",
+      "High Availability",
+      "Linux"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 83,
+    "resume_skills": [
+      "Data Pipeline",
+      "Linux",
+      "Python",
+      "NLP",
+      "TensorFlow",
+      "MLOps",
+      "PyTorch",
+      "Kubernetes"
+    ],
+    "jd_title": "Security Engineer",
+    "jd_skills": [
+      "Firewall",
+      "Python",
+      "Wireshark",
+      "Risk Assessment",
+      "Penetration Testing",
+      "Linux",
+      "Cryptography",
+      "SIEM",
+      "IDS/IPS",
+      "OWASP"
+    ],
+    "match_score": 0.2
+  },
+  {
+    "id": 84,
+    "resume_skills": [
+      "HTML",
+      "Docker",
+      "React",
+      "JavaScript",
+      "Redux"
+    ],
+    "jd_title": "Machine Learning Engineer",
+    "jd_skills": [
+      "Docker",
+      "Model Serving",
+      "PyTorch",
+      "ONNX",
+      "CUDA",
+      "Data Pipeline",
+      "Python",
+      "Feature Store",
+      "Distributed Training"
+    ],
+    "match_score": 0.111
+  },
+  {
+    "id": 85,
+    "resume_skills": [
+      "Deep Learning",
+      "Data Visualization",
+      "NLP",
+      "Linux",
+      "Statistical Analysis",
+      "Git"
+    ],
+    "jd_title": "Backend Developer",
+    "jd_skills": [
+      "Docker",
+      "Spring Boot",
+      "Redis",
+      "Microservices",
+      "Python",
+      "OAuth"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 86,
+    "resume_skills": [
+      "TensorFlow",
+      "Pandas",
+      "Data Visualization",
+      "Docker",
+      "SQL",
+      "Machine Learning",
+      "Deep Learning",
+      "Statistical Analysis",
+      "NLP"
+    ],
+    "jd_title": "Product Manager",
+    "jd_skills": [
+      "A/B Testing",
+      "Roadmap Planning",
+      "Wireframing",
+      "User Research",
+      "Stakeholder Management",
+      "JIRA",
+      "Competitive Analysis",
+      "Agile Scrum",
+      "Data Analysis",
+      "SQL"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 87,
+    "resume_skills": [
+      "NLP",
+      "Git",
+      "Pandas",
+      "Data Visualization",
+      "SQL"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "TypeScript",
+      "JavaScript",
+      "Redux",
+      "Webpack",
+      "CSS",
+      "GraphQL",
+      "Responsive Design",
+      "React",
+      "Performance Optimization",
+      "Next.js"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 88,
+    "resume_skills": [
+      "Kubernetes",
+      "Java",
+      "Go",
+      "Kafka",
+      "Docker",
+      "PostgreSQL",
+      "Redis",
+      "Code Review"
+    ],
+    "jd_title": "Frontend Developer",
+    "jd_skills": [
+      "HTML",
+      "GraphQL",
+      "Webpack",
+      "React",
+      "Performance Optimization",
+      "Responsive Design",
+      "JavaScript",
+      "Next.js",
+      "TypeScript",
+      "Redux"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 89,
+    "resume_skills": [
+      "Bash",
+      "Kubernetes",
+      "Grafana",
+      "Git",
+      "Ansible",
+      "Prometheus",
+      "AWS",
+      "Docker",
+      "Terraform",
+      "Linux"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Microservices",
+      "Agile",
+      "Code Review",
+      "Java",
+      "Docker",
+      "Git"
+    ],
+    "match_score": 0.333
+  },
+  {
+    "id": 90,
+    "resume_skills": [
+      "Responsive Design",
+      "Next.js",
+      "Docker",
+      "React",
+      "Git",
+      "GraphQL",
+      "Redux",
+      "HTML",
+      "CSS"
+    ],
+    "jd_title": "Machine Learning Engineer",
+    "jd_skills": [
+      "Model Serving",
+      "Kubernetes",
+      "Feature Store",
+      "TensorFlow",
+      "Python",
+      "Docker",
+      "PyTorch",
+      "MLOps"
+    ],
+    "match_score": 0.125
+  },
+  {
+    "id": 91,
+    "resume_skills": [
+      "JavaScript",
+      "CSS",
+      "HTML",
+      "SQL",
+      "Git",
+      "Python"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "A/B Testing",
+      "Data Visualization",
+      "SQL",
+      "Deep Learning",
+      "Pandas",
+      "NLP",
+      "PyTorch",
+      "Statistical Analysis",
+      "Feature Engineering",
+      "TensorFlow"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 92,
+    "resume_skills": [
+      "OWASP",
+      "SIEM",
+      "Firewall",
+      "Wireshark"
+    ],
+    "jd_title": "Database Administrator",
+    "jd_skills": [
+      "Performance Tuning",
+      "PostgreSQL",
+      "High Availability",
+      "Replication",
+      "Shell Scripting",
+      "Backup Recovery",
+      "Query Optimization",
+      "MongoDB",
+      "Redis"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 93,
+    "resume_skills": [
+      "JavaScript",
+      "SQL",
+      "HTML",
+      "Python"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Python",
+      "Regression Testing",
+      "SQL",
+      "Test Automation",
+      "Selenium",
+      "TDD",
+      "Jenkins"
+    ],
+    "match_score": 0.286
+  },
+  {
+    "id": 94,
+    "resume_skills": [
+      "Git",
+      "CSS",
+      "JavaScript",
+      "HTML",
+      "SQL",
+      "Python"
+    ],
+    "jd_title": "DevOps Engineer",
+    "jd_skills": [
+      "Networking",
+      "Linux",
+      "Prometheus",
+      "Jenkins",
+      "Terraform",
+      "Security",
+      "Ansible"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 95,
+    "resume_skills": [
+      "Git",
+      "Redux",
+      "React",
+      "Next.js",
+      "Jest"
+    ],
+    "jd_title": "Data Scientist",
+    "jd_skills": [
+      "Machine Learning",
+      "Feature Engineering",
+      "Data Visualization",
+      "NLP",
+      "PyTorch",
+      "SQL",
+      "A/B Testing",
+      "Statistical Analysis",
+      "TensorFlow",
+      "Pandas"
+    ],
+    "match_score": 0.0
+  },
+  {
+    "id": 96,
+    "resume_skills": [
+      "Java",
+      "System Design",
+      "Kubernetes"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Auto Scaling",
+      "Kubernetes",
+      "GCP",
+      "Load Balancing",
+      "AWS",
+      "Cost Optimization",
+      "VPN",
+      "IAM",
+      "Docker",
+      "Azure"
+    ],
+    "match_score": 0.1
+  },
+  {
+    "id": 97,
+    "resume_skills": [
+      "SIEM",
+      "Python",
+      "Git",
+      "Firewall"
+    ],
+    "jd_title": "QA Engineer",
+    "jd_skills": [
+      "Cypress",
+      "API Testing",
+      "JMeter",
+      "Regression Testing",
+      "JIRA",
+      "Python"
+    ],
+    "match_score": 0.167
+  },
+  {
+    "id": 98,
+    "resume_skills": [
+      "Linux",
+      "Kubernetes",
+      "Data Pipeline",
+      "PyTorch"
+    ],
+    "jd_title": "Software Engineer",
+    "jd_skills": [
+      "Code Review",
+      "Unit Testing",
+      "Redis",
+      "PostgreSQL",
+      "Microservices",
+      "Kubernetes",
+      "Python",
+      "Docker",
+      "REST APIs"
+    ],
+    "match_score": 0.111
+  },
+  {
+    "id": 99,
+    "resume_skills": [
+      "Git",
+      "Android",
+      "Flutter",
+      "iOS",
+      "Firebase",
+      "Kotlin"
+    ],
+    "jd_title": "Mobile Developer",
+    "jd_skills": [
+      "Kotlin",
+      "Flutter",
+      "App Store",
+      "Android",
+      "iOS",
+      "Core Data",
+      "Firebase",
+      "Mobile UI Design",
+      "REST APIs",
+      "Swift"
+    ],
+    "match_score": 0.5
+  },
+  {
+    "id": 100,
+    "resume_skills": [
+      "JavaScript",
+      "CSS",
+      "HTML"
+    ],
+    "jd_title": "Cloud Architect",
+    "jd_skills": [
+      "Azure",
+      "Security Groups",
+      "Auto Scaling",
+      "IAM",
+      "VPN",
+      "Load Balancing",
+      "GCP"
+    ],
+    "match_score": 0.0
+  }
+]

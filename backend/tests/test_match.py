@@ -89,7 +89,7 @@ def evaluate_split(split_data, split_name, verbose=False):
     对一组 (jd, answer) 跑匹配分析，计算 P/R/F1
     用"技能提取准确率"作为代理指标
     """
-    from match_analyzer import extract_profile_features
+    from services.match_analyzer import extract_profile_features
 
     total_tp, total_fp, total_fn = 0, 0, 0
     per_jd_results = []

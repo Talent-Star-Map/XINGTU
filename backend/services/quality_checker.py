@@ -65,37 +65,36 @@ def cross_validate(skills_per_source: list[tuple[str, list[str]]]) -> dict:
 
 def score_skills(extracted: list[str], source_text: str, method: str = 'rule_based') -> list[dict]:
     """
-    为每个提取的技能打分
+    为每个提取的技能打分（证据驱动，对齐幻觉防控设计）
+    规则：有原文证据是"已验证"的硬前提；无证据的提取最多 0.3，永远标记待确认并带幻觉风险。
     method: 'rule_based' | 'llm'
     """
     results = []
     text_lower = source_text.lower()
     for skill in extracted:
         s = skill.strip()
-        score = 0.5  # 基础分
+        matched = s.lower() in text_lower
 
-        # 直接命中 +0.3
-        if s.lower() in text_lower:
-            score += 0.3
-
-        # 多词技能 +0.1（如"Spring Boot"比"Java"更具体）
-        if ' ' in s or len(s) > 6:
-            score += 0.1
-
-        # LLM 提取 +0.15
-        if method == 'llm':
-            score += 0.15
-
-        # 常见技能加权（在种子数据中出现过的技能更可信）
-        if is_common_skill(s):
-            score += 0.05
+        if matched:
+            # 有原文证据：基础 0.7，附加因子封顶 1.0
+            score = 0.7
+            if method == 'llm':
+                score += 0.15
+            if ' ' in s or len(s) > 6:
+                score += 0.1
+            if is_common_skill(s):
+                score += 0.05
+        else:
+            # 无原文证据：幻觉风险，封顶 0.3，永不"已验证"
+            score = 0.3 if method == 'llm' else 0.1
 
         score = min(score, 1.0)
         results.append({
             'skill': s,
             'confidence': round(score, 2),
-            'status': 'verified' if score >= 0.7 else 'unconfirmed',
-            'matched_in_text': s.lower() in text_lower,
+            'status': 'verified' if (matched and score >= 0.7) else 'unconfirmed',
+            'matched_in_text': matched,
+            'hallucination_risk': not matched,
         })
     return results
 
@@ -223,7 +222,7 @@ def full_quality_report(jobs: list[dict], skills_per_source: list[tuple[str, lis
             'total_skills': total_skills,
             'verified': verified_count,
             'unconfirmed': unconfirmed_count,
-            'high_confidence': total_skills - verified_count - unconfirmed_count,
+            'high_confidence': sum(1 for v in cross.values() if v['confidence'] >= 0.7),
             'avg_confidence': round(avg_confidence, 2),
             'details': cross,
         },
@@ -236,9 +235,11 @@ def full_quality_report(jobs: list[dict], skills_per_source: list[tuple[str, lis
             'jobs': inflation,
         },
         'accuracy_estimate': {
-            'jd_parse': round(avg_confidence * 100, 1),
-            'resume_extract': round(avg_confidence * 100, 1),
-            'method': 'DeepSeek大模型 + 多源交叉验证',
-            'note': '基于DeepSeek语义提取+交叉验证。正式评分需≥100条人工标注JD测试数据',
+            'jd_parse': None,
+            'resume_extract': None,
+            'match_accuracy': None,
+            'method': '待运行实测',
+            'note': '三项硬指标以 accuracy-test / resume-test / match-test 实测为准；'
+                    'accuracy_estimate 不再给出未经实测的估算值，避免误导',
         },
     }
