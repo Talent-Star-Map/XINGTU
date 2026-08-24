@@ -38,7 +38,7 @@ services:
     build: ./frontend
     container_name: xingtu-frontend
     ports:
-      - "3001:80"
+      - "3000:80"
     depends_on:
       - api
     restart: unless-stopped
