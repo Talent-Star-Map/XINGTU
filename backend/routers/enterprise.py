@@ -22,7 +22,12 @@ from database import get_session, Job, Jobseeker, MatchRecord, Message
 from sqlalchemy import func as _func
 from services.deerflow_compare import run_deep_compare
 # services 模块已迁移到 services/ 子目录
-from services.match_engine import run_match_batch
+from services.match_engine import (
+    run_match_batch,
+    calibrate_weights_from_feedback,
+    get_active_weights,
+    WEIGHTS,
+)
 
 router = APIRouter(prefix='/api/enterprise', tags=['enterprise'])
 
@@ -181,6 +186,40 @@ def trigger_match():
         }
     except Exception as e:
         return _err('MATCH_ENGINE_ERROR', f'匹配引擎执行失败: {e}')
+
+
+@router.get('/match-weights')
+def get_match_weights():
+    """
+    查看当前匹配权重 — 返回默认权重与当前生效权重（反馈校准后两者可能不同）。
+    """
+    return {
+        'success': True,
+        'data': {
+            'active': get_active_weights(),        # 当前生效（校准后的学习值）
+            'default': dict(WEIGHTS),              # 代码内置默认值
+        },
+        'message': '当前五维匹配权重',
+    }
+
+
+@router.post('/calibrate')
+def calibrate_match_weights():
+    """
+    反馈闭环校准 — 从 HR 的 accept/reject 历史数据学习五维权重（维度区分度法）。
+
+    逻辑:
+        1. 统计 accepted / rejected 两组在各维度的平均分差（区分度）
+        2. 分差大的维度权重上调，分差小的下调，学习率 λ=0.3
+        3. 样本不足（两类各 <6 条）时不校准，返回当前权重
+
+    校准成功后建议重新执行 POST /api/enterprise/run-match 让新权重生效到分数。
+    """
+    try:
+        result = calibrate_weights_from_feedback()
+        return {'success': True, 'data': result, 'message': result['message']}
+    except Exception as e:
+        return _err('CALIBRATE_ERROR', f'权重校准失败: {e}')
 
 
 class CompareReq(BaseModel):
