@@ -22,11 +22,13 @@ services:
   api:
     build: ./backend
     container_name: xingtu-api
+    env_file:
+      - ./backend/.env
     ports:
       - "8081:8081"
     # 注意:不再 depends_on mysql — 直连云库 180.76.227.159:3308
-    # DATABASE_URL / JWT_SECRET / FRONTEND_BASE_URL 全部从 backend/.env 读
-    # (Dockerfile 已 COPY . . 把 .env 拷进容器)
+    # DATABASE_URL / JWT_SECRET 等从 backend/.env 读取（运行时通过 env_file 注入，
+    # 不受 backend/.dockerignore 排除 .env 的影响）
     environment:
       # 简历导出 — Playwright 通过容器内 frontend 域名访问前端
       FRONTEND_BASE_URL: http://frontend
