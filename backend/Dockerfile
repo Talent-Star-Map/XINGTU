@@ -1,11 +1,10 @@
 FROM python:3.12-slim
 
-# apt 换国内镜像源（服务器在百度云，走其内网镜像快且免流）。
-# 若在云外构建报错，将两处域名换成 mirrors.aliyun.com。
+# apt 换阿里云公共镜像源（国内各云均可访问，速度快）
 # 兼容 deb822 格式(trixie 的 debian.sources)与旧版 sources.list
 RUN for f in /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list; do \
       if [ -f "$f" ]; then \
-        sed -i 's@deb.debian.org@mirrors.baidubce.com@g; s@security.debian.org@mirrors.baidubce.com@g' "$f"; \
+        sed -i 's@deb.debian.org@mirrors.aliyun.com@g; s@security.debian.org@mirrors.aliyun.com@g' "$f"; \
       fi; \
     done
 
