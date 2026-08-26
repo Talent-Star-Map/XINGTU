@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
 
-type Page = 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'learning' | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'diagnosis' | 'job-detail'
+type Page = 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'learning' | 'trend' | 'profile-home' | 'quality' | 'diagnosis' | 'job-detail'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -18,7 +18,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
 ]
 
 import JSDashboard from '../pages/jobseeker/Dashboard'
-import JSSkillGraph from '../pages/jobseeker/SkillGraph'
+import JSJobGraphPage from '../pages/jobseeker/JobGraphPage'
 import JSResume from '../pages/jobseeker/Resume'
 import JSResumeCenter from '../pages/jobseeker/ResumeCenter'
 import JSMatch from '../pages/jobseeker/JobMatch'
@@ -27,14 +27,13 @@ import JSJobDetail from '../pages/jobseeker/JobDetail'
 import JSLearning from '../pages/jobseeker/LearningPath'
 import JSTrend from '../pages/jobseeker/Trend'
 import JSProfileHome from '../pages/jobseeker/ProfileHome'
-import JSMySkillGraph from '../pages/jobseeker/MySkillGraphPage'
 import QualityDashboard from '../pages/enterprise/QualityDashboard'
 import TutuChat from './TutuChat'
 
-const pages: Record<Page, () => ReactNode> = {
-  dashboard: JSDashboard, 'skill-graph': JSSkillGraph,
+const pages: Record<Page, () => JSX.Element> = {
+  dashboard: JSDashboard, 'skill-graph': JSJobGraphPage,
   resume: JSResume, 'resume-center': JSResumeCenter, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
-  'profile-home': JSProfileHome, 'my-skill-graph': JSMySkillGraph, quality: QualityDashboard,
+  'profile-home': JSProfileHome, quality: QualityDashboard,
 }
 
 interface Props { onLogout: () => void }
@@ -138,8 +137,8 @@ export default function JobseekerShell({ onLogout }: Props) {
           </div>
         </div>
       </header>
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-[1440px] mx-auto">
+      <main className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-[1440px] mx-auto h-full">
           <LearningProvider>
             <JSNav.Provider value={{ setPage, page }}>
               <PageComp />

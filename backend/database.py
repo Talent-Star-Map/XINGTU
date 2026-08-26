@@ -418,3 +418,106 @@ def verify_token(token):
     try: return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
     except jwt.ExpiredSignatureError: raise ValueError('登录已过期')
     except jwt.InvalidTokenError: raise ValueError('无效的登录凭证')
+
+
+# ────────────────────────────────────────────────────────────────
+# Neo4j 知识图谱驱动（岗位为主体）
+# ────────────────────────────────────────────────────────────────
+_NEO4J_DRIVER = None
+
+def get_neo4j_uri() -> str:
+    return os.getenv('NEO4J_URI', 'bolt://localhost:7687')
+
+def get_neo4j_auth() -> tuple:
+    return (
+        os.getenv('NEO4J_USER', 'neo4j'),
+        os.getenv('NEO4J_PASSWORD', 'Xingtu123'),
+    )
+
+def get_neo4j_database() -> str:
+    return os.getenv('NEO4J_DATABASE', 'neo4j')
+
+
+def get_neo4j_driver():
+    """同步 Bolt 驱动。脚本和阻塞调用使用。"""
+    global _NEO4J_DRIVER
+    if _NEO4J_DRIVER is None:
+        from neo4j import GraphDatabase
+        _NEO4J_DRIVER = GraphDatabase.driver(
+            get_neo4j_uri(),
+            auth=get_neo4j_auth(),
+            max_connection_lifetime=3600,
+        )
+    return _NEO4J_DRIVER
+
+
+def close_neo4j():
+    global _NEO4J_DRIVER
+    if _NEO4J_DRIVER is not None:
+        _NEO4J_DRIVER.close()
+        _NEO4J_DRIVER = None
+
+
+# ────────────────────────────────────────────────────────────────
+# LangChain LLM / Embeddings 单例（按需懒加载）
+# ────────────────────────────────────────────────────────────────
+_LLM_STRONG = None
+_LLM_FAST = None
+_OPENAI_EMBED = None
+
+
+def get_llm_strong():
+    """强档 LLM（归因 / Reporter / 决策建议）。优先 DeepSeek，fallback OpenAI。"""
+    global _LLM_STRONG
+    if _LLM_STRONG is None:
+        from langchain_openai import ChatOpenAI
+        api_key = os.getenv('DEEPSEEK_API_KEY') or os.getenv('OPENAI_API_KEY')
+        base_url = os.getenv('DEEPSEEK_BASE_URL') or os.getenv('OPENAI_BASE_URL')
+        model = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
+        if not api_key or api_key.startswith('你的'):
+            raise RuntimeError('LLM 未配置：请在 .env 设置 DEEPSEEK_API_KEY 或 OPENAI_API_KEY')
+        _LLM_STRONG = ChatOpenAI(
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            temperature=0.3,
+            streaming=True,
+        )
+    return _LLM_STRONG
+
+
+def get_llm_fast():
+    """快档 LLM（clarifier / task decomposer 等短推理）。"""
+    global _LLM_FAST
+    if _LLM_FAST is None:
+        from langchain_openai import ChatOpenAI
+        api_key = os.getenv('DEEPSEEK_API_KEY') or os.getenv('OPENAI_API_KEY')
+        base_url = os.getenv('DEEPSEEK_BASE_URL') or os.getenv('OPENAI_BASE_URL')
+        model = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
+        if not api_key or api_key.startswith('你的'):
+            raise RuntimeError('LLM 未配置：请在 .env 设置 DEEPSEEK_API_KEY 或 OPENAI_API_KEY')
+        _LLM_FAST = ChatOpenAI(
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            temperature=0.0,
+            streaming=False,
+        )
+    return _LLM_FAST
+
+
+def get_openai_embeddings():
+    """OpenAI text-embedding-3-small 1536 维。"""
+    global _OPENAI_EMBED
+    if _OPENAI_EMBED is None:
+        from langchain_openai import OpenAIEmbeddings
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key or api_key.startswith('你的'):
+            raise RuntimeError('Embedding 未配置：请在 .env 设置 OPENAI_API_KEY')
+        _OPENAI_EMBED = OpenAIEmbeddings(
+            model=os.getenv('OPENAI_EMBED_MODEL', 'text-embedding-3-small'),
+            api_key=api_key,
+            base_url=os.getenv('OPENAI_BASE_URL'),
+            dimensions=1536,
+        )
+    return _OPENAI_EMBED
