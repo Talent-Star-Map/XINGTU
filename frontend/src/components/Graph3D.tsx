@@ -1,3 +1,7 @@
+/**
+ * @deprecated 已被 JobGraphPage + components/kg/JobGraphCanvas 取代。
+ * 保留此文件以便回滚,新版稳定后清理。
+ */
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
