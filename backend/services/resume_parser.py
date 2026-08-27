@@ -122,12 +122,13 @@ def rule_based_extract(text: str) -> dict:
             break
 
     # 学校
-    m = re.search(r'(?:学校|院校|毕业院校|大学)[：:\s]*(\S{2,20})', text)
+    m = re.search(r'(?:学校|院校|毕业院校|大学)[：:]*[ \t]*(\S{2,20})', text)
     if m:
         result['school'] = m.group(1)
     elif '大学' in text:
         m = re.search(r'(\S{2,15}大学)', text)
-        if m: result['school'] = m.group(1)
+        if m:
+            result['school'] = re.sub(r'^(毕业于|就读于|来自)', '', m.group(1))
 
     # 期望岗位
     for pat in [r'(?:目标岗位|期望岗位|应聘岗位|求职意向)[：:]\s*(\S{2,30})', r'(?:应聘|求职)[：:]\s*(\S{2,20})']:
