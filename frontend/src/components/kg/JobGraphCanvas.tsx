@@ -224,8 +224,8 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
     const R_SKILL = 70
     const R_OTHER = 50
 
+    // ── 计算位置(Fibonacci 球面分布) ──
     const place = (n: GraphNode, i: number, total: number, R: number) => {
-      // 单位球面 → 缩放到 R
       const u = fibonacciSphere(i, total)
       return new THREE.Vector3(u.x * R, u.y * R, u.z * R)
     }
