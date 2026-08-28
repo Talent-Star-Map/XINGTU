@@ -47,6 +47,24 @@ def extract_text(path: str) -> str:
     return ''
 
 
+def _kw_hit(keyword: str, text_lower: str) -> bool:
+    """判断技能关键词是否命中文本。
+
+    ASCII 词条用词边界匹配（re.escape 保留 . / + 等字面量），避免
+    `Java` 命中 `JavaScript`、`Gin` 命中 `Engine`、`Go` 命中 `Google`。
+    中文词条无词边界概念，仍用子串匹配。
+    """
+    kw = keyword.lower()
+    if not kw or not kw.isascii():
+        return kw in text_lower
+    # 首尾非字母数字的词条（如 `C++`）无法套词边界，退化为子串匹配
+    if not kw[0].isalnum() or not kw[-1].isalnum():
+        return kw in text_lower
+    return re.search(
+        r'(?<![a-z0-9])' + re.escape(kw) + r'(?![a-z0-9])', text_lower
+    ) is not None
+
+
 def rule_based_extract(text: str) -> dict:
     """基于正则的快速提取，作为大模型解析的fallback"""
     result = {
@@ -100,19 +118,40 @@ def rule_based_extract(text: str) -> dict:
         'Presto', 'Trino', 'Superset',
         # 云原生/DevOps
         'Docker', 'Kubernetes', 'K8s', 'CI/CD', 'Jenkins', 'Terraform', 'Nginx',
-        'Linux', 'AWS', '阿里云', '腾讯云', 'Serverless', 'GitLab', 'ArgoCD',
+        'Linux', 'AWS', '阿里云', '腾讯云', '华为云', 'Serverless', 'GitLab', 'ArgoCD',
         'Prometheus', 'Grafana', 'Istio', 'Consul', 'Vault', 'Ansible', 'Vagrant',
         'Harbor', 'RabbitMQ', 'RocketMQ',
+        # 公有云与云基础设施
+        'GCP', 'Azure', 'EC2', 'S3', 'Lambda', 'VPC', 'CloudFormation',
+        'CloudWatch', 'EKS', 'AKS', 'Serverless Framework',
         # 安全/测试
         '渗透测试', 'Burp Suite', 'Metasploit', 'Selenium', 'JMeter', 'Postman',
         'OWASP', 'Nessus', 'Wireshark', 'Appium', 'LoadRunner', 'SonarQube',
-        'ZAP',
+        'ZAP', 'Nmap', 'SIEM', 'IDS/IPS', 'Firewall', 'Cryptography',
+        'Incident Response', 'Risk Assessment', 'Malware Analysis',
+        'Digital Forensics', 'Zero Trust', 'WAF',
+        # 前端框架补充
+        'Jest', 'Vitest', 'Cypress', 'Playwright', 'Flutter', 'React Native',
+        'Redux', 'Pinia', 'Zustand', 'SASS', 'Less',
+        # 机器学习工程 / MLOps
+        'Scikit-learn', 'XGBoost', 'LightGBM', 'CUDA', 'ONNX', 'Kubeflow',
+        'MLflow', 'Feast', 'Feature Store', 'Model Serving', 'Data Pipeline',
+        '机器学习', '深度学习', '强化学习', '计算机视觉', '自然语言处理',
+        '特征工程', 'A/B Testing', '统计分析', 'Data Visualization',
+        # 英文常见写法（文本写英文、标准名归一为中文，两侧都要能命中）
+        'Machine Learning', 'Deep Learning', 'Penetration Testing',
+        'REST APIs', 'REST API', 'Networking', 'IAM', 'Bash', 'Jupyter',
+        'Responsive Design', 'Statistical Analysis', 'Data Pipelines',
+        # 移动端
+        'iOS', 'Android', 'Core Data', 'App Store', 'Firebase',
+        'Push Notifications', 'SwiftUI', 'UIKit', 'ARKit',
         # 架构/分布式
         '微服务', '分布式', '高并发', '架构设计', '分布式事务', '分布式缓存',
         '消息队列', '负载均衡', '服务网格', 'DDD', '链路追踪', 'SkyWalking',
         'Seata', 'Nacos', 'Sentinel',
     ]
-    found = [s for s in skill_keywords if s.lower() in text.lower()]
+    text_lower = text.lower()
+    found = [s for s in skill_keywords if _kw_hit(s, text_lower)]
     result['skills'] = found
 
     # 学历
