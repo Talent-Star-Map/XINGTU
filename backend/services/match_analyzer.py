@@ -96,6 +96,8 @@ def compute_match_score(
     profile: dict,
     job: dict,
     quality_context: Optional[dict] = None,
+    skill_popularity: Optional[dict] = None,
+    all_jobs: Optional[list[dict]] = None,
 ) -> dict:
     """
     纯函数，不含 I/O，可复用于企业端批量匹配
@@ -103,6 +105,8 @@ def compute_match_score(
     profile: extract_profile_features 的输出
     job:     jobs.py 中单个 JD dict（含 skills/experience/education/salary）
     quality_context: quality_checker.cross_validate 的全部技能验证状态
+    skill_popularity: 预计算的技能频率 {技能名: 出现比例}，避免重复遍历
+    all_jobs: 岗位池，注入后不回源数据库（离线评测/批量匹配用）
     """
     if quality_context is None:
         quality_context = {}
@@ -150,7 +154,7 @@ def compute_match_score(
                 "matched_in_text": True,
             })
         else:
-            priority, reason = calc_miss_priority(jd_skill, job, profile["skills"], quality_context)
+            priority, reason = calc_miss_priority(jd_skill, job, profile["skills"], quality_context, skill_popularity)
             miss.append({
                 "skill": jd_skill,
                 "priority": priority,
@@ -192,7 +196,7 @@ def compute_match_score(
     grade = "S" if overall >= 90 else "A" if overall >= 80 else "B" if overall >= 70 else "C" if overall >= 60 else "D"
 
     # ── 改进建议 ──
-    recommendations = _generate_recommendations(have, miss, job, quality_context)
+    recommendations = _generate_recommendations(have, miss, job, quality_context, all_jobs)
 
     # ── 具体比较文本 ──
     comparison = {
@@ -244,25 +248,31 @@ def calc_miss_priority(
     job: dict,
     profile_skills: list[str],
     quality_context: dict,
+    skill_popularity: Optional[dict] = None,
 ) -> tuple[str, str]:
     """
     priority = f(岗位核心度, JD出现频次, 与已有技能邻近度, 学习成本)
     返回：("high"|"medium"|"low", reason_str)
+    skill_popularity: 预计算的技能频率字典，避免重复遍历全部岗位
     """
-    from services.skill_synonyms import get_skill_popularity, has_adjacent_skill
+    from services.skill_synonyms import get_skill_popularity, has_adjacent_skill, normalize_preprocess
 
     jd_skills = job.get("skills", [])
     idx = next((i for i, s in enumerate(jd_skills) if s == jd_skill), len(jd_skills))
     is_core = idx < max(len(jd_skills) // 3, 1)
 
-    try:
-        all_jobs = None
-        from routers.jobs import SEED_JOBS
-        all_jobs = SEED_JOBS
-    except ImportError:
-        all_jobs = [job]
+    # 优先用预计算的频率，避免重复遍历 1500+ 岗位
+    if skill_popularity is not None:
+        s_key = normalize_preprocess(jd_skill)
+        freq = skill_popularity.get(s_key, 0.0)
+    else:
+        try:
+            from routers.jobs import load_all_jobs
+            all_jobs = load_all_jobs()
+        except ImportError:
+            all_jobs = [job]
+        freq = get_skill_popularity(jd_skill, all_jobs)
 
-    freq = get_skill_popularity(jd_skill, all_jobs)
     adjacent = has_adjacent_skill(jd_skill, profile_skills)
 
     score = 0
@@ -477,14 +487,21 @@ def _generate_summary(have: list[dict], miss: list[dict], job: dict, overall: fl
     return "，".join(parts) + "。"
 
 
-def _generate_recommendations(have: list[dict], miss: list[dict], job: dict, quality_context: dict) -> list[str]:
-    """按缺失技能优先级生成改进建议（最多 5 条）"""
+def _generate_recommendations(have: list[dict], miss: list[dict], job: dict,
+                              quality_context: dict,
+                              all_jobs: Optional[list[dict]] = None) -> list[str]:
+    """按缺失技能优先级生成改进建议（最多 5 条）
+
+    all_jobs: 调用方可注入岗位池（离线评测用）；为 None 时才回源数据库。
+    """
     from services.skill_synonyms import get_skill_popularity
-    try:
-        from routers.jobs import SEED_JOBS
-        all_jobs = SEED_JOBS
-    except ImportError:
-        all_jobs = [job]
+    if all_jobs is None:
+        try:
+            from routers.jobs import load_all_jobs
+            all_jobs = load_all_jobs()
+        except Exception:
+            # 数据库不可用不能拖垮匹配主流程，退化为只按当前岗位判断
+            all_jobs = [job]
 
     recs = []
     # 高优优先

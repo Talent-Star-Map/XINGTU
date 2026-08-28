@@ -1,13 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Bell, Menu, X, Sun, Moon, User, FileText, Activity, Shield } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
-import { JSNav } from '../lib/NavContext'
+import { JSNav, type JSPage } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
 
-type Page = 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'learning' | 'trend' | 'profile-home' | 'quality' | 'diagnosis' | 'job-detail'
+const PAGE_KEYS: JSPage[] = [
+  'dashboard', 'skill-graph', 'resume', 'resume-center', 'match', 'job-detail',
+  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality',
+]
 
-const navItems: { key: Page; icon: any; label: string }[] = [
+const isPage = (v: string): v is JSPage => (PAGE_KEYS as string[]).includes(v)
+
+const readHash = (): JSPage => {
+  const h = window.location.hash.replace(/^#\/?/, '')
+  return isPage(h) ? h : 'dashboard'
+}
+
+const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
   { key: 'match', icon: LineChart, label: '岗位' },
@@ -17,39 +27,68 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   // 质检已移至管理员端，求职端不再展示
 ]
 
-import JSDashboard from '../pages/jobseeker/Dashboard'
-import JSJobGraphPage from '../pages/jobseeker/JobGraphPage'
-import JSResume from '../pages/jobseeker/Resume'
-import JSResumeCenter from '../pages/jobseeker/ResumeCenter'
-import JSMatch from '../pages/jobseeker/JobMatch'
-import JSDiagnosis from '../pages/jobseeker/Diagnosis'
-import JSJobDetail from '../pages/jobseeker/JobDetail'
-import JSLearning from '../pages/jobseeker/LearningPath'
-import JSTrend from '../pages/jobseeker/Trend'
-import JSProfileHome from '../pages/jobseeker/ProfileHome'
-import QualityDashboard from '../pages/enterprise/QualityDashboard'
-import TutuChat from './TutuChat'
+// 页面按需加载：进入哪个页面才下载哪个页面的代码，
+// 避免首屏一次性加载图谱(Three.js)/简历编辑器等重库
+const JSDashboard = lazy(() => import('../pages/jobseeker/Dashboard'))
+const JSJobGraphPage = lazy(() => import('../pages/jobseeker/JobGraphPage'))
+const JSResume = lazy(() => import('../pages/jobseeker/Resume'))
+const JSResumeCenter = lazy(() => import('../pages/jobseeker/ResumeCenter'))
+const JSMatch = lazy(() => import('../pages/jobseeker/JobMatch'))
+const JSDiagnosis = lazy(() => import('../pages/jobseeker/Diagnosis'))
+const JSJobDetail = lazy(() => import('../pages/jobseeker/JobDetail'))
+const JSLearning = lazy(() => import('../pages/jobseeker/LearningPath'))
+const JSTrend = lazy(() => import('../pages/jobseeker/Trend'))
+const JSProfileHome = lazy(() => import('../pages/jobseeker/ProfileHome'))
+const JSMySkillGraph = lazy(() => import('../pages/jobseeker/MySkillGraph'))
+const QualityDashboard = lazy(() => import('../pages/enterprise/QualityDashboard'))
+const TutuChat = lazy(() => import('./TutuChat'))
 
-const pages: Record<Page, () => JSX.Element> = {
-  dashboard: JSDashboard, 'skill-graph': JSJobGraphPage,
-  resume: JSResume, 'resume-center': JSResumeCenter, match: JSMatch, 'job-detail': JSJobDetail, diagnosis: JSDiagnosis, learning: JSLearning, trend: JSTrend,
-  'profile-home': JSProfileHome, quality: QualityDashboard,
+const pages: Record<JSPage, ComponentType> = {
+  dashboard: JSDashboard,
+  'skill-graph': JSJobGraphPage,
+  resume: JSResume,
+  'resume-center': JSResumeCenter,
+  match: JSMatch,
+  'job-detail': JSJobDetail,
+  diagnosis: JSDiagnosis,
+  learning: JSLearning,
+  trend: JSTrend,
+  'profile-home': JSProfileHome,
+  'my-skill-graph': JSMySkillGraph,
+  quality: QualityDashboard,
 }
 
 interface Props { onLogout: () => void }
 
-const profileItems: { key: Page; icon: any; label: string }[] = [
+const profileItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'profile-home', icon: User, label: '个人主页' },
   { key: 'resume', icon: Upload, label: '简历管理' },
   { key: 'my-skill-graph', icon: Activity, label: '我的能力图谱' },
 ]
 
+const menuItemStyle = { color: 'var(--color-on-surface-variant)' }
+
 export default function JobseekerShell({ onLogout }: Props) {
-  const [page, setPage] = useState<Page>('dashboard')
+  // 页面状态与 URL hash 同步：刷新不回到首页，浏览器前进/后退可用
+  const [page, setPageState] = useState<JSPage>(readHash)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
-  const PageComp = pages[page]
+
+  const setPage = useCallback((p: JSPage) => {
+    setPageState(p)
+    setMobileMenu(false)
+    if (readHash() !== p) window.location.hash = `#/${p}`
+  }, [])
+
+  useEffect(() => {
+    const onHashChange = () => setPageState(readHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  // 兜底：未知 key 不再白屏，退回工作台
+  const PageComp = pages[page] || JSDashboard
   const userStr = localStorage.getItem('xingtu_user')
   const userData = userStr ? JSON.parse(userStr) : null
   const avatarText = (() => {
@@ -87,12 +126,8 @@ export default function JobseekerShell({ onLogout }: Props) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={toggle} className="p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }}>
+            <button onClick={toggle} className="p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }} aria-label="切换主题">
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            <button className="relative p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }}>
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full" style={{ background: 'var(--color-primary)' }} />
             </button>
             <div className="relative">
               <button onClick={() => setProfileOpen(!profileOpen)}
@@ -112,7 +147,7 @@ export default function JobseekerShell({ onLogout }: Props) {
                   {profileItems.map(item => (
                     <button key={item.key} onClick={() => { setPage(item.key); setProfileOpen(false) }}
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
-                      style={{ color: 'var(--color-on-surface-variant)' }}
+                      style={menuItemStyle}
                       onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container-low)'; e.currentTarget.style.color = 'var(--color-on-surface)' }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}
                     >
@@ -122,7 +157,7 @@ export default function JobseekerShell({ onLogout }: Props) {
                   <div className="my-1 border-t" style={{ borderColor: 'var(--color-outline-variant)' }} />
                   <button onClick={onLogout}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
-                    style={{ color: 'var(--color-on-surface-variant)' }}
+                    style={menuItemStyle}
                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-red)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}
                   >
@@ -131,17 +166,37 @@ export default function JobseekerShell({ onLogout }: Props) {
                 </motion.div>
               )}
             </div>
-            <button className="md:hidden p-2" onClick={() => setMobileMenu(!mobileMenu)} style={{ color: 'var(--color-on-surface-variant)' }}>
+            <button className="md:hidden p-2" onClick={() => setMobileMenu(!mobileMenu)}
+              style={{ color: 'var(--color-on-surface-variant)' }} aria-label="菜单" aria-expanded={mobileMenu}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
+
+        {/* 移动端导航 — 之前 mobileMenu 开关存在却没有对应的面板 */}
+        {mobileMenu && (
+          <nav className="md:hidden border-t px-4 py-2 flex flex-col"
+            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
+            {navItems.map(item => {
+              const active = page === item.key
+              return (
+                <button key={item.key} onClick={() => setPage(item.key)}
+                  className="flex items-center gap-3 px-2 py-2.5 text-sm font-medium rounded-lg"
+                  style={{ color: active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)', background: active ? 'var(--color-primary-fixed)' : 'transparent' }}>
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </button>
+              )
+            })}
+          </nav>
+        )}
       </header>
       <main className="flex-1 overflow-y-auto min-h-0">
         <div className="max-w-[1440px] mx-auto h-full">
           <LearningProvider>
             <JSNav.Provider value={{ setPage, page }}>
-              <PageComp />
+              <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
+                <PageComp />
+              </Suspense>
             </JSNav.Provider>
           </LearningProvider>
         </div>

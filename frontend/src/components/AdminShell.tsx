@@ -1,12 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { useState, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
 import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
-import QualityDashboard from '../pages/enterprise/QualityDashboard'
-import AdminUserManage from '../pages/admin/AdminUserManage'
-import AdminJobManage from '../pages/admin/AdminJobManage'
-import AdminResourceManage from '../pages/admin/AdminResourceManage'
-import AdminModelConfig from '../pages/admin/AdminModelConfig'
+
+// 页面按需加载，避免首屏一次性加载全部管理端代码
+const QualityDashboard = lazy(() => import('../pages/enterprise/QualityDashboard'))
+const AdminUserManage = lazy(() => import('../pages/admin/AdminUserManage'))
+const AdminJobManage = lazy(() => import('../pages/admin/AdminJobManage'))
+const AdminResourceManage = lazy(() => import('../pages/admin/AdminResourceManage'))
+const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
 
 // 管理员端功能模块：
 //   quality    — 质检（已有，质检已从求职端/企业端移除，统一归管理员监管）
@@ -26,11 +28,11 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'quality', icon: Shield, label: '质检' },
 ]
 
-// 用包装组件给 AdminUserManage 传 role prop（pages 表要求无参组件）
-const JobseekerManagePage = () => <AdminUserManage role="jobseeker" />
-const EnterpriseManagePage = () => <AdminUserManage role="enterprise" />
+// 用包装组件给 AdminUserManage 传 role prop（懒组件放在 Suspense 内）
+const JobseekerManagePage = () => <Suspense fallback={null}><AdminUserManage role="jobseeker" /></Suspense>
+const EnterpriseManagePage = () => <Suspense fallback={null}><AdminUserManage role="enterprise" /></Suspense>
 
-const pages: Record<Page, () => ReactNode> = {
+const pages: Record<Page, ComponentType> = {
   jobseekers: JobseekerManagePage,
   enterprises: EnterpriseManagePage,
   jobs: AdminJobManage,
@@ -130,7 +132,9 @@ export default function AdminShell({ onLogout }: Props) {
       </header>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
-          <PageComp />
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
+            <PageComp />
+          </Suspense>
         </div>
       </main>
     </div>
