@@ -31,7 +31,7 @@ export default function NodeListPanel({ nodes, selectedId, onSelect, searchTerm 
   }, [nodes])
 
   const filterFn = (n: Node) =>
-    !searchTerm || (n.label || n.name || n.id).toLowerCase().includes(searchTerm.toLowerCase())
+    !searchTerm || (n.name || n.label || n.id).toLowerCase().includes(searchTerm.toLowerCase())
 
   return (
     <div className="overflow-auto h-full">
@@ -55,9 +55,9 @@ export default function NodeListPanel({ nodes, selectedId, onSelect, searchTerm 
                     background: active ? 'var(--color-primary-fixed)' : 'transparent',
                     color: active ? 'var(--color-primary)' : 'inherit',
                   }}
-                  title={n.label || n.name || n.id}
+                  title={n.name || n.label || n.id}
                 >
-                  {n.label || n.name || n.id}
+                  {n.name || n.label || n.id}
                 </button>
               )
             })}

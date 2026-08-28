@@ -271,8 +271,8 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
       const ring = new THREE.Mesh(ringGeo, ringMat)
       ring.position.copy(pos)
 
-      // 标签 — 优先用 API 返回的 label (显示名),否则 name,否则 id
-      const labelText = n.label || n.name || n.id
+      // 标签 — 优先用 name(真实显示名),否则 label(图渲染类别),否则 id
+      const labelText = n.name || n.label || n.id
       const sprite = makeLabelSprite(labelText, style.color, isJob)
       // 标签放在球正上方(更贴近球),不再往下错位
       sprite.position.set(pos.x, pos.y + (isJob ? 6 : 4.5), pos.z)
