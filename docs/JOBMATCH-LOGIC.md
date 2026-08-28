@@ -506,7 +506,9 @@ score = 0
 | `backend/match_api.py` | 3 个 API 路由 | ~250 |
 | `backend/match_analyzer.py` | 核心评分算法 | ~450 |
 | `backend/skill_synonyms.py` | 同义词扩展表 | ~100 |
-| `backend/test_match.py` | 准确率测试 | ~170 |
+| `backend/tests/test_jd_parser.py` | JD 技能解析准确率(离线) | 见 §9 |
+| `backend/tests/test_resume.py` | 简历提取准确率(离线) | 见 §9 |
+| `backend/tests/test_job_agent.py` | 人岗匹配一致性 + 排序召回(离线) | 见 §9 |
 
 ---
 
@@ -532,17 +534,25 @@ JWT_MIN_BYTES = 32  # 强制最低 32 字节
 
 ## 9. 测试
 
-```bash
-# 运行准确率测试
-cd backend
-JWT_SECRET="your-32-byte-secret-key-here!!" python test_match.py
+三项准确率脚本均为**纯 Python 直跑**，不依赖 pytest／不连库／不调 LLM（脚本内置空 `DEEPSEEK_API_KEY` 强制规则路径），退出码 0 为通过。测试集在 `backend/test_data/`（注意：**不是** `tests/test_data/`）。
 
-# 预期输出:
-# [train]  P=0.895  R=0.973  F1=0.933  (n=70)
-# [dev]    P=0.924  R=0.988  F1=0.955  (n=10)
-# [test]   P=0.879  R=0.979  F1=0.926  (n=20)  ← 最终指标
-# [PASS] Test F1=0.926 >= 0.90
+```bash
+cd backend
+python tests/test_jd_parser.py     # JD 技能解析   F1 0.9553（104 条 JD，有原文证据子集真值）
+python tests/test_resume.py        # 简历技能提取   F1 0.9533（100 条简历，841 个标注技能）
+python tests/test_job_agent.py     # 人岗匹配       Top-5 1.0000 / MRR 0.9525
+                                   #   全量约 7 分钟；--quick 只跑 30 份简历；--skip-rank 只跑一致性
+python tests/test_our_modules.py   # 纯函数单测     20 PASS
+python tests/test_quality.py       # 质检模块单测   14 PASS
 ```
+
+三个口径陷阱（换测试集前必查）：
+
+1. **JD 真值必须取「有原文证据」子集**：`standard_answers.json` 800 个标注技能只有 463 个(57.9%)真出现在描述里，
+   按全量标注计召回上限 0.5787、F1 上限约 0.71，**数学上不可能达到 90%**
+2. **匹配不能只比覆盖率**：`match_pairs.json` 真值 = 技能覆盖率，系统算的也是覆盖率 → Pearson 1.0 退化自证。
+   主指标用 104 条 JD 候选池的排序召回（Top-1 0.91 / Top-3 0.99 / Top-5 1.00）
+3. **`test_match.py` 的数字不要引用**：旧脚本把标准答案拼进输入再提取，真值与输入同源（自证），当前 FAIL 0.848
 
 ---
 

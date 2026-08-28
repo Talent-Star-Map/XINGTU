@@ -8,7 +8,9 @@ interface LearningPhase {
   duration: string
   skills: string[]
   goals: string[]
-  resources: { name: string; url?: string; type?: string }[]
+  /** 单项技能的预估周数，由调用方按需提供 */
+  etaPerSkill?: number
+  resources?: { name: string; url?: string; type?: string }[]
 }
 
 interface Props {

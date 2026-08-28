@@ -88,7 +88,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [])
 
-  const addDiagnosis = useCallback(async (record) => {
+  const addDiagnosis = useCallback(async (record: Omit<DiagnosisRecord, 'id' | 'created_at'>) => {
     const t = getToken()
     if (!t) return
     try {

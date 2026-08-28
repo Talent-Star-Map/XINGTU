@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ResumeSection } from '../../../types/resume'
 import { EditorToolbar } from './EditorToolbar'
 import { EditorSidebar } from './EditorSidebar'
 import { EditorCanvas } from './EditorCanvas'
 import { EditorPreviewPanel } from './EditorPreviewPanel'
+import type { EditorResume, EditorSection as ResumeSection } from './types'
 import { DEFAULT_SECTION_CONTENT, SECTION_LABELS } from './icons'
 
 // ──────────────── 类型 ────────────────
-interface ResumeItem {
-  id: number
-  title: string
-  template_key: string
-  language: string
-  created_at: string
-  sections: ResumeSection[]
-}
+type ResumeItem = EditorResume
 
 interface Props {
   resume: ResumeItem
@@ -296,6 +289,8 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
           callbacks={{
             onSelectSection: setSelectedSectionId,
             onAddSection: addSection,
+            // 拖拽排序发生在侧栏列表，之前这个回调被误传给了 EditorCanvas
+            onReorderSection: reorderSection,
             selectedSectionId,
             existingSectionTypes: existingTypes,
           }}
@@ -310,7 +305,6 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
             onRenameSection: renameSection,
             onDeleteSection: deleteSection,
             onMoveSection: moveSection,
-            onReorderSection: reorderSection,
             onSelectSection: setSelectedSectionId,
             onAIOptimize: handleAIOptimize,
           }}

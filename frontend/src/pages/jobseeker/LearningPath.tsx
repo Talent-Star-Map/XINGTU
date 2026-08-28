@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, MessageCircle, BookOpen, Video, FileText, CheckCircle, ArrowRight, Star, Compass, Rocket, Brain, Zap, Target, RotateCcw, ExternalLink, Play, Clock } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import { useLearning } from '../../lib/LearningContext'
+import { groupMissingSkills, activePhases, estimateWeeks, PHASE_TITLES } from '../../lib/learningPhases'
 
 interface Phase { phase: string; title: string; duration: string; icon: any; skills: string[]; resources: { name: string; type: string; url: string }[]; color: string; tip: string }
 interface DiagnosisResult { overall: number; grade: string; phases: any[]; recommendations: string[]; skills: { have: any[]; miss: any[]; extra: string[] } }
@@ -51,34 +52,21 @@ function buildPhases(diagnosis: DiagnosisResult | null): Phase[] {
       tip: p.goals?.[0] || `掌握 ${p.skills?.slice(0, 2).join('、')} 的核心用法`,
     }))
   }
-  // 从 skills.miss 构建
-  const miss = diagnosis.skills?.miss || []
-  if (!miss.length) return []
-  const groups: Record<string, any[]> = { high: [], medium: [], low: [] }
-  miss.forEach((s: any) => {
-    const name = typeof s === 'string' ? s : (s.skill || s.name || '')
-    const priority = s.priority || 'low'
-    const k = priority === 'high' ? 'high' : priority === 'medium' ? 'medium' : 'low'
-    groups[k].push({ name, priority })
-  })
+  // 从 skills.miss 构建（分组与周期算法与诊断页共用 lib/learningPhases，避免两处算出不同结果）
+  const groups = groupMissingSkills(diagnosis.skills?.miss)
   const colorPool = ['#00C8FF', '#7C3AED', '#00E599']
   const iconPool = [Rocket, Zap, Compass]
-  const titles = ['核心技能补齐', '进阶能力提升', '拓宽技能栈']
-  const baseWeeks = [2, 3, 2]
   const phases: Phase[] = []
-  ;(['high', 'medium', 'low'] as const).forEach((p, i) => {
-    if (!groups[p].length) return
-    const eta = p === 'high' ? 1 : p === 'medium' ? 0.5 : 0.3
-    const weeks = Math.max(baseWeeks[i], Math.ceil(groups[p].length * eta))
+  activePhases(groups).forEach((p, i) => {
     phases.push({
-      phase: `第${['一', '二', '三'][phases.length]}阶段`,
-      title: titles[i],
-      duration: `${weeks} 周`,
+      phase: `第${['一', '二', '三'][i]}阶段`,
+      title: PHASE_TITLES[p],
+      duration: `${estimateWeeks(p, groups[p].length)} 周`,
       icon: iconPool[i % iconPool.length],
-      skills: groups[p].map(s => s.name),
+      skills: groups[p],
       resources: [],
       color: colorPool[i % colorPool.length],
-      tip: `掌握 ${groups[p].slice(0, 2).map(s => s.name).join('、')} 的核心用法`,
+      tip: `掌握 ${groups[p].slice(0, 2).join('、')} 的核心用法`,
     })
   })
   return phases
@@ -112,6 +100,7 @@ export default function LearningPath() {
   ])
   const [resources, setResources] = useState<{ name: string; type: string; url: string }[]>([])
   const [loadingResources, setLoadingResources] = useState(false)
+  const [resourcesLoaded, setResourcesLoaded] = useState(false)
   const [resourceFilter, setResourceFilter] = useState<string>('all')
   const chatRef = useRef<HTMLDivElement>(null)
 
@@ -119,6 +108,7 @@ export default function LearningPath() {
   const changeStep = (i: number) => {
     setStep(i)
     setResources([])
+    setResourcesLoaded(false)
     setResourceFilter('all')
   }
 
@@ -190,6 +180,7 @@ export default function LearningPath() {
 
   const loadResources = async (skills: string[]) => {
     setLoadingResources(true)
+    setResourcesLoaded(true)
     const res = await fetchResources(skills)
     setResources(res)
     setLoadingResources(false)
@@ -264,10 +255,15 @@ export default function LearningPath() {
               <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 图图</h1>
               <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>目标：{targetJob.title} · {targetJob.company}</p>
               <div className="flex items-center gap-4 mt-2">
-                <span className="text-xs flex items-center gap-1" style={{ color: 'var(--color-primary)' }}><Target className="h-3.5 w-3.5" /> 匹配度 {diagnosis ? Math.round(diagnosis.overall) : '-'}</span>
+                <span className="text-xs flex items-center gap-1" style={{ color: 'var(--color-primary)' }}><Target className="h-3.5 w-3.5" /> 匹配度 {diagnosis ? Math.round(diagnosis.overall) : '-'}{diagnosis?.grade && <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--color-primary)', color: 'white' }}>{diagnosis.grade}</span>}</span>
                 <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-green)' }}><CheckCircle className="h-3.5 w-3.5" /> 已掌握 {masteredSkills.size}</span>
                 <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-red)' }}><Zap className="h-3.5 w-3.5" /> 待提升 {diagnosis?.skills?.miss?.length || 0}</span>
               </div>
+              <p className="text-[11px] mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+                {diagnosis?.skills?.miss && diagnosis.skills.miss.length > 0
+                  ? `你还有 ${diagnosis.skills.miss.length} 项技能待提升，按下方路径逐步掌握 💪`
+                  : '🎉 所有技能已掌握，可以重新诊断查看进步！'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -276,6 +272,42 @@ export default function LearningPath() {
           </div>
         </div>
       </motion.div>
+
+      {/* 当前重点快捷区 */}
+      {phases.length > 0 && phases[step] && (
+        <div className="rounded-2xl border p-4" style={{ borderColor: `${phases[step].color}30`, background: `${phases[step].color}08` }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold" style={{ color: phases[step].color }}>📌 当前重点</span>
+              <div className="flex items-center gap-2">
+                {phases[step].skills.slice(0, 3).map(s => {
+                  const isMastered = masteredSkills.has(s)
+                  return (
+                    <button key={s} onClick={() => toggleMastered(s)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all hover:scale-105"
+                      style={{
+                        background: isMastered ? 'var(--accent-green)' : 'white',
+                        color: isMastered ? 'white' : phases[step].color,
+                        border: `1px solid ${isMastered ? 'var(--accent-green)' : phases[step].color}40`,
+                      }}>
+                      {isMastered ? <CheckCircle className="h-3 w-3" /> : <span className="h-3 w-3 flex items-center justify-center rounded-full border text-[8px]" style={{ borderColor: phases[step].color }}>+</span>}
+                      {s}
+                    </button>
+                  )
+                })}
+                {phases[step].skills.length > 3 && (
+                  <span className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>+{phases[step].skills.length - 3}</span>
+                )}
+              </div>
+            </div>
+            <button onClick={() => loadResources(phases[step].skills)}
+              className="text-[11px] px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
+              style={{ color: phases[step].color, background: `${phases[step].color}15`, border: `1px solid ${phases[step].color}30` }}>
+              查看资源 →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 路径进度 */}
       {phases.length > 0 && (
@@ -301,7 +333,12 @@ export default function LearningPath() {
                       <p.icon className="h-5 w-5" style={{ color: active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)' }} />
                     </motion.div>
                     <span className="text-[10px] font-semibold text-center leading-tight" style={{ color: active ? p.color : 'var(--color-on-surface-variant)', maxWidth: 64 }}>{p.title}</span>
-                    <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>{getPhaseProgress(p.skills)}% · {p.duration}</span>
+                    <div className="w-14 flex flex-col items-center gap-0.5">
+                      <div className="w-full h-1 rounded-full" style={{ background: 'var(--color-surface)' }}>
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${getPhaseProgress(p.skills)}%`, background: p.color }} />
+                      </div>
+                      <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>{getPhaseProgress(p.skills)}% · {p.duration}</span>
+                    </div>
                   </button>
                 )
               })}
@@ -310,9 +347,9 @@ export default function LearningPath() {
         </div>
       )}
 
-      <div className="grid grid-cols-5 gap-5">
+      <div className="grid grid-cols-12 gap-5">
         {/* 左侧：当前阶段详情 */}
-        <div className="col-span-3 space-y-4">
+        <div className="col-span-7 space-y-4">
           <AnimatePresence mode="wait">
             {phases[step] && (
               <motion.div key={step} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
@@ -334,7 +371,7 @@ export default function LearningPath() {
                       </span>
                     </div>
                     {/* 阶段进度条 */}
-                    <div className="h-1.5 rounded-full mb-3" style={{ background: 'var(--color-surface)' }}>
+                    <div className="h-2 rounded-full mb-3" style={{ background: 'var(--color-surface)' }}>
                       <motion.div className="h-full rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${getPhaseProgress(phases[step].skills)}%` }}
@@ -387,6 +424,11 @@ export default function LearningPath() {
                       {loadingResources ? (
                         <div className="space-y-2">
                           {[1, 2].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: 'var(--color-surface)' }} />)}
+                        </div>
+                      ) : resourcesLoaded && resources.length === 0 ? (
+                        <div className="text-center py-4">
+                          <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>暂无学习资源</p>
+                          <p className="text-[10px] mt-1" style={{ color: 'var(--color-outline)' }}>管理员可在后台上传该技能的学习资源</p>
                         </div>
                       ) : resources.length > 0 ? (
                         <>
@@ -460,7 +502,7 @@ export default function LearningPath() {
         </div>
 
         {/* 右侧：图图聊天 */}
-        <div className="col-span-2">
+        <div className="col-span-5">
           <div className="rounded-2xl border flex flex-col sticky top-24" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', height: 480 }}>
             <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'linear-gradient(135deg, #00C8FF, #7C3AED)' }}>

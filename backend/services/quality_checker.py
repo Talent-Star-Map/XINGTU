@@ -187,20 +187,24 @@ def detect_inflation(jobs: list[dict], sigma: float = 2.0) -> list[dict]:
 # ─── 辅助 ───
 
 COMMON_SKILLS = set()
+_COMMON_LOADED = False
 
 def _load_common():
-    """从种子数据加载常见技能"""
+    """从岗位数据加载常见技能（懒加载：导入期不查库，避免拖慢启动）"""
+    global _COMMON_LOADED
+    if _COMMON_LOADED:
+        return
+    _COMMON_LOADED = True
     try:
-        import importlib
-        jobs = importlib.import_module('jobs')
-        for j in jobs.SEED_JOBS:
+        from routers.jobs import load_all_jobs
+        for j in load_all_jobs():
             for s in j.get('skills', []):
                 COMMON_SKILLS.add(s.lower())
-    except: pass
-
-_load_common()
+    except Exception:
+        pass
 
 def is_common_skill(skill: str) -> bool:
+    _load_common()
     return skill.lower() in COMMON_SKILLS
 
 

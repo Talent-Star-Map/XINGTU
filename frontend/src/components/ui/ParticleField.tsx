@@ -24,7 +24,8 @@ export default function ParticleField() {
       })
     }
 
-    function animate() {
+    // 用箭头函数而非函数声明：函数声明会被提升，TS 无法确认调用时机在空值守卫之后
+    const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       particles.forEach(p => {
         p.x += p.vx; p.y += p.vy

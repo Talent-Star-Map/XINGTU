@@ -161,7 +161,8 @@ function genSkillEvolution(jobId: number) {
 
 // ── Tab 2: 岗位名称演化 ──
 function genTitleEvolution(jobId: number) {
-  const titles = pickFromPool(TITLE_POOL, 6, jobId)
+  // TITLE_POOL 是「岗位族 → 该族岗位名列表」，先选一个族，再取族内的岗位名
+  const titles = pickFromPool(TITLE_POOL, 1, jobId)[0] ?? []
   const r = rand(seedHash(`title-evo:${jobId}`))
   // 每个变体有 first_seen / last_seen / 总出现次数
   const spans = MONTHS.map((_, mi) => mi)

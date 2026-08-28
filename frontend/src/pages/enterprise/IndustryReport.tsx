@@ -28,7 +28,7 @@ export default function IndustryReport() {
               key={report.title}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: i * 0.04 }}
-              className="flex items-center justify-between py-6 border-b transition-colors hover:bg-[var(--color-surface-container-low)] -mx-3 px-3 rounded cursor-pointer group"
+              className="flex items-center justify-between py-6 border-b transition-all hover:bg-[var(--color-surface-container-low)] hover:shadow-sm -mx-3 px-3 rounded-lg cursor-pointer group"
               style={{ borderColor: 'var(--color-outline-variant)' }}
             >
               <div className="flex items-center gap-6 min-w-0 flex-1">
