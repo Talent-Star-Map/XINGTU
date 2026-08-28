@@ -519,43 +519,58 @@ def get_overview_graph(
     limit_jobs: int = 200,
     limit_skills: int = 80,
 ) -> Dict[str, Any]:
-    """单页首次加载的全图:Job + Skill + REQUIRES。"""
+    """单页首次加载的全图:Job + Skill + REQUIRES。
+
+    拆两个 query:原写法把 `[(j)-[:REQUIRES]->(sk:Skill) | sk][..$ls]` list comprehension
+    跟 collect({map}) 放在同一 WITH,Neo4j 会按边笛卡尔积逐行分裂,导致 jobs_data 只返 1 项。
+    """
     rows = _query(
         """
         MATCH (j:Job)
         WITH j ORDER BY j.hot_score DESC LIMIT $lj
         OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill)
         WITH j, collect(distinct sk) AS sks
-        WITH collect({j: j, sks: sks}) AS jobs_data,
-             [(j)-[:REQUIRES]->(sk:Skill) | sk][..$ls] AS all_skills
-        RETURN jobs_data, all_skills
+        WITH collect({j: j, sks: sks}) AS jobs_data
+        RETURN jobs_data
+        """,
+        {"lj": limit_jobs},
+    )
+    skills_rows = _query(
+        """
+        MATCH (j:Job)-[:REQUIRES]->(sk:Skill)
+        WITH j, sk, j.hot_score AS hs
+        ORDER BY hs DESC LIMIT $lj
+        WITH collect(DISTINCT sk)[..$ls] AS all_skills
+        RETURN all_skills
         """,
         {"lj": limit_jobs, "ls": limit_skills},
     )
     nodes = []
     links = []
     seen = set()
-    if rows:
+    if rows and rows[0].get("jobs_data"):
         for jd in rows[0]["jobs_data"]:
             j = _record_to_dict(jd["j"])
-            jid = f"Job:{j['id']}"
+            jid = f"job:{j['id']}"
             if jid not in seen:
                 seen.add(jid)
                 nodes.append({
                     "id": jid,
-                    "label": "Job",
-                    "name": j.get("title"),
+                    "type": "Job",            # 给 NodeListPanel 分组用(原来是 'Other')
+                    "label": "Job",            # 给 react-force-graph 渲染图用
+                    "name": j.get("title"),    # 显示名
                     "source": j.get("source"),
                     "salary_avg": ((j.get("salary_min") or 0) + (j.get("salary_max") or 0)) / 2 if j.get("salary_min") else 0,
                 })
             for sk in jd["sks"]:
                 sn = _record_to_dict(sk)
-                sid = f"Skill:{sn.get('canonical_name')}"
+                sid = f"skill:{sn.get('canonical_name')}"
                 if sid not in seen:
                     seen.add(sid)
                     nodes.append({
                         "id": sid,
-                        "label": "Skill",
+                        "type": "Skill",         # 给 NodeListPanel 分组用
+                        "label": "Skill",        # 给 react-force-graph 渲染图用
                         "name": sn.get("display_name") or sn.get("canonical_name"),
                     })
                 links.append({"source": jid, "target": sid, "type": "REQUIRES"})
