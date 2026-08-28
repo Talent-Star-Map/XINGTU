@@ -198,7 +198,7 @@ export default function CompanyProfile() {
               onClick={() => logoRef.current?.click()}
               disabled={logoUploading}
               className="absolute inset-0 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ background: 'rgba(0,0,0,0.4)' }}
+              style={{ background: 'var(--color-scrim, rgba(0,0,0,0.4))' }}
             >
               {logoUploading ? <Loader2 className="h-6 w-6 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
             </button>
@@ -211,7 +211,7 @@ export default function CompanyProfile() {
               <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>
                 {df(p.company_name, '未命名企业')}
               </h2>
-              <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded font-medium"
+              <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg font-medium"
                 style={{
                   background: p.verified > 0 ? 'var(--color-primary-fixed)' : 'var(--color-surface-container-high)',
                   color: p.verified > 0 ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
@@ -221,12 +221,12 @@ export default function CompanyProfile() {
             </div>
             <div className="flex flex-wrap items-center gap-2.5 mb-4">
               {p.industry && (
-                <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                <span className="text-sm px-2.5 py-1 rounded-lg font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                   {p.industry}
                 </span>
               )}
               {p.company_size && (
-                <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+                <span className="text-sm px-2.5 py-1 rounded-lg font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                   {p.company_size}
                 </span>
               )}
@@ -355,7 +355,7 @@ export default function CompanyProfile() {
               {p.company_benefits?.trim() ? (
                 <div className="flex flex-wrap gap-2.5">
                   {p.company_benefits.split(/[,，、]/).filter(Boolean).map((b: string) => (
-                    <span key={b} className="px-3 py-1.5 rounded text-base font-medium"
+                    <span key={b} className="px-3 py-1.5 rounded-lg text-base font-medium"
                       style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                       {b.trim()}
                     </span>
@@ -415,7 +415,7 @@ export default function CompanyProfile() {
                 {form.company_benefits?.trim() && (
                   <div className="flex flex-wrap gap-2 mt-2.5">
                     {form.company_benefits.split(/[,，、]/).filter(Boolean).map((b: string) => (
-                      <span key={b} className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{b.trim()}</span>
+                      <span key={b} className="px-2.5 py-1 rounded-lg text-sm font-medium" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{b.trim()}</span>
                     ))}
                   </div>
                 )}

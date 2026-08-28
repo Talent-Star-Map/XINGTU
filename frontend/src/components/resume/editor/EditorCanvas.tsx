@@ -1,4 +1,4 @@
-import type { ResumeSection } from '../../../types/resume'
+import type { EditorSection } from './types'
 import { SectionCard } from './SectionCard'
 import { PersonalInfoForm } from './forms/PersonalInfoForm'
 import { SummaryForm } from './forms/SummaryForm'
@@ -19,11 +19,11 @@ interface Callbacks {
   onDeleteSection: (sectionId: string) => void
   onMoveSection: (sectionId: string, direction: 'up' | 'down') => void
   onSelectSection: (sectionId: string) => void
-  onAIOptimize: (section: ResumeSection) => Promise<void>
+  onAIOptimize: (section: EditorSection) => Promise<void>
 }
 
 interface Props {
-  resumeSections: ResumeSection[]
+  resumeSections: EditorSection[]
   selectedSectionId: string | null
   optimizingId: string | null
   callbacks: Callbacks

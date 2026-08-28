@@ -11,7 +11,7 @@ interface Props {
     education: DimensionScore
     salary: DimensionScore
   }
-  dimensions: Record<string, any>
+  dimensions?: Record<string, any>
 }
 
 const DIM_LABELS: Record<string, string> = {
@@ -57,6 +57,8 @@ const DIM_TOOLTIP: Record<string, string> = {
 }
 
 export default function DimensionBars({ dims }: Props) {
+  if (!dims) return null
+
   return (
     <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
       <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--color-on-surface)' }}>
@@ -65,6 +67,7 @@ export default function DimensionBars({ dims }: Props) {
       <div className="grid grid-cols-2 gap-5">
         {(Object.entries(DIM_LABELS) as [string, string][]).map(([key, label]) => {
           const d = dims[key as keyof typeof dims]
+          if (!d) return null
           const color = DIM_COLORS[key] || 'var(--color-primary)'
           return (
             <div key={key} className="group relative">
@@ -72,10 +75,10 @@ export default function DimensionBars({ dims }: Props) {
                 <span style={{ color: 'var(--color-on-surface-variant)' }}>{label}</span>
                 <span className="font-bold" style={{ color }}>{Math.round(d.score)}%</span>
               </div>
-              <div className="h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
+              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: '#E8ECF4' }}>
                 <div
                   className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${d.score}%`, background: `linear-gradient(90deg, ${color}66, ${color})` }}
+                  style={{ width: `${d.score}%`, background: color }}
                 />
               </div>
               <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>

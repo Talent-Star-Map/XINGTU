@@ -132,7 +132,7 @@ export default function QualityDashboard() {
             passLabel={matchResult ? (matchPass ? '已达标' : '未达标') : '点击测试'}
           />
           {/* 综合 */}
-          <div className="rounded-2xl border p-5 text-center" style={{
+          <div className="rounded-2xl border shadow-sm p-5 text-center" style={{
             borderColor: allRun ? (allPass ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--color-outline-variant)',
             background: allRun ? (allPass ? 'var(--accent-green-dim)' : 'var(--accent-red-dim)') : 'var(--color-surface-container-lowest)',
           }}>
@@ -151,7 +151,7 @@ export default function QualityDashboard() {
       {/* ─── 多源交叉验证 + 抄袭/通胀 ─── */}
       <div className="grid grid-cols-2 gap-6">
         {/* 多源交叉验证 */}
-        <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+        <div className="rounded-2xl border shadow-sm p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
               <Zap className="h-4 w-4" style={{ color: 'var(--accent-green)' }} /> 多源交叉验证
@@ -183,7 +183,7 @@ export default function QualityDashboard() {
                 <summary className="text-xs cursor-pointer" style={{ color: 'var(--color-on-surface-variant)' }}>查看已验证技能详情</summary>
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {Object.entries(cv.details).filter(([_, v]: [string, any]) => v.verified).map(([skill, info]: [string, any]) => (
-                    <div key={skill} className="flex items-center justify-between text-xs p-1.5 rounded" style={{ background: 'var(--accent-green-dim)' }}>
+                    <div key={skill} className="flex items-center justify-between text-xs p-1.5 rounded-lg" style={{ background: 'var(--accent-green-dim)' }}>
                       <span className="flex items-center gap-1.5"><CheckCircle className="h-3 w-3" style={{ color: 'var(--accent-green)' }} />{skill}</span>
                       <span style={{ color: 'var(--color-on-surface-variant)' }}>{info.sources.join(', ')}（{info.confidence}）</span>
                     </div>
@@ -196,7 +196,7 @@ export default function QualityDashboard() {
 
         {/* 抄袭 + 通胀 */}
         <div className="space-y-6">
-          <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div className="rounded-2xl border shadow-sm p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
                 <Copy className="h-4 w-4" style={{ color: 'var(--accent-purple)' }} /> JD抄袭检测
@@ -223,7 +223,7 @@ export default function QualityDashboard() {
             {(pl?.total_pairs ?? 0) === 0 && <p className="text-xs" style={{ color: 'var(--accent-green)' }}>未检测到抄袭对</p>}
           </div>
 
-          <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div className="rounded-2xl border shadow-sm p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
                 <TrendingUp className="h-4 w-4" style={{ color: 'var(--accent-orange)' }} /> 技能通胀检测

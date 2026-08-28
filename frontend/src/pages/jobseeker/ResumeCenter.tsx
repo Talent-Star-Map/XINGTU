@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Copy, Loader2, Sparkles, FileText, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ResumeEditor from '../../components/resume/editor/ResumeEditor'
+import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
 // ─── token 注入 ───
 const getToken = () => localStorage.getItem('xingtu_token') || ''
@@ -9,8 +10,11 @@ const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=
 
 // ─── 类型 ───
 interface Template { id: number; name: string; template_key: string; category: string; thumbnail: string }
-interface ResumeSection { id?: number; section_type: string; title: string; content: any; sort_order: number; visible: number }
-interface ResumeItem { id: number; title: string; template_key: string; language: string; created_at: string; sections: ResumeSection[] }
+// 复用编辑器的 section 形状：后端返回 snake_case 字段，与 types/resume.ts 的领域模型不是一回事。
+// 之前这里另起一份同名 ResumeSection，导致两份类型互不相容（TS2719）。
+type ResumeSection = EditorSection
+/** 列表里的简历 id 来自后端自增主键，一定是数字（新建草稿在保存后才会拿到真实 id） */
+type ResumeItem = Omit<EditorResume, 'id'> & { id: number }
 
 type SortOption = 'lastEdited' | 'created' | 'nameAsc' | 'nameDesc'
 type ViewMode = 'grid' | 'list'

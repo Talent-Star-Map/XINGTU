@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, GripVertical } from 'lucide-react'
+import type { EditorSection } from './types'
 import { SECTION_ICONS, SECTION_LABELS, RESUME_MODULE_TYPES, ADD_MODULE_TYPES } from './icons'
 
 export interface SidebarCallbacks {
@@ -28,7 +29,7 @@ function sectionTypeOf(s: any): string {
 export function EditorSidebar({
   resumeSections, callbacks,
 }: {
-  resumeSections: { id: string; type: string; title: string; sort_order: number; visible: number }[]
+  resumeSections: EditorSection[]
   callbacks: SidebarCallbacks
 }) {
   // 按 sort_order 升序列出已有 section

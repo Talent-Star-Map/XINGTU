@@ -167,7 +167,7 @@ export default function Conversations() {
                           {conv.candidate_name}
                         </span>
                         {conv.job_title && (
-                          <span className="text-sm px-2 py-0.5 rounded shrink-0"
+                          <span className="text-sm px-2 py-0.5 rounded-lg shrink-0"
                             style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                             {conv.job_title}
                           </span>

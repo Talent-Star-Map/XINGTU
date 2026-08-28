@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2, Briefcase, Users, TrendingUp, MessageSquare, BarChart3, Rocket, Search, FileText } from 'lucide-react'
 import { EPNav } from '../../lib/NavContext'
 
-// 仪表盘数据类型
 interface DashboardData {
   metrics: {
-    active_jobs: number        // 在招岗位数
-    total_candidates: number   // 匹配候选人总数（去重）
-    high_match: number         // 高匹配度候选人数 (>=85)
-    pending_count: number      // 待处理匹配记录数
+    active_jobs: number
+    total_candidates: number
+    high_match: number
+    pending_count: number
   }
   recent_jobs: Array<{
     id: number
@@ -25,12 +24,14 @@ interface DashboardData {
   }
 }
 
-// 状态文案与颜色映射（后端 status: active/closed/draft → 前端中文）
-const STATUS_MAP: Record<string, { label: string, color: string }> = {
-  'active':  { label: '招聘中', color: 'var(--accent-green)' },
-  'draft':   { label: '草稿',   color: 'var(--accent-orange)' },
-  'closed':  { label: '已关闭', color: 'var(--color-on-surface-variant)' },
+const STATUS_MAP: Record<string, { label: string, color: string, bg: string }> = {
+  'active':  { label: '招聘中', color: 'var(--accent-green)', bg: 'var(--accent-green-dim)' },
+  'draft':   { label: '草稿',   color: 'var(--accent-orange)', bg: 'var(--accent-orange-dim)' },
+  'closed':  { label: '已关闭', color: 'var(--color-on-surface-variant)', bg: 'var(--color-surface-container-high)' },
 }
+
+const METRIC_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
+const METRIC_ICONS = [Briefcase, Users, TrendingUp, MessageSquare]
 
 export default function Dashboard() {
   const { setPage } = EPNav.use()
@@ -38,7 +39,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // 拉取仪表盘汇总数据
   const load = async () => {
     setLoading(true)
     setError('')
@@ -77,15 +77,13 @@ export default function Dashboard() {
 
   if (!data) return null
 
-  // 指标 — utility copy，不是营销文案
   const metrics = [
-    { label: '在招职位', value: data.metrics.active_jobs, action: () => setPage('jobs') },
-    { label: '匹配候选人', value: data.metrics.total_candidates, action: () => setPage('talent') },
-    { label: '高匹配人才 (≥85)', value: data.metrics.high_match, action: () => setPage('talent') },
-    { label: '待沟通', value: data.metrics.pending_count, action: () => setPage('talent') },
+    { label: '在招职位', value: data.metrics.active_jobs, icon: Briefcase, action: () => setPage('jobs') },
+    { label: '匹配候选人', value: data.metrics.total_candidates, icon: Users, action: () => setPage('talent') },
+    { label: '高匹配人才', value: data.metrics.high_match, icon: TrendingUp, action: () => setPage('talent') },
+    { label: '待沟通', value: data.metrics.pending_count, icon: MessageSquare, action: () => setPage('talent') },
   ]
 
-  // 匹配度分布 — 用于水平条形图
   const distributions = [
     { label: '高匹配 (≥85)', val: data.match_distribution.high, color: 'var(--accent-green)' },
     { label: '中匹配 (60-84)', val: data.match_distribution.mid, color: 'var(--color-primary)' },
@@ -93,145 +91,164 @@ export default function Dashboard() {
   ]
   const totalDist = distributions.reduce((s, d) => s + d.val, 0) || 1
 
-  // 快捷入口 — 仅一个 accent 色，去掉营销文案
   const shortcuts = [
-    { label: '人才星', desc: '查看匹配的候选人', page: 'talent' as const },
-    { label: '岗位管理', desc: '发布与编辑岗位', page: 'jobs' as const },
-    { label: '市场洞察', desc: '技能需求与趋势', page: 'market' as const },
+    { label: '人才星', desc: '查看匹配的候选人', page: 'talent' as const, icon: Search, color: '#3b82f6' },
+    { label: '岗位管理', desc: '发布与编辑岗位', page: 'jobs' as const, icon: Briefcase, color: '#8b5cf6' },
+    { label: '市场洞察', desc: '技能需求与趋势', page: 'market' as const, icon: BarChart3, color: '#10b981' },
+    // 行业报告页面在 EnterpriseShell 里注册的 key 是 industry，不是 report
+    { label: '行业报告', desc: '行业人才分布', page: 'industry' as const, icon: FileText, color: '#f59e0b' },
   ]
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="px-14 py-12 space-y-12">
-        {/* ── KPI 区 — 无卡片，列对齐 ── */}
-        <section>
-          <h2 className="text-base font-medium uppercase tracking-wider mb-6" style={{ color: 'var(--color-on-surface-variant)' }}>核心指标</h2>
-          <div className="grid grid-cols-4 border-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            {metrics.map((m, i) => (
-              <motion.div
-                key={m.label}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={m.action}
-                className={`py-9 px-3 ${i < 3 ? 'border-r' : ''} cursor-pointer transition-colors hover:bg-[var(--color-surface-container-low)]`}
-                style={{ borderColor: 'var(--color-outline-variant)' }}
-              >
-                <p className="text-base mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>{m.label}</p>
-                <p className="text-6xl font-semibold tabular-nums tracking-tight" style={{ color: 'var(--color-on-surface)' }}>
-                  {m.value}
-                </p>
-              </motion.div>
-            ))}
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      {/* 头部渐变横幅 */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, var(--color-primary-fixed) 0%, var(--color-surface-container-lowest) 100%)' }}>
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20" style={{ background: 'var(--color-primary)' }} />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: 'var(--accent-purple)' }} />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <Rocket className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>企业工作台</span>
           </div>
-        </section>
+          <h1 className="text-2xl font-extrabold" style={{ color: 'var(--color-on-surface)' }}>欢迎回来，探索者</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>基于多源异构数据与知识图谱，精准定位你的招聘方向</p>
+        </div>
+      </motion.div>
 
-        {/* ── 双栏：近期岗位 + 匹配分布 ── */}
-        <section className="grid grid-cols-3 gap-12">
-          {/* 近期岗位 — 列表，无卡片 */}
-          <div className="col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-base font-medium uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>近期岗位</h2>
-              <button
-                onClick={() => setPage('jobs')}
-                className="flex items-center gap-2 text-base transition-colors hover:text-[var(--color-primary)]"
-                style={{ color: 'var(--color-on-surface-variant)' }}
-              >
-                全部岗位 <ArrowRight className="h-5 w-5" />
-              </button>
-            </div>
-            {data.recent_jobs.length > 0 ? (
-              <div className="border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                {data.recent_jobs.map((job, i) => {
-                  const st = STATUS_MAP[job.status] || STATUS_MAP['active']
-                  return (
-                    <div
-                      key={job.id}
-                      onClick={() => setPage('jobs', { selectedJobId: job.id })}
-                      className="flex items-center justify-between py-5 border-b transition-colors hover:bg-[var(--color-surface-container-low)] cursor-pointer -mx-3 px-3 rounded"
-                      style={{ borderColor: 'var(--color-outline-variant)' }}
-                    >
-                      <div className="flex items-center gap-5 min-w-0">
-                        <span className="text-base tabular-nums w-10" style={{ color: 'var(--color-on-surface-variant)' }}>{String(i + 1).padStart(2, '0')}</span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
-                            <span className="text-sm" style={{ color: st.color }}>· {st.label}</span>
-                          </div>
-                          <p className="text-sm mt-1.5 tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{job.created_at}</p>
+      {/* 核心指标卡片 */}
+      <div className="grid grid-cols-4 gap-4">
+        {metrics.map((m, i) => {
+          const Icon = m.icon
+          const color = METRIC_COLORS[i]
+          return (
+            <motion.div key={m.label}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+              onClick={m.action}
+              className="rounded-2xl border p-5 cursor-pointer transition-all shadow-sm"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{m.label}</span>
+                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: `${color}15` }}>
+                  <Icon className="h-4 w-4" style={{ color }} />
+                </div>
+              </div>
+              <p className="text-3xl font-bold tabular-nums" style={{ color }}>{m.value}</p>
+              <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+                <motion.div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}aa)` }}
+                  initial={{ width: 0 }} animate={{ width: '60%' }} transition={{ duration: 0.8, delay: i * 0.1 }} />
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* 快捷功能卡片 */}
+      <div>
+        <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--color-on-surface)' }}>快捷功能</h2>
+        <div className="grid grid-cols-4 gap-4">
+          {shortcuts.map((item, i) => {
+            const Icon = item.icon
+            return (
+              <motion.button key={item.label}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.06 }}
+                whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setPage(item.page)}
+                className="rounded-2xl border p-5 text-left transition-all shadow-sm"
+                style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center mb-3" style={{ background: `${item.color}15` }}>
+                  <Icon className="h-5 w-5" style={{ color: item.color }} />
+                </div>
+                <p className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>{item.label}</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{item.desc}</p>
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 双栏：近期岗位 + 匹配分布 */}
+      <div className="grid grid-cols-5 gap-5">
+        {/* 近期岗位 */}
+        <div className="col-span-3 rounded-2xl border p-5 shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>近期岗位</h2>
+            <button onClick={() => setPage('jobs')}
+              className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              style={{ color: 'var(--color-primary)' }}>
+              全部岗位 <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {data.recent_jobs.length > 0 ? (
+            <div className="space-y-2">
+              {data.recent_jobs.map((job, i) => {
+                const st = STATUS_MAP[job.status] || STATUS_MAP['active']
+                return (
+                  <motion.div key={job.id}
+                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.05 }}
+                    whileHover={{ scale: 1.01, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                    onClick={() => setPage('jobs', { selectedJobId: job.id })}
+                    className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all"
+                    style={{ background: 'var(--color-surface)' }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs tabular-nums w-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>{String(i + 1).padStart(2, '0')}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-lg font-medium" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--color-on-surface)' }}>{job.candidates}</p>
-                        <p className="text-sm mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>候选人</p>
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{job.created_at}</p>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-lg py-12 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>暂无岗位</p>
-            )}
-          </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--color-primary)' }}>{job.candidates}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>候选人</p>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm py-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>暂无岗位</p>
+          )}
+        </div>
 
-          {/* 匹配度分布 — 水平条形图 */}
-          <div>
-            <h2 className="text-base font-medium uppercase tracking-wider mb-6" style={{ color: 'var(--color-on-surface-variant)' }}>匹配度分布</h2>
-            <div className="space-y-6">
-              {distributions.map(item => (
-                <div key={item.label}>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
-                    <span className="text-base font-semibold tabular-nums" style={{ color: item.color }}>
-                      {item.val}
-                      <span className="text-sm ml-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                        ({Math.round(item.val / totalDist * 100)}%)
-                      </span>
+        {/* 匹配度分布 */}
+        <div className="col-span-2 rounded-2xl border p-5 shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--color-on-surface)' }}>匹配度分布</h2>
+          <div className="space-y-5">
+            {distributions.map((item, i) => (
+              <div key={item.label}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: item.color }}>
+                    {item.val}
+                    <span className="font-normal ml-1" style={{ color: 'var(--color-on-surface-variant)' }}>
+                      ({Math.round(item.val / totalDist * 100)}%)
                     </span>
-                  </div>
-                  <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${item.val / totalDist * 100}%` }}
-                      transition={{ duration: 0.6, ease: 'easeOut' }}
-                      className="h-full rounded-full"
-                      style={{ background: item.color }}
-                    />
-                  </div>
+                  </span>
                 </div>
-              ))}
-              <div className="pt-5 mt-5 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                <p className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  总计 {totalDist} 位候选人
-                </p>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+                  <motion.div className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.val / totalDist * 100}%` }}
+                    transition={{ duration: 0.6, delay: 0.5 + i * 0.1 }}
+                    style={{ background: item.color }} />
+                </div>
               </div>
+            ))}
+            <div className="pt-4 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
+              <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
+                总计 <span className="font-bold" style={{ color: 'var(--color-on-surface)' }}>{totalDist}</span> 位候选人
+              </p>
             </div>
           </div>
-        </section>
-
-        {/* ── 快捷入口 — 列布局，单一 accent 色 ── */}
-        <section>
-          <h2 className="text-base font-medium uppercase tracking-wider mb-6" style={{ color: 'var(--color-on-surface-variant)' }}>快捷入口</h2>
-          <div className="grid grid-cols-3 border-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            {shortcuts.map((item, i) => (
-              <motion.button
-                key={item.label}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => setPage(item.page)}
-                className={`text-left py-8 px-6 transition-colors hover:bg-[var(--color-surface-container-low)] ${i < 2 ? 'border-r' : ''}`}
-                style={{ borderColor: 'var(--color-outline-variant)' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xl font-medium" style={{ color: 'var(--color-on-surface)' }}>{item.label}</p>
-                    <p className="text-base mt-1.5" style={{ color: 'var(--color-on-surface-variant)' }}>{item.desc}</p>
-                  </div>
-                  <ArrowRight className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </section>
+        </div>
       </div>
     </div>
   )

@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, ChevronRight, BookOpen, Target, AlertCircle } from 'lucide-react'
+import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, ChevronRight, BookOpen, Target, Clock } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import { useLearning } from '../../lib/LearningContext'
 import StatsCounter from '../../components/ui/StatsCounter'
 
-interface DiagnosisHistory {
-  id: string
+interface HistoryItem {
+  id: number | string
+  jobId: number
   jobTitle: string
-  score: number
+  jobCompany: string
+  jobLocation: string
+  jobSalary: string
+  overall: number
   grade: string
+  haveCount: number
+  missCount: number
+  skills: any
+  phases: any[]
+  recommendations: string[]
+  dims: any
   timestamp: number
 }
 
@@ -19,29 +30,138 @@ const statsData = [
   { label: '平台用户', value: 8642, color: 'var(--accent-orange)' },
 ]
 
+/** 安全地将各种日期格式转为时间戳 */
+function toTimestamp(v: any): number {
+  if (typeof v === 'number') return v
+  if (typeof v === 'string' && v) {
+    const t = new Date(v).getTime()
+    if (!isNaN(t)) return t
+  }
+  return 0
+}
+
+/** 格式化时间戳为友好日期 */
+function fmtDate(ts: number): string {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 60_000) return '刚刚'
+  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} 分钟前`
+  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} 小时前`
+  if (diff < 604800_000) return `${Math.floor(diff / 86400_000)} 天前`
+  return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
 export default function Dashboard() {
   const { setPage } = JSNav.use()
-  const [history, setHistory] = useState<DiagnosisHistory[]>([])
-  const [masteredCount, setMasteredCount] = useState(0)
+  const { masteredSkills } = useLearning()
+  const [history, setHistory] = useState<HistoryItem[]>([])
 
+  // 从 localStorage 读诊断历史（Diagnosis.tsx 写入）
   useEffect(() => {
-    // 加载诊断历史
     try {
       const saved = localStorage.getItem('jt_diagnosis_history')
       if (saved) {
         const list = JSON.parse(saved)
-        setHistory(Array.isArray(list) ? list.slice(0, 3) : [])
-      }
-    } catch {}
-
-    // 加载已掌握技能数
-    try {
-      const skills = localStorage.getItem('jt_mastered_skills')
-      if (skills) {
-        setMasteredCount(JSON.parse(skills).length)
+        if (Array.isArray(list)) {
+          // 去重（按 jobId + overall 去重）
+          const seen = new Set<string>()
+          const unique = list.filter((h: any) => {
+            const key = `${h.jobId || h.job_id}-${h.overall}-${h.grade}`
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
+          setHistory(unique.slice(0, 3).map((h: any) => ({
+            id: h.id || 0,
+            jobId: h.jobId || h.job_id || 0,
+            jobTitle: h.jobTitle || h.job_title || h.title || '未知岗位',
+            jobCompany: h.jobCompany || h.job_company || '',
+            jobLocation: h.jobLocation || h.job_location || '',
+            jobSalary: h.jobSalary || h.job_salary || '',
+            overall: h.overall || h.score || 0,
+            grade: h.grade || '-',
+            haveCount: h.haveCount || h.have_count || 0,
+            missCount: h.missCount || h.miss_count || 0,
+            skills: h.skills || { have: [], miss: [], extra: [] },
+            phases: h.phases || [],
+            recommendations: h.recommendations || [],
+            dims: h.dims || null,
+            timestamp: toTimestamp(h.timestamp || h.created_at),
+          })))
+        }
       }
     } catch {}
   }, [])
+
+  // 页面可见时重新读取 localStorage
+  const reloadHistory = () => {
+    try {
+      const saved = localStorage.getItem('jt_diagnosis_history')
+      if (saved) {
+        const list = JSON.parse(saved)
+        if (Array.isArray(list)) {
+          const seen = new Set<string>()
+          const unique = list.filter((h: any) => {
+            const key = `${h.jobId || h.job_id}-${h.overall}-${h.grade}`
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
+          setHistory(unique.slice(0, 3).map((h: any) => ({
+            id: h.id || 0,
+            jobId: h.jobId || h.job_id || 0,
+            jobTitle: h.jobTitle || h.job_title || h.title || '未知岗位',
+            jobCompany: h.jobCompany || h.job_company || '',
+            jobLocation: h.jobLocation || h.job_location || '',
+            jobSalary: h.jobSalary || h.job_salary || '',
+            overall: h.overall || h.score || 0,
+            grade: h.grade || '-',
+            haveCount: h.haveCount || h.have_count || 0,
+            missCount: h.missCount || h.miss_count || 0,
+            skills: h.skills || { have: [], miss: [], extra: [] },
+            phases: h.phases || [],
+            recommendations: h.recommendations || [],
+            dims: h.dims || null,
+            timestamp: toTimestamp(h.timestamp || h.created_at),
+          })))
+        }
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    const handler = () => { if (!document.hidden) reloadHistory() }
+    document.addEventListener('visibilitychange', handler)
+    return () => document.removeEventListener('visibilitychange', handler)
+  }, [])
+
+  /** 点击诊断条目 → 进入学习 */
+  const handleClickDiagnosis = (item: HistoryItem) => {
+    // 数据不完整（旧记录），提示去重新诊断
+    const skills = item.skills || { have: [], miss: [], extra: [] }
+    if (!skills.have?.length && !skills.miss?.length && !item.phases?.length) {
+      setPage('match')
+      return
+    }
+    const resultData = {
+      job: {
+        id: item.jobId, title: item.jobTitle, company: item.jobCompany,
+        salary: item.jobSalary, location: item.jobLocation, skills: [],
+      },
+      result: {
+        overall: item.overall, grade: item.grade,
+        skills,
+        recommendations: item.recommendations || [],
+        dims: item.dims || null,
+      },
+      phases: item.phases || [],
+      timestamp: item.timestamp || Date.now(),
+    }
+    localStorage.setItem('jt_diagnosis_result', JSON.stringify(resultData))
+    setPage('learning')
+  }
 
   const quickActions = [
     { icon: Upload, label: '上传简历', desc: 'AI 自动解析，1 分钟建立能力档案', color: 'var(--color-primary)', page: 'resume' as const },
@@ -107,8 +227,8 @@ export default function Dashboard() {
         <div className="rounded-2xl border shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
             <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>最近诊断</h3>
-            <button onClick={() => history.length > 0 ? setPage('diagnosis') : setPage('match')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
-              {history.length > 0 ? '查看全部' : '去诊断'} <ChevronRight className="h-4 w-4" />
+            <button onClick={() => setPage('match')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
+              去诊断 <ChevronRight className="h-4 w-4" />
             </button>
           </div>
           <div className="p-5">
@@ -122,36 +242,49 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {history.map((item) => (
-                  <motion.div key={item.id} whileHover={{ scale: 1.01 }}
+                {history.map((item) => {
+                  const hasDetail = (item.skills?.have?.length || item.skills?.miss?.length || item.phases?.length)
+                  return (
+                  <motion.div key={item.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                     className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors"
-                    style={{ background: 'var(--color-surface-container)' }}
-                    onClick={() => {
-                      // 将历史诊断结果写入 jt_diagnosis_result，供页面直接读取
-                      const resultData = {
-                        job: { id: item.jobId, title: item.jobTitle, company: item.jobCompany, salary: item.jobSalary, location: item.jobLocation, skills: [] },
-                        result: { overall: item.overall, grade: item.grade, skills: item.skills || { have: [], miss: [], extra: [] }, recommendations: item.recommendations || [] },
-                        phases: item.phases || [],
-                        timestamp: item.timestamp,
-                      }
-                      localStorage.setItem('jt_diagnosis_result', JSON.stringify(resultData))
-                      setPage('learning')
-                    }}>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white" style={{ background: getGradeColor(item.grade) }}>
+                    style={{ background: 'var(--color-surface-container)', opacity: hasDetail ? 1 : 0.7 }}
+                    onClick={() => handleClickDiagnosis(item)}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white shrink-0" style={{ background: getGradeColor(item.grade) }}>
                         {item.grade}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>{item.jobTitle}</p>
-                        <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{new Date(item.timestamp).toLocaleDateString()}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-on-surface)' }}>{item.jobTitle}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Clock className="h-3 w-3 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }} />
+                          <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
+                            {fmtDate(item.timestamp) || '未知时间'}
+                          </p>
+                          {hasDetail ? (
+                            item.missCount > 0 && (
+                              <>
+                                <span className="text-xs" style={{ color: 'var(--color-outline-variant)' }}>·</span>
+                                <span className="text-xs" style={{ color: 'var(--accent-red)' }}>
+                                  缺 {(() => {
+                                    const missSkills = (item.skills?.miss || []).map((s: any) => s.skill || s.name || s).filter(Boolean)
+                                    return missSkills.length > 0 ? missSkills.slice(0, 2).join('、') + (missSkills.length > 2 ? ` 等${missSkills.length}项` : '') : `${item.missCount} 项`
+                                  })()}
+                                </span>
+                              </>
+                            )
+                          ) : (
+                            <span className="text-xs" style={{ color: 'var(--accent-orange)' }}>· 数据已过期</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0 ml-3">
                       <p className="text-xl font-bold" style={{ color: getGradeColor(item.grade) }}>{item.overall}</p>
                       <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>分</p>
                     </div>
                   </motion.div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -169,14 +302,14 @@ export default function Dashboard() {
             <div className="text-center py-6">
               <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
               <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-                已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredCount}</span> 项技能
+                已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredSkills.size}</span> 项技能
               </p>
-              <div className="mt-4 h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
-                <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredCount * 5, 100)}%` }}
-                  transition={{ duration: 1 }} style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--accent-purple))' }} />
+              <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: '#E8ECF4' }}>
+                <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredSkills.size * 5, 100)}%` }}
+                  transition={{ duration: 1 }} style={{ background: 'var(--color-primary)' }} />
               </div>
               <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-                {masteredCount < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
+                {masteredSkills.size < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
               </p>
               <button onClick={() => setPage('skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
                 查看能力图谱

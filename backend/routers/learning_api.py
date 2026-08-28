@@ -63,7 +63,9 @@ def get_skills(token: str = Query(...), job_id: Optional[int] = Query(None)):
 
 @router.post('/skills')
 def toggle_skill(req: SkillReq, token: str = Query(...)):
+    from services.skill_synonyms import canonical_name
     uid, role = _get_uid(token)
+    req.skill_name = canonical_name(req.skill_name)
     session = get_session()
     try:
         # 检查是否已存在
@@ -218,7 +220,9 @@ def get_progress(token: str = Query(...), job_id: Optional[int] = Query(None)):
 
 @router.post('/progress')
 def update_progress(req: ProgressReq, token: str = Query(...)):
+    from services.skill_synonyms import canonical_name
     uid, role = _get_uid(token)
+    req.skill_name = canonical_name(req.skill_name)
     session = get_session()
     try:
         # upsert

@@ -347,12 +347,12 @@ export default function JobManage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2.5 mb-2">
                         <span className="text-lg font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{job.title}</span>
-                        <span className="text-sm px-2 py-0.5 rounded shrink-0" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        <span className="text-sm px-2 py-0.5 rounded-lg shrink-0" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                       </div>
                       {skills.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 items-center">
                           {skills.map(s => (
-                            <span key={s} className="text-sm px-2.5 py-1 rounded"
+                            <span key={s} className="text-sm px-2.5 py-1 rounded-lg"
                               style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                               {s}
                             </span>
@@ -390,42 +390,42 @@ export default function JobManage() {
                       <button
                         onClick={() => setPage('talent', { filterJobId: job.id })}
                         title="查看候选人"
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <Users className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                       <button
                         onClick={() => setPage('talent', { filterJobId: job.id, autoCompare: true })}
                         title="对比候选人"
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <GitCompare className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                       <button
                         onClick={() => openView(job)}
                         title="查看详情"
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <Eye className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                       <button
                         onClick={() => openEdit(job)}
                         title="编辑"
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <Edit3 className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                       <button
                         onClick={() => toggleStatus(job)}
                         title={job.status === 'active' ? '关闭岗位' : '重新开放'}
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <Power className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
                       <button
                         onClick={() => setConfirmDelete(job)}
                         title="删除"
-                        className="p-2.5 rounded transition-colors hover:bg-[var(--color-surface-container-high)]"
+                        className="p-2.5 rounded-lg transition-all hover:bg-[var(--color-surface-container-high)] hover:shadow-sm"
                       >
                         <Trash2 className="h-5 w-5" style={{ color: 'var(--color-on-surface-variant)' }} />
                       </button>
@@ -471,7 +471,7 @@ export default function JobManage() {
                 <p className="text-sm mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>技能要求</p>
                 <div className="flex flex-wrap gap-2">
                   {viewing.skills_required.split(',').map(s => s.trim()).filter(Boolean).map(s => (
-                    <span key={s} className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
+                    <span key={s} className="text-sm px-2.5 py-1 rounded-lg" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
                   ))}
                 </div>
               </div>

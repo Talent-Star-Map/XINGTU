@@ -561,10 +561,11 @@ def list_resource_skills():
 @router.post('/resources')
 def create_resource(req: ResourceCreateReq):
     """新增学习资源"""
+    from services.skill_synonyms import canonical_name
     session = get_session()
     try:
         r = SkillResource(
-            skill_name=req.skill_name.strip(),
+            skill_name=canonical_name(req.skill_name),
             resource_type=req.resource_type,
             title=req.title,
             url=req.url,
@@ -587,12 +588,13 @@ def create_resource(req: ResourceCreateReq):
 @router.put('/resources/{res_id}')
 def update_resource(res_id: int, req: ResourceCreateReq):
     """更新学习资源"""
+    from services.skill_synonyms import canonical_name
     session = get_session()
     try:
         r = session.query(SkillResource).filter(SkillResource.id == res_id).first()
         if not r:
             return _err('NOT_FOUND', f'资源不存在: id={res_id}')
-        r.skill_name = req.skill_name.strip()
+        r.skill_name = canonical_name(req.skill_name)
         r.resource_type = req.resource_type
         r.title = req.title
         r.url = req.url
@@ -633,6 +635,7 @@ def delete_resource(res_id: int):
 @router.post('/resources/batch')
 def batch_import_resources(items: list[ResourceCreateReq]):
     """批量导入学习资源（用于初始数据迁移，上限 200 条）"""
+    from services.skill_synonyms import canonical_name
     if len(items) > 200:
         return _err('BATCH_TOO_LARGE', '单次批量导入上限 200 条')
     session = get_session()
@@ -640,7 +643,7 @@ def batch_import_resources(items: list[ResourceCreateReq]):
         created = 0
         for item in items:
             r = SkillResource(
-                skill_name=item.skill_name.strip(),
+                skill_name=canonical_name(item.skill_name),
                 resource_type=item.resource_type,
                 title=item.title,
                 url=item.url,

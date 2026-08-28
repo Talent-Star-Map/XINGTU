@@ -539,19 +539,19 @@ export default function TalentSearch() {
         {(keyword || selectedJob || matchInfo) && (
           <div className="px-14 pb-5 flex items-center gap-2.5 flex-wrap text-base">
             {keyword && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                 关键词: {keyword}
                 <button onClick={clearSearch}><X className="h-4 w-4" /></button>
               </span>
             )}
             {selectedJob && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>
                 岗位: {selectedJobTitle}
                 <button onClick={() => pickJob(null)}><X className="h-4 w-4" /></button>
               </span>
             )}
             {matchInfo && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
                 <TrendingUp className="h-4 w-4" /> {matchInfo}
               </span>
             )}
@@ -644,7 +644,7 @@ export default function TalentSearch() {
                           <div className="flex items-center gap-2">
                             <span className="text-lg font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
                             {c.job_title && (
-                              <span className="text-sm px-2 py-0.5 rounded font-medium shrink-0" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
+                              <span className="text-sm px-2 py-0.5 rounded-lg font-medium shrink-0" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                                 {c.job_title}
                               </span>
                             )}
@@ -656,7 +656,7 @@ export default function TalentSearch() {
                       {/* 技能 */}
                       <div className="flex flex-wrap gap-1.5 items-center">
                         {visibleSkills.map(s => (
-                          <span key={s} className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
+                          <span key={s} className="text-sm px-2.5 py-1 rounded-lg" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
                         ))}
                         {hiddenCount > 0 && <span className="text-sm tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>+{hiddenCount}</span>}
                         {c.skills.length === 0 && <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)', opacity: 0.5 }}>—</span>}
@@ -716,7 +716,7 @@ export default function TalentSearch() {
                               <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>技能 ({c.skills.length})</p>
                               <div className="flex flex-wrap gap-2">
                                 {c.skills.map(s => (
-                                  <span key={s} className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>{s}</span>
+                                  <span key={s} className="text-sm px-2.5 py-1 rounded-lg" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>{s}</span>
                                 ))}
                                 {c.skills.length === 0 && <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>未提供</span>}
                               </div>
@@ -802,7 +802,7 @@ export default function TalentSearch() {
                   const c = candidates.find(x => x.id === id)
                   if (!c) return null
                   return (
-                    <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-sm"
+                    <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm"
                       style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCompareColor(idx) }} />
                       {c.name}
@@ -849,7 +849,7 @@ export default function TalentSearch() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-8"
-            style={{ background: 'rgba(0,0,0,0.5)' }}
+            style={{ background: 'var(--color-scrim, rgba(0,0,0,0.5))' }}
             onClick={() => { setShowCompare(false); setCompareData(null); setDeepCompareData(null); setDeepCompareError('') }}
           >
             <motion.div
@@ -902,7 +902,7 @@ export default function TalentSearch() {
                       <div className="flex flex-wrap gap-2">
                         {compareData.skill_analysis.common.length > 0 ? (
                           compareData.skill_analysis.common.map(s => (
-                            <span key={s} className="text-sm px-3 py-1.5 rounded"
+                            <span key={s} className="text-sm px-3 py-1.5 rounded-lg"
                               style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>{s}</span>
                           ))
                         ) : (
@@ -926,7 +926,7 @@ export default function TalentSearch() {
                               </div>
                               <div className="flex flex-wrap gap-2 ml-4.5">
                                 {unique.length > 0 ? unique.map(s => (
-                                  <span key={s} className="text-sm px-3 py-1.5 rounded"
+                                  <span key={s} className="text-sm px-3 py-1.5 rounded-lg"
                                     style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>{s}</span>
                                 )) : (
                                   <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>无独有技能</span>
@@ -991,7 +991,7 @@ export default function TalentSearch() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-8"
-            style={{ background: 'rgba(0,0,0,0.5)' }}
+            style={{ background: 'var(--color-scrim, rgba(0,0,0,0.5))' }}
             onClick={() => setShowDeepPanel(false)}
           >
             <motion.div
@@ -1074,7 +1074,7 @@ export default function TalentSearch() {
                               {item.candidate_name}
                             </span>
                             {item.rank === 1 && (
-                              <span className="text-sm px-2.5 py-1 rounded" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+                              <span className="text-sm px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
                                 最推荐
                               </span>
                             )}

@@ -34,9 +34,13 @@ npm run dev
 #    在 Navicat 中依次执行以下 SQL 文件（连接 xingtu 库后运行）：
 #    - backend/sql/seed_users.sql   # 求职者 Xing + 企业端 Tu 测试账号
 #    - backend/sql/seed_admin.sql   # 默认管理员 admin@xingtu.com
-#    - backend/sql/seed.sql         # 企业端测试数据（10 求职者 + 10 岗位 + 10 匹配记录）
+#    - backend/sql/seed_rcx.sql     # 企业端测试数据（10 求职者 + 10 岗位 + 10 匹配记录）
 #    - backend/sql/seed_jobs.sql    # 爬虫主表 15 条种子岗位数据
 ```
+
+> 前端构建命令 `npm run build` = `tsc --noEmit && vite build`，**会先做 TypeScript 类型检查**。
+> 只想查类型不打包用 `npm run typecheck`。提交前建议跑一次 build，
+> 早期只跑 `vite build` 时类型错误会被静默放过。
 
 浏览器打开 http://localhost:5173
 
@@ -103,7 +107,7 @@ npm run dev
 |---|---|
 | `seed_users.sql` | 求职者 Xing/Xing123 + 企业端 Tu/Tu123 测试账号 |
 | `seed_admin.sql` | 默认管理员 admin@xingtu.com / Admin1234 |
-| `seed.sql` | 企业端测试数据：10 求职者 + 10 岗位(enterprise_jobs) + 10 匹配记录 |
+| `seed_rcx.sql` | 企业端测试数据：10 求职者 + 10 岗位(enterprise_jobs) + 10 匹配记录 |
 | `seed_jobs.sql` | 爬虫主表(jobs) 15 条种子岗位数据 |
 
 密码哈希说明：脚本中的密码用 `bcrypt(salt_rounds=12)` 预计算，后端 `auth.py` 用 `bcrypt.checkpw` 校验，完全兼容。
@@ -118,6 +122,23 @@ python -c "import bcrypt; print(bcrypt.hashpw('新密码'.encode(), bcrypt.gensa
 ## ⚠️ 不要提交依赖到仓库
 
 已通过 `.gitignore` 排除 `node_modules/`、`dist/`、`*.db`，各自本地安装即可。
+
+---
+
+## 准确率验证（离线可复现）
+
+后端三项核心指标（JD 解析 / 简历提取 / 人岗匹配）各有独立验证脚本，纯 Python 直跑，**不依赖数据库、网络与 LLM**：
+
+```bash
+cd backend
+python tests/test_jd_parser.py     # JD 技能解析   F1 0.9553（104 条 JD）
+python tests/test_resume.py        # 简历技能提取   F1 0.9533（100 条简历）
+python tests/test_job_agent.py     # 人岗匹配       Top-5 1.0000 / MRR 0.9525（全量约 7 分钟，--quick 更快）
+python tests/test_our_modules.py   # 纯函数单测     20 PASS
+python tests/test_quality.py       # 质检模块单测   14 PASS
+```
+
+测试集在 `backend/test_data/`（104 条 JD + 100 条简历 + 100 组匹配对），口径细节见 `docs/作品设计实现方案书.md` §8。
 
 ---
 
