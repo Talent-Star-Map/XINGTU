@@ -150,10 +150,11 @@ export default function JobGraphPage() {
             )}
           </div>
 
-          {/* 右下角:演化时间轴 */}
-          <div className="h-56 border-t shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
+          {/* 右下角:演化时间轴(收紧,完整展示不滚动) */}
+          <div className="h-[210px] border-t shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
             <JobEvolutionTimeline
               jobId={selectedJobId}
+              height={170}
               onChangePointClick={(cid) => {
                 // 变化点已通过 JobGraphCanvas 悬浮窗和"查看详情"承载,这里不再展开
                 console.log('[JobGraphPage] 点击变化点:', cid)
