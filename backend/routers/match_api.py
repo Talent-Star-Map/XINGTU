@@ -19,7 +19,7 @@ from collections import defaultdict
 
 from database import get_session, get_user_model_by_role
 # 跨模块引用：routers/services 已分目录
-from routers.jobs import SEED_JOBS
+from routers.jobs import load_all_jobs, load_job_by_id
 from services.match_analyzer import compute_match_score, extract_profile_features, SCORE_VERSION
 from services.quality_checker import cross_validate
 
@@ -59,6 +59,8 @@ _cleanup_old_cache()
 
 class AnalyzeReq(BaseModel):
     job_id: int
+    # 优先使用显式技能列表：直接是结构化的，不必对假文本跑一遍 LLM
+    skills: list[str] = Field(default_factory=list)
     resume_text: Optional[str] = None
     use_profile_skills: bool = True
     use_parsed_resume_cache: bool = True
@@ -80,8 +82,8 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
     user_id = payload['user_id']
     role = payload.get('role', 'jobseeker')
 
-    # 2. 加载岗位
-    job = next((j for j in SEED_JOBS if j['id'] == req.job_id), None)
+    # 2. 加载岗位（实时查库，不用启动期的静态快照）
+    job = load_job_by_id(req.job_id)
     if not job:
         raise HTTPException(404, '岗位不存在')
 
@@ -94,7 +96,7 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
         raise HTTPException(404, '用户不存在')
 
     # 4. 构图 quality_context（交叉验证状态）
-    from routers.jobs import SEED_JOBS as all_jobs_for_validation
+    all_jobs_for_validation = load_all_jobs()
     source_skills_map = defaultdict(list)
     for j in all_jobs_for_validation:
         source_skills_map[j['source']].extend(j.get('skills', []))
@@ -102,14 +104,21 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
     quality_context = cross_validate(skills_per_source)
 
     # 5. 提取 profile_features（按优先级）
+    #    显式技能列表 > 简历原文 > 简历解析缓存 > 个人资料技能字段
     profile = None
     cache_path = None
 
-    # 5a. 直接传了简历文本
-    if req.resume_text and req.resume_text.strip():
+    # 5a. 前端直接传了技能列表 —— 结构化数据，无需再走 LLM 解析
+    if req.skills and len(req.skills) > 0:
+        profile = extract_profile_features(req.skills, "skill_list")
+        profile["raw_source"] = "skill_list"
+
+    # 5b. 传了真实简历文本
+    if profile is None and req.resume_text and req.resume_text.strip():
         profile = extract_profile_features(req.resume_text, "resume_text")
-    else:
-        # 5b. 找最新解析缓存
+
+    if profile is None:
+        # 5c. 找最新解析缓存
         cache_files = sorted(
             glob.glob(os.path.join(UPLOAD_DIR, 'resumes', f'{user_id}_*.json')),
             key=os.path.getmtime,
@@ -196,8 +205,9 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
     except Exception:
         pass
 
-    # 7. 计算 match score
-    result = compute_match_score(profile, job, quality_context)
+    # 7. 计算 match score（all_jobs 已在上方为 cross_validate 加载，直接复用，
+    #    避免 _generate_recommendations 内部再回源 load_all_jobs() 白跑一次）
+    result = compute_match_score(profile, job, quality_context, all_jobs=all_jobs_for_validation)
     result["has_profile"] = True
     result["cache_hit"] = False
     result["computed_at"] = computed_at
@@ -228,9 +238,14 @@ class RecommendReq(BaseModel):
 @router.post('/recommend')
 def api_match_recommend(
     req: RecommendReq,
+    n: Optional[int] = Query(None, ge=1, le=50),
     token: str = Query(...),
 ):
-    """推荐岗位 Top N（支持传入技能列表或 resume_text）"""
+    """推荐岗位 Top N（支持传入技能列表或 resume_text）
+
+    n 兼容两种传法：query `?n=10`（前端在用）或 body `{"n": 10}`；
+    都缺省时用 RecommendReq 的默认值。
+    """
     from database import verify_token
     try:
         payload = verify_token(token)
@@ -240,14 +255,14 @@ def api_match_recommend(
     user_id = payload['user_id']
     role = payload.get('role', 'jobseeker')
 
-    # 1. 优先使用请求中传入的技能 / resume_text
+    # 1. 优先使用请求中传入的技能列表（用户显式选择，最准确）
     profile = None
 
-    if req.resume_text and req.resume_text.strip():
-        profile = extract_profile_features(req.resume_text, "resume_text")
-    elif req.skills and len(req.skills) > 0:
+    if req.skills and len(req.skills) > 0:
         profile = extract_profile_features(req.skills, "skill_list")
         profile["raw_source"] = "manual_input"
+    elif req.resume_text and req.resume_text.strip():
+        profile = extract_profile_features(req.resume_text, "resume_text")
 
     # 2. fallback：用户已解析的简历缓存
     if profile is None:
@@ -289,10 +304,34 @@ def api_match_recommend(
     if profile is None:
         return {'success': False, 'code': 'NO_PROFILE', 'data': [], 'message': '无可用技能数据'}
 
+    # 结果缓存（5 分钟）：同一用户同一技能组合重复点击秒出。
+    # 岗位池是实时查的，但 5 分钟内爬虫新岗位不会丢失太多，体验优先
+    from datetime import datetime, timezone, timedelta
+    cache_key = hashlib.md5(
+        f"{user_id}:{','.join(sorted(s.lower() for s in profile.get('skills', [])))}".encode()
+    ).hexdigest()
+    rec_cache_path = os.path.join(MATCH_CACHE_DIR, f"rec_{cache_key}.json")
+    try:
+        if os.path.exists(rec_cache_path):
+            with open(rec_cache_path, 'r', encoding='utf-8') as f:
+                cached = json.load(f)
+            if cached.get('created_at'):
+                ct = datetime.fromisoformat(cached['created_at'])
+                if ct.tzinfo is None:
+                    ct = ct.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) - ct < timedelta(minutes=5):
+                    return {'success': True, 'data': cached['data'],
+                            'score_version': SCORE_VERSION, 'cache_hit': True}
+    except Exception:
+        pass
+
+    # 实时读取岗位池：用启动期快照会导致爬虫新写入的岗位永远不会被推荐
+    all_jobs = load_all_jobs()
+
     # 快速预筛选：只保留技能有重叠的岗位（避免全量计算）
     user_skills_lower = set(s.lower() for s in profile.get("skills", []) if s)
     candidate_jobs = []
-    for job in SEED_JOBS:
+    for job in all_jobs:
         job_skills = set(s.lower() for s in job.get("skills", []) if s)
         overlap = len(user_skills_lower & job_skills)
         if overlap >= 1:  # 至少1个技能重叠
@@ -301,10 +340,26 @@ def api_match_recommend(
     candidate_jobs.sort(key=lambda x: x[0], reverse=True)
     candidate_jobs = [job for _, job in candidate_jobs[:50]]
 
+    # 预计算技能频率：一次遍历全部岗位，统计每个技能出现次数
+    from services.skill_synonyms import normalize_preprocess, is_synonym
+    skill_popularity = {}
+    total_jobs = len(all_jobs)
+    for jd in all_jobs:
+        for js in jd.get("skills", []):
+            s_key = normalize_preprocess(js)
+            if s_key:
+                skill_popularity[s_key] = skill_popularity.get(s_key, 0) + 1
+    # 转为比例
+    for k in skill_popularity:
+        skill_popularity[k] = round(skill_popularity[k] / max(total_jobs, 1), 3)
+
     # 详细计算匹配分数
+    # ⚠️ 必须传 all_jobs：compute_match_score 内部 _generate_recommendations 会
+    #    回源 load_all_jobs()，不传的话每个候选岗位都重复拉一次全量岗位池，
+    #    50 个候选就是 50 次全表读取（实测 ~64s，智能匹配直接卡死）
     scores = []
     for job in candidate_jobs:
-        result = compute_match_score(profile, job, {})
+        result = compute_match_score(profile, job, {}, skill_popularity, all_jobs)
         have_skills = [s["skill"] for s in result["skills"]["have"]]
         miss_high = [s["skill"] for s in result["skills"]["miss"] if s.get("priority") == "high"]
         scores.append({
@@ -322,7 +377,16 @@ def api_match_recommend(
         })
 
     scores.sort(key=lambda x: x["overall"], reverse=True)
-    return {'success': True, 'data': scores[:req.n], 'score_version': SCORE_VERSION}
+    n = n or req.n
+    result_data = scores[:n]
+    # 写缓存（失败不影响主流程）
+    try:
+        with open(rec_cache_path, 'w', encoding='utf-8') as f:
+            json.dump({'created_at': datetime.now(timezone.utc).isoformat(), 'data': result_data},
+                      f, ensure_ascii=False)
+    except Exception:
+        pass
+    return {'success': True, 'data': result_data, 'score_version': SCORE_VERSION}
 
 
 # ──────────────────────────────────────────────

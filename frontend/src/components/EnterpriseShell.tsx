@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
@@ -16,15 +16,16 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'industry', icon: FileText, label: '行业报告' },
 ]
 
-import EPDashboard from '../pages/enterprise/Dashboard'
-import EPJobs from '../pages/enterprise/JobManage'
-import EPTalent from '../pages/enterprise/TalentSearch'
-import EPMessages from '../pages/enterprise/Conversations'
-import EPMarket from '../pages/enterprise/MarketInsight'
-import EPIndustry from '../pages/enterprise/IndustryReport'
-import EPCompany from '../pages/enterprise/CompanyProfile'
+// 页面按需加载，避免首屏一次性加载全部业务代码
+const EPDashboard = lazy(() => import('../pages/enterprise/Dashboard'))
+const EPJobs = lazy(() => import('../pages/enterprise/JobManage'))
+const EPTalent = lazy(() => import('../pages/enterprise/TalentSearch'))
+const EPMessages = lazy(() => import('../pages/enterprise/Conversations'))
+const EPMarket = lazy(() => import('../pages/enterprise/MarketInsight'))
+const EPIndustry = lazy(() => import('../pages/enterprise/IndustryReport'))
+const EPCompany = lazy(() => import('../pages/enterprise/CompanyProfile'))
 
-const pages: Record<Page, () => ReactNode> = {
+const pages: Record<Page, ComponentType> = {
   dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
   market: EPMarket, industry: EPIndustry, company: EPCompany,
 }
@@ -190,7 +191,9 @@ export default function EnterpriseShell({ onLogout }: Props) {
       {/* ── 主内容区 ── */}
       <main className="flex-1 overflow-y-auto">
         <EPNav.Provider value={{ setPage, page, params: navParams }}>
-          <PageComp />
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
+            <PageComp />
+          </Suspense>
         </EPNav.Provider>
       </main>
     </div>
