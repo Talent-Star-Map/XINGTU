@@ -1,0 +1,11 @@
+1、爬取csdn数据： python -m collectors.csdn.collector
+2、爬取掘金数据：python -m collectors.juejin.collector
+3、爬取GitHub数据： python -m collectors.github.collector
+
+python -m py_compile collectors/github/collector.py（语法检查）
+python -m collectors.github.collector login → 登录并回车保存状态
+csdn和掘金都是这样的登录，保存状态的命令
+python -m collectors.github.collector → 采集第一个仓库并打印 JSON
+
+4、数据清洗：python -m test.test_article_clean
+5、上传云服务器：python -m sync.article_sync
