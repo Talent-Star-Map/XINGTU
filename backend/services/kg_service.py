@@ -114,8 +114,13 @@ def get_jobs(
         "MATCH (j:Job) "
         + ("WHERE " + " AND ".join(where) + " " if where else "")
         + "OPTIONAL MATCH (j)-[:BELONGS_TO]->(i:Industry) "
-        + "RETURN j, i.name AS industry "
-        + "ORDER BY j.crawl_time DESC "
+        # 实时算 sort_score = 技能需求数×2 + 变化事件数×5 + 相似岗位数
+        # 反映"综合性 + 时序活跃度 + 跨源关联度",比 crawl_time 排序更稳定
+        + "OPTIONAL MATCH (j)-[:REQUIRES]->(:Skill) WITH j, i, count(*) AS req "
+        + "OPTIONAL MATCH (j)-[:HAS_CHANGE]->(:ChangeEvent) WITH j, i, req, count(*) AS chg "
+        + "OPTIONAL MATCH (j)-[:SIMILAR_TO]->(:Job) WITH j, i, req, chg, count(*) AS sim "
+        + "RETURN j, i.name AS industry, (req * 2 + chg * 5 + sim) AS sort_score "
+        + "ORDER BY sort_score DESC, j.crawl_time DESC "
         + "SKIP $skip LIMIT $limit"
     )
     rows = _query(cypher, params)
@@ -133,7 +138,9 @@ def get_jobs(
             "education": j.get("education"),
             "experience": j.get("experience"),
             "industry": r.get("industry"),
-            "hot_score": j.get("hot_score"),
+            # 把实时算的 sort_score 暴露成 hot_score 给前端
+            # (字段名不变,前端调用方不动)
+            "hot_score": int(r.get("sort_score") or 0),
             "trend_score": j.get("trend_score"),
             "crawl_time": str(j.get("crawl_time")) if j.get("crawl_time") else None,
         })
