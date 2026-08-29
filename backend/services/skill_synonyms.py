@@ -408,6 +408,36 @@ def best_match_in_profile(jd_skill: str, profile_skills: list[str]) -> Optional[
     return None
 
 
+# 已知易混淆的包含对 — 子串成立但语义不同（防误判黑名单，与企业端 match_engine 口径一致）
+_CONFUSABLE_CONTAINMENT = {('java', 'javascript'), ('javascript', 'java')}
+
+
+def containment_match(jd_skill: str, profile_skills: list[str]) -> Optional[str]:
+    """
+    子串包含匹配（L3 级部分匹配）：JD 技能是求职者技能的子串（或反之）。
+    如 JD 写 "ReactJS"，用户技能是 "React" → 返回 "React"。
+
+    防误判规则：
+        - 较短一方长度 ≥ 4（排除 "js" ⊂ "json" 这类短词误判）
+        - 黑名单对（java ⊄ javascript，语义不同不算匹配）
+
+    返回匹配到的用户技能名（原始大小写）；无匹配返回 None。
+    供 match_analyzer 计算部分得分（×0.7）使用。
+    """
+    jd_key = normalize_preprocess(jd_skill)
+    if len(jd_key) < 4:
+        return None
+    for ps in profile_skills:
+        ps_key = normalize_preprocess(ps)
+        if len(ps_key) < 4:
+            continue
+        if (jd_key, ps_key) in _CONFUSABLE_CONTAINMENT or (ps_key, jd_key) in _CONFUSABLE_CONTAINMENT:
+            continue
+        if jd_key in ps_key or ps_key in jd_key:
+            return ps
+    return None
+
+
 def canonical_name(skill: str) -> str:
     """
     返回技能的标准名（Title Case，用于存储和显示）

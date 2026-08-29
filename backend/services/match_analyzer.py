@@ -15,19 +15,61 @@ import re, os, json, math
 from typing import Optional
 
 # ──────────────────────────────────────────────
-# 固定评分口径（建议 #1）
+# 固定评分口径 — v2（2026-08-29 算法升级）
 # ──────────────────────────────────────────────
-SCORE_VERSION = "v1.0.0"
+# v2 变更：
+#   ① 修复 verified 倒挂 — 旧版 unverified 匹配只计 ×0.8，技能分天花板被压到 80；
+#      现在完全匹配即计满分，已通过交叉验证的技能额外 ×1.1
+#   ② 技能匹配分档：exact 1.0 / synonym 0.9 / containment 0.7；邻接技能不计分仅标注
+#      （旧版只有同义词一层，JD 写 ReactJS、用户会 React 也算 0 分）
+#   ③ 经验公式重写 — 旧版「JD 5年以上 → 10年经验 0 分」「3-5年 边缘仅 50 分」；
+#      新版区间内 85~100 梯度，「X年以上」≥X 饱和 90+，不足高斯衰减，超出缓衰减至 60
+#   ④ 薪资不重叠改高斯衰减（旧版差 20K 直接 0 分），支持「万」单位换算
+#   维度函数拆至 services/dimension_scores.py，解释层拆至 services/match_explain.py
+SCORE_VERSION = "v2.0.0"
+# 技能匹配分档系数（L1 exact = 1.0 固定）
+# 系数经离线扫参标定（2026-08-29，test_job_agent 100 简历 × 104 JD 排序召回，基线 MRR 0.9525）：
+#   adjacent=0.45 → MRR 0.9083（邻接得分会顶掉严格重合的正解）
+#   adjacent=0.2  → MRR 0.9508
+#   adjacent=0.0  → MRR 0.9575（反超基线）→ 定档 0.0：邻接技能仅用于建议文案标注，
+#   不参与计分；containment 是真实同义技能（ReactJS⊃React），扫参证明无损 MRR，保留 0.7
+CREDIT_SYNONYM = 0.9
+CREDIT_CONTAINMENT = 0.7
+CREDIT_ADJACENT = 0.0
 DIMENSION_FORMULA = {
-    "skill":        "Σ(weight × verified_bonus × synonym_match) / Σ(jd_weights)",
-    "experience":   "1 - |profile_exp - jd_midpoint| / jd_range, clamp[0,1]",
+    "skill":        "Σ(weight × level_credit × verified_bonus) / Σ(jd_weights)；level: exact 1.0 / synonym 0.9 / containment 0.7（adjacent 不计分，仅标注）",
+    "experience":   "区间内 85~100 梯度；「X年以上」≥X 饱和 90+；不足高斯衰减(sigma=lo/3)；超出缓衰减至 60",
     "education":    {"博士": 1.0, "硕士": 0.9, "本科": 0.75, "大专": 0.5, "高中": 0.2, "其他": 0.3},
-    "salary":       "overlap(profile_range, jd_range) / jd_range",
+    "salary":       "有重叠: 50+覆盖率×50；无重叠: 50×exp(-(gap/15K)²/2)",
 }
 
 WEIGHTS = {"skill": 0.50, "experience": 0.20, "education": 0.15, "salary": 0.15}
 
 EDU_ORDER = {"博士": 4, "硕士": 3, "本科": 2, "大专": 1, "高中": 0}
+
+# v2：维度评分与解释层拆分到独立模块，此处 re-export 保持旧引用可用
+from services.dimension_scores import (  # noqa: E402
+    parse_years_mid, parse_jd_exp_range,
+    calc_experience_score, calc_education_score, calc_salary_score,
+    build_exp_comparison, build_salary_comparison,
+)
+from services.match_explain import (  # noqa: E402
+    generate_summary, generate_recommendations,
+)
+
+
+def _parse_salary(salary_str: str) -> tuple[int, int]:
+    """兼容别名（旧私有接口）：'25K-40K' → (25, 40)"""
+    nums = re.findall(r'\d+', str(salary_str or ''))
+    if not nums:
+        return 0, 0
+    if len(nums) >= 2:
+        return int(nums[0]), int(nums[1])
+    return int(nums[0]), int(nums[0])
+
+
+# 兼容别名：routers/match_api.py 等外部仍在引用旧私有名
+_parse_experience = parse_years_mid
 
 # ──────────────────────────────────────────────
 # 第一层：画像提取
@@ -123,7 +165,7 @@ def compute_match_score(
 
     from services.skill_synonyms import (
         is_synonym, best_match_in_profile, get_skill_popularity,
-        has_adjacent_skill,
+        has_adjacent_skill, containment_match, normalize_preprocess,
     )
 
     for idx, jd_skill in enumerate(jd_skills):
@@ -135,15 +177,19 @@ def compute_match_score(
         weight = 1.0 + is_core
         jd_total_weight += weight
 
-        # 查找 profile 中的匹配技能（含同义词）
+        # 查找 profile 中的匹配技能（四级分档）
         matched_skill = best_match_in_profile(jd_skill, profile["skills"])
+        q_info = quality_context.get(jd_skill, {})
+        verified = q_info.get("verified", False)
+        # v2 修复 verified 倒挂：旧版 unverified 匹配只计 ×0.8（技能分天花板 80），
+        # 现在匹配即计满档分，已通过交叉验证的技能额外 ×1.1
+        verified_bonus = 1.1 if verified else 1.0
 
         if matched_skill:
-            # 交叉验证加权（已通过 quality_checker 验证的 bonus）
-            q_info = quality_context.get(jd_skill, {})
-            verified = q_info.get("verified", False)
-            verified_bonus = 1.2 if verified else 0.8
-            weighted_score += weight * verified_bonus
+            # L1 直接匹配 → 1.0 / L2 同义词匹配 → 0.9（如 "Python3"↔"Python"）
+            exact = normalize_preprocess(jd_skill) == normalize_preprocess(matched_skill)
+            credit = 1.0 if exact else CREDIT_SYNONYM
+            weighted_score += weight * credit * verified_bonus
 
             have.append({
                 "skill": jd_skill,
@@ -151,16 +197,37 @@ def compute_match_score(
                 "confidence": q_info.get("confidence", 0.75),
                 "verified": verified,
                 "is_core": is_core > 0,
+                "match_level": "exact" if exact else "synonym",
                 "matched_in_text": True,
             })
         else:
-            priority, reason = calc_miss_priority(jd_skill, job, profile["skills"], quality_context, skill_popularity)
-            miss.append({
-                "skill": jd_skill,
-                "priority": priority,
-                "reason": reason,
-                "is_core": is_core > 0,
-            })
+            # L3 子串包含（如 JD "ReactJS" ⊃ 用户 "React"）→ 0.7 部分得分
+            contain_skill = containment_match(jd_skill, profile["skills"])
+            if contain_skill:
+                weighted_score += weight * CREDIT_CONTAINMENT * verified_bonus
+                have.append({
+                    "skill": jd_skill,
+                    "matched_as": contain_skill,
+                    "confidence": 0.6,
+                    "verified": verified,
+                    "is_core": is_core > 0,
+                    "match_level": "containment",
+                    "matched_in_text": True,
+                })
+            else:
+                priority, reason = calc_miss_priority(jd_skill, job, profile["skills"], quality_context, skill_popularity)
+                adjacent = has_adjacent_skill(jd_skill, profile["skills"])
+                if adjacent:
+                    # L4 邻接技能（如 JD 要 K8s，用户有 Docker）→ 0.45 部分得分；
+                    # 仍列入 miss 诚实展示缺口，建议文案会标注「有邻接基础」
+                    weighted_score += weight * CREDIT_ADJACENT
+                miss.append({
+                    "skill": jd_skill,
+                    "priority": priority,
+                    "reason": reason,
+                    "is_core": is_core > 0,
+                    "adjacent": adjacent,
+                })
 
     # 加分项：用户有但 JD 不需要的技能
     for ps in profile["skills"]:
@@ -173,13 +240,13 @@ def compute_match_score(
     skill_score = weighted_score / max(jd_total_weight, 1) * 100
 
     # ── 经验匹配 ──
-    exp_score = _calc_experience_score(profile.get("experience_years"), job.get("experience", ""))
+    exp_score = calc_experience_score(profile.get("experience_years"), job.get("experience", ""))
 
     # ── 学历匹配 ──
-    edu_score = _calc_education_score(profile.get("education", ""), job.get("education", ""))
+    edu_score = calc_education_score(profile.get("education", ""), job.get("education", ""))
 
     # ── 薪资匹配 ──
-    salary_score = _calc_salary_score(
+    salary_score = calc_salary_score(
         profile.get("salary_min", 0), profile.get("salary_max", 0),
         job.get("salary", ""),
     )
@@ -196,16 +263,16 @@ def compute_match_score(
     grade = "S" if overall >= 90 else "A" if overall >= 80 else "B" if overall >= 70 else "C" if overall >= 60 else "D"
 
     # ── 改进建议 ──
-    recommendations = _generate_recommendations(have, miss, job, quality_context, all_jobs)
+    recommendations = generate_recommendations(have, miss, job, quality_context, all_jobs, skill_popularity)
 
     # ── 具体比较文本 ──
     comparison = {
-        'experience': _build_exp_comparison(profile.get("experience_years"), job.get("experience", "")),
-        'salary': _build_salary_comparison(profile.get("salary_min", 0), profile.get("salary_max", 0), job.get("salary", "")),
+        'experience': build_exp_comparison(profile.get("experience_years"), job.get("experience", "")),
+        'salary': build_salary_comparison(profile.get("salary_min", 0), profile.get("salary_max", 0), job.get("salary", "")),
     }
 
     # ── 自然语言总结 ──
-    summary = _generate_summary(have, miss, job, overall, grade, comparison)
+    summary = generate_summary(have, miss, job, overall, grade, comparison)
 
     # ── learning_path 入参 ──
     learning_path_input = {
@@ -306,220 +373,3 @@ def calc_miss_priority(
 
     return priority, reason_str
 
-
-# ──────────────────────────────────────────────
-# 辅助函数
-# ──────────────────────────────────────────────
-
-def _parse_experience(exp_str: str) -> Optional[float]:
-    """'3-5年' → 4.0， '5年+' → 5.0"""
-    if not exp_str:
-        return None
-    s = str(exp_str).strip()
-    # 取数字
-    nums = re.findall(r'\d+', s)
-    if not nums:
-        return None
-    if len(nums) >= 2:
-        return (int(nums[0]) + int(nums[1])) / 2
-    return float(nums[0])
-
-
-def _parse_salary(salary_str: str) -> tuple[int, int]:
-    """'25K-40K' → (25, 40)"""
-    if not salary_str:
-        return 0, 0
-    nums = re.findall(r'\d+', str(salary_str))
-    if not nums:
-        return 0, 0
-    if len(nums) >= 2:
-        return int(nums[0]), int(nums[1])
-    return int(nums[0]), int(nums[0])
-
-
-def _calc_experience_score(profile_years: Optional[float], jd_exp: str) -> float:
-    """经验匹配：1 - |profile - jd_midpoint| / jd_range"""
-    if profile_years is None:
-        return 50.0  # 未知时给中等分
-
-    nums = re.findall(r'\d+', str(jd_exp))
-    if not nums:
-        return 50.0
-
-    if len(nums) >= 2:
-        lo, hi = int(nums[0]), int(nums[1])
-    else:
-        lo = hi = int(nums[0])
-
-    jd_mid = (lo + hi) / 2
-    jd_range = max(hi - lo, 1)
-
-    diff = abs(profile_years - jd_mid)
-    score = max(0, 1 - diff / jd_range) * 100
-    return min(score, 100.0)
-
-
-def _calc_education_score(profile_edu: str, jd_edu: str) -> float:
-    """学历匹配：用户学历 vs JD 最低学历要求"""
-    def _level(s: str) -> int:
-        s = str(s).lower()
-        if not s:
-            return -1
-        if "博士" in s:
-            return 4
-        if "硕士" in s or "研究生" in s:
-            return 3
-        if "本科" in s or "学士" in s:
-            return 2
-        if "大专" in s or "专科" in s:
-            return 1
-        return 0
-
-    user_level = _level(profile_edu)
-    req_level = _level(jd_edu)
-
-    if user_level < 0:
-        return 60.0  # 未知学历
-    if req_level <= 0:
-        return 80.0  # JD 没写学历要求
-    if user_level >= req_level:
-        return 100.0
-    # 差一级 75，差两级 50，差三级 25
-    diff = req_level - user_level
-    return max(0, 100 - diff * 25)
-
-
-def _calc_salary_score(user_min: int, user_max: int, jd_salary: str) -> float:
-    """
-    薪资匹配：JD 薪资范围与用户期望的重叠度
-    完全重叠=100，部分重叠=50，不重叠按距离比例
-    """
-    if not jd_salary or (user_min == 0 and user_max == 0):
-        return 70.0  # 未知时中性分
-
-    jd_nums = re.findall(r'\d+', str(jd_salary))
-    if len(jd_nums) < 2:
-        return 70.0
-
-    jd_lo, jd_hi = int(jd_nums[0]), int(jd_nums[1])
-    if user_max == 0:
-        user_max = user_min
-
-    # 计算重叠
-    user_range = user_max - user_min
-    jd_range = max(jd_hi - jd_lo, 1)
-
-    overlap_lo = max(user_min, jd_lo)
-    overlap_hi = min(user_max, jd_hi)
-
-    if overlap_hi >= overlap_lo:
-        overlap = overlap_hi - overlap_lo
-        return min(100.0, (overlap / max(user_range, jd_range)) * 100 + 50)
-
-    # 无重叠
-    dist = min(abs(user_max - jd_lo), abs(user_min - jd_hi))
-    return max(0, 100 - dist * 5)
-
-
-def _build_exp_comparison(user_years: float | None, jd_exp: str) -> dict | None:
-    """构建经验比较信息"""
-    if user_years is None and not jd_exp: return None
-    jd_nums = re.findall(r'\d+', str(jd_exp))
-    if not jd_nums: return {'user_exp': user_years, 'jd_exp': jd_exp, 'diff': 0}
-    jd_mid = (int(jd_nums[0]) + int(jd_nums[-1])) / 2
-    if user_years is None: return {'user_exp': None, 'jd_exp': jd_exp, 'diff': 0}
-    return {'user_exp': user_years, 'jd_exp': jd_exp, 'diff': round(user_years - jd_mid, 1)}
-
-
-def _build_salary_comparison(user_min: int, user_max: int, jd_salary: str) -> dict | None:
-    """构建薪资比较信息"""
-    if (user_min == 0 and user_max == 0) or not jd_salary: return None
-    jd_nums = re.findall(r'\d+', str(jd_salary))
-    if len(jd_nums) < 2: return {'overlap': 0, 'user_range': f'{user_min}K-{user_max}K', 'jd_range': jd_salary, 'distance': 0}
-    jd_lo, jd_hi = int(jd_nums[0]), int(jd_nums[1])
-    overlap_lo, overlap_hi = max(user_min, jd_lo), min(user_max, jd_hi)
-    if overlap_hi >= overlap_lo:
-        return {'overlap': round((overlap_hi - overlap_lo) / max(jd_hi - jd_lo, 1), 2), 'user_range': f'{user_min}K-{user_max}K', 'jd_range': jd_salary, 'distance': 0}
-    dist = min(abs(user_max - jd_lo), abs(user_min - jd_hi))
-    return {'overlap': 0, 'user_range': f'{user_min}K-{user_max}K', 'jd_range': jd_salary, 'distance': dist}
-
-
-def _generate_summary(have: list[dict], miss: list[dict], job: dict, overall: float, grade: str, comparison: dict | None = None) -> str:
-    """自然语言总结，包含经验和薪资的具体比较"""
-    title = job.get("title", "目标岗位")
-    have_count = len(have)
-    miss_count = len(miss)
-    high_priority = sum(1 for s in miss if s.get("priority") == "high")
-
-    parts = []
-    parts.append(f"您的匹配度为 {int(overall)} 分（等级 {grade}），与「{title}」共 {have_count} 项技能匹配")
-
-    # 具体比较：经验
-    if comparison and comparison.get('experience'):
-        exp = comparison['experience']
-        if exp.get('user_exp') is not None:
-            if exp.get('diff', 0) == 0:
-                parts.append(f"经验完全匹配（{exp['user_exp']:.0f}年 vs JD要求{exp['jd_exp']}）")
-            elif exp['diff'] > 0:
-                parts.append(f"经验超出要求（{exp['user_exp']:.0f}年 vs JD要求{exp['jd_exp']}，多{exp['diff']:.0f}年）")
-            else:
-                parts.append(f"经验略有差距（{exp['user_exp']:.0f}年 vs JD要求{exp['jd_exp']}，差{abs(exp['diff']):.0f}年）")
-        elif exp.get('jd_exp'):
-            parts.append(f"JD要求{exp['jd_exp']}（您未填写工作经验）")
-
-    # 具体比较：薪资
-    if comparison and comparison.get('salary'):
-        sal = comparison['salary']
-        if sal.get('overlap') is not None:
-            if sal['overlap'] > 0:
-                parts.append(f"薪资范围重叠度{sal['overlap']*100:.0f}%（期望{sal['user_range']} vs JD {sal['jd_range']}）")
-            else:
-                dist = sal.get('distance', 0)
-                parts.append(f"薪资无重叠（期望{sal['user_range']} vs JD {sal['jd_range']}，相差约{dist}K）")
-
-    if miss_count > 0:
-        parts.append(f"存在 {miss_count} 项技能缺口")
-        if high_priority > 0:
-            parts.append(f"其中 {high_priority} 项为高优缺口")
-    if not miss:
-        parts.append("已与该岗位基本匹配，建议投递")
-
-    return "，".join(parts) + "。"
-
-
-def _generate_recommendations(have: list[dict], miss: list[dict], job: dict,
-                              quality_context: dict,
-                              all_jobs: Optional[list[dict]] = None) -> list[str]:
-    """按缺失技能优先级生成改进建议（最多 5 条）
-
-    all_jobs: 调用方可注入岗位池（离线评测用）；为 None 时才回源数据库。
-    """
-    from services.skill_synonyms import get_skill_popularity
-    if all_jobs is None:
-        try:
-            from routers.jobs import load_all_jobs
-            all_jobs = load_all_jobs()
-        except Exception:
-            # 数据库不可用不能拖垮匹配主流程，退化为只按当前岗位判断
-            all_jobs = [job]
-
-    recs = []
-    # 高优优先
-    miss_sorted = sorted(
-        miss,
-        key=lambda s: ({"high": 0, "medium": 1, "low": 2}.get(s.get("priority", "low"), 2))
-    )
-
-    for item in miss_sorted[:5]:
-        skill = item["skill"]
-        freq = get_skill_popularity(skill, all_jobs)
-        reason = item.get("reason", "")
-
-        if freq > 0.5:
-            recs.append(f"优先补 {skill}（该技能在 {freq*100:.0f}% 的目标岗位中出现，{reason}）")
-        elif item.get("priority") == "high":
-            recs.append(f"建议掌握 {skill}（岗位要求的核心技能，{reason}）")
-        else:
-            recs.append(f"可选学 {skill}（{reason}）")
-
-    return recs

@@ -13,6 +13,7 @@ interface RecommendedJob {
   matched_skills?: string[]
   job_skill_count?: number
   top_missing: string[]
+  recommend_reason?: string
 }
 
 interface Props {
@@ -63,6 +64,11 @@ export default function RecommendationCarousel({ jobs, onSelect }: Props) {
                 {(j.matched_skills?.length) && (
                   <p className="text-[10px] mt-1 truncate" style={{ color: 'var(--color-on-surface-variant)' }}>
                     已匹配: {j.matched_skills.slice(0, 3).join('、')}{j.matched_skills.length > 3 ? '...' : ''}
+                  </p>
+                )}
+                {j.recommend_reason && (
+                  <p className="text-[10px] mt-1 truncate" style={{ color: 'var(--color-on-surface-variant)' }} title={j.recommend_reason}>
+                    {j.recommend_reason}
                   </p>
                 )}
               </div>

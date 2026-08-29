@@ -14,7 +14,7 @@ DELETE /api/match/cache      ←→ 删除用户所有匹配缓存 + 简历缓�
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
-import os, json, glob, hashlib
+import os, re, json, glob, hashlib
 from collections import defaultdict
 
 from database import get_session, get_user_model_by_role
@@ -362,6 +362,13 @@ def api_match_recommend(
         result = compute_match_score(profile, job, {}, skill_popularity, all_jobs)
         have_skills = [s["skill"] for s in result["skills"]["have"]]
         miss_high = [s["skill"] for s in result["skills"]["miss"] if s.get("priority") == "high"]
+        # 推荐理由：命中技能数 + 核心命中 + 主要缺口（前端轮播卡片直接展示）
+        core_hit = sum(1 for s in result["skills"]["have"] if s.get("is_core"))
+        reason = f"命中 {len(have_skills)}/{len(job.get('skills', []))} 项技能"
+        if core_hit:
+            reason += f"（含 {core_hit} 项核心）"
+        if miss_high:
+            reason += f"，缺口：{'、'.join(miss_high[:2])}"
         scores.append({
             "job_id": job["id"],
             "title": job["title"],
@@ -374,11 +381,32 @@ def api_match_recommend(
             "matched_skills": have_skills[:5],
             "job_skill_count": len(job.get("skills", [])),
             "top_missing": miss_high[:3],
+            "recommend_reason": reason,
         })
 
     scores.sort(key=lambda x: x["overall"], reverse=True)
     n = n or req.n
+    # v2 推荐多样性：结果多于请求数时，同类岗位（标题主体相同，如多个"Java工程师"）
+    # 每类最多保留 3 条，避免 Top10 全是同质岗位；不足时从被裁掉的池子里回填
     result_data = scores[:n]
+    if len(scores) > n:
+        def _cluster(title: str) -> str:
+            base = re.split(r'[(（\[【/··]', str(title))[0].strip()
+            return base[:4] if base else str(title)
+        picked, dropped = [], []
+        cluster_cnt: dict = defaultdict(int)
+        cap = max(n // 3, 3)  # 每类上限：n=10 → 3，避免一类岗位刷屏
+        for s in scores:
+            c = _cluster(s['title'])
+            if cluster_cnt[c] < cap:
+                cluster_cnt[c] += 1
+                picked.append(s)
+            else:
+                dropped.append(s)
+        # 多样性优先，不足 n 条时按原排序从被裁池回填
+        result_data = picked[:n]
+        if len(result_data) < n:
+            result_data += dropped[:n - len(result_data)]
     # 写缓存（失败不影响主流程）
     try:
         with open(rec_cache_path, 'w', encoding='utf-8') as f:
