@@ -477,14 +477,14 @@ export default function Resume() {
 
 function FieldCard({ icon: Icon, label, value }: { icon: any; label: string; value?: string }) {
   return (
-    <div className="rounded-xl border p-4 flex items-center gap-3" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+    <div className="rounded-xl border p-4 flex items-start gap-3" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--color-primary-fixed)' }}>
         <Icon className="h-4.5 w-4.5" style={{ color: 'var(--color-primary)' }} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</p>
-        <p className="text-sm font-semibold truncate" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic' }}>
-          {value || '未识别'}
+        <p className="text-sm font-semibold mt-0.5 break-words whitespace-pre-wrap" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic' }}>
+          {value || '未填写'}
         </p>
       </div>
     </div>
@@ -495,8 +495,8 @@ function PreviewField({ label, value }: { label: string; value?: string }) {
   return (
     <div className="rounded-lg border p-3" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
       <p className="text-[11px] font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{label}</p>
-      <p className="text-sm mt-0.5" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic', fontWeight: value ? 600 : 400 }}>
-        {value || '未识别'}
+      <p className="text-sm mt-0.5 break-words whitespace-pre-wrap" style={{ color: value ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)', fontStyle: value ? 'normal' : 'italic', fontWeight: value ? 600 : 400 }}>
+        {value || '未填写'}
       </p>
     </div>
   )
