@@ -4,7 +4,7 @@ import { JSNav, type JSPage } from '../lib/NavContext'
 const items: { icon: any; label: string; page: JSPage }[] = [
   { icon: User, label: '个人主页', page: 'profile-home' },
   { icon: Upload, label: '简历管理', page: 'resume' },
-  { icon: Activity, label: '我的图谱', page: 'my-skill-graph' },
+  { icon: Activity, label: '我的能力图谱', page: 'my-skill-graph' },
 ]
 
 export default function ProfileSidebar() {
