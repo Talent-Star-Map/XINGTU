@@ -311,7 +311,7 @@ export default function Dashboard() {
               <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
                 {masteredSkills.size < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
               </p>
-              <button onClick={() => setPage('skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
+              <button onClick={() => setPage('my-skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
                 查看能力图谱
               </button>
             </div>
