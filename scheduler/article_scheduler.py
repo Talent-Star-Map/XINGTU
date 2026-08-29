@@ -24,6 +24,7 @@ from dao.job_info_dao import JobInfoDAO
 from dao.job_raw_dao import JobRawDAO
 from pipeline.job_pipeline import JobPipeline
 from sync.article_sync import sync_articles
+from sync.job_sync import sync_jobs
 
 log_dir = BASE_DIR / "logs"
 log_dir.mkdir(exist_ok=True)
@@ -264,7 +265,7 @@ def _run_task(is_once=False):
         else:
             log_file = None
 
-    #    _run_step("智联采集", _run_job_collection, log_file, is_once)
+        _run_step("智联采集", _run_job_collection, log_file, is_once)
 
         _run_step("CSDN采集", collect_csdn, log_file, is_once)
         _run_step("文章清洗入库", _run_article_cleaning, log_file, is_once)
@@ -275,7 +276,8 @@ def _run_task(is_once=False):
         _run_step("GitHub采集", collect_github, log_file, is_once)
         _run_step("文章清洗入库", _run_article_cleaning, log_file, is_once)
 
-        _run_step("同步到云服务器", sync_articles, log_file, is_once)
+        _run_step("岗位同步到云服务器", sync_jobs, log_file, is_once)
+        _run_step("文章同步到云服务器", sync_articles, log_file, is_once)
     except Exception as e:
         print("每日采集任务失败")
         print(e)
