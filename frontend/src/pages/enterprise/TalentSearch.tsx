@@ -262,6 +262,9 @@ export default function TalentSearch() {
   const [compareLoading, setCompareLoading] = useState(false)
   const [maxCompare, setMaxCompare] = useState(4)  // 最多对比人数，可手动设置（2-10）
   const autoCompareTriggered = useRef(false)  // 防止自动对比重复触发
+  // 反选人面板（点对比按钮后弹出，勾选候选人再确认开始对比）
+  const [comparePickerOpen, setComparePickerOpen] = useState(false)
+  const [comparePickerMode, setComparePickerMode] = useState<'radar' | 'deep' | null>(null)
 
   // ── AI 深度对比状态（DeerFlow 编排）──
   const [deepCompareData, setDeepCompareData] = useState<DeepCompareData | null>(null)
@@ -432,6 +435,35 @@ export default function TalentSearch() {
     setCompareSelected(next)
   }
 
+  // 打开对比（反选人逻辑）：
+  //   已选≥2人 → 直接对比（兼容岗位管理自动跳转场景）
+  //   未选够   → 弹出选人面板，勾选候选人再确认
+  const openCompare = (type: 'radar' | 'deep') => {
+    if (compareSelected.size >= 2) {
+      if (type === 'deep') {
+        setShowDeepPanel(true)
+        runDeepCompare()
+      } else {
+        runCompare()
+      }
+    } else {
+      setComparePickerMode(type)
+      setComparePickerOpen(true)
+    }
+  }
+
+  // 选人面板确认：关闭面板并按所选类型发起对比
+  const confirmCompare = () => {
+    if (compareSelected.size < 2) return
+    setComparePickerOpen(false)
+    if (comparePickerMode === 'deep') {
+      setShowDeepPanel(true)
+      runDeepCompare()
+    } else {
+      runCompare()
+    }
+  }
+
   // 搜索
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') setKeyword(search.trim())
@@ -461,15 +493,36 @@ export default function TalentSearch() {
               {candidates.length} / {totalCount || '—'}
             </span>
           </div>
-          <button
-            onClick={runMatch}
-            disabled={matching}
-            className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
-            style={{ border: '1px solid var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
-          >
-            {matching ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
-            {matching ? '五维度匹配中' : '重新匹配'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={runMatch}
+              disabled={matching}
+              className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
+              style={{ border: '1px solid var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
+            >
+              {matching ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+              {matching ? '五维度匹配中' : '重新匹配'}
+            </button>
+            <button
+              onClick={() => openCompare('radar')}
+              disabled={compareLoading}
+              data-compare-btn
+              className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
+              style={{ border: '1px solid var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
+            >
+              {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
+              雷达对比
+            </button>
+            <button
+              onClick={() => openCompare('deep')}
+              disabled={deepCompareLoading}
+              className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
+              style={{ background: 'var(--color-primary)', color: 'white' }}
+            >
+              {deepCompareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="text-lg">🦌</span>}
+              AI 深度对比
+            </button>
+          </div>
         </div>
       </header>
 
@@ -584,10 +637,9 @@ export default function TalentSearch() {
             </div>
           ) : (
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
-              {/* 列表头 — 新增勾选列 */}
-              <div className="grid grid-cols-[40px_1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-4 text-sm uppercase tracking-wider border-b"
+              {/* 列表头 */}
+              <div className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-4 text-sm uppercase tracking-wider border-b"
                 style={{ color: 'var(--color-on-surface-variant)', borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
-                <span></span>
                 <span>匹配</span>
                 <span>候选人</span>
                 <span>技能</span>
@@ -601,29 +653,18 @@ export default function TalentSearch() {
                 const expanded = expandedId === c.id
                 const visibleSkills = c.skills.slice(0, 3)
                 const hiddenCount = c.skills.length - visibleSkills.length
-                const isChecked = compareSelected.has(c.id)
                 return (
                   <motion.div key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}>
                     <div
                       onClick={() => setExpandedId(expanded ? null : c.id)}
-                      className="grid grid-cols-[40px_1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-5 items-center cursor-pointer transition-colors border-b last:border-b-0"
+                      className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_56px] gap-8 px-8 py-5 items-center cursor-pointer transition-colors border-b last:border-b-0"
                       style={{
                         borderColor: 'var(--color-outline-variant)',
-                        background: expanded ? 'var(--color-surface-container-low)' : isChecked ? 'var(--color-primary-fixed)' : 'var(--color-surface)',
+                        background: expanded ? 'var(--color-surface-container-low)' : 'var(--color-surface)',
                       }}
-                      onMouseEnter={e => { if (!expanded && !isChecked) e.currentTarget.style.background = 'var(--color-surface-container-low)' }}
-                      onMouseLeave={e => { if (!expanded && !isChecked) e.currentTarget.style.background = 'var(--color-surface)' }}
+                      onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = 'var(--color-surface-container-low)' }}
+                      onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = 'var(--color-surface)' }}
                     >
-                      {/* 勾选框 — 点击不触发展开 */}
-                      <div onClick={(e) => { e.stopPropagation(); toggleCompare(c.id) }} className="flex justify-center">
-                        <div className="w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer transition-all"
-                          style={{
-                            borderColor: isChecked ? 'var(--color-primary)' : 'var(--color-outline-variant)',
-                            background: isChecked ? 'var(--color-primary)' : 'transparent',
-                          }}>
-                          {isChecked && <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>✓</span>}
-                        </div>
-                      </div>
 
                       {/* 匹配度 */}
                       <div className="flex items-center gap-3">
@@ -762,83 +803,140 @@ export default function TalentSearch() {
         </div>
       </div>
 
-      {/* ── 底部浮动对比栏 ── */}
+      {/* ── 反选人面板：点对比按钮后弹出，勾选候选人再确认 ── */}
       <AnimatePresence>
-        {compareSelected.size > 0 && (
+        {comparePickerOpen && (
           <motion.div
-            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="shrink-0 border-t px-14 py-4 flex items-center justify-between"
-            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-8"
+            style={{ background: 'var(--color-scrim, rgba(0,0,0,0.5))' }}
+            onClick={() => setComparePickerOpen(false)}
           >
-            <div className="flex items-center gap-4">
-              <span className="text-base" style={{ color: 'var(--color-on-surface)' }}>
-                已选 <span className="font-semibold tabular-nums">{compareSelected.size}</span>/{maxCompare} 个候选人
-              </span>
-              {/* 最大对比人数设置 */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>上限</span>
-                <select
-                  value={maxCompare}
-                  onChange={e => {
-                    const v = Number(e.target.value)
-                    setMaxCompare(v)
-                    // 如果已选超过新上限，裁剪选中列表
-                    if (compareSelected.size > v) {
-                      const trimmed = new Set(Array.from(compareSelected).slice(0, v))
-                      setCompareSelected(trimmed)
-                    }
-                  }}
-                  className="h-9 px-2 rounded border text-sm"
-                  style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
-                >
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                    <option key={n} value={n}>{n} 人</option>
-                  ))}
-                </select>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-2xl border w-full max-w-3xl flex flex-col max-h-[85vh]"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* 头 */}
+              <div className="flex items-center justify-between px-8 py-5 border-b shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                <div className="flex items-center gap-3">
+                  {comparePickerMode === 'deep'
+                    ? <span className="text-2xl">🦌</span>
+                    : <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />}
+                  <h2 className="text-xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>
+                    {comparePickerMode === 'deep' ? 'AI 深度对比' : '雷达对比'} · 选择候选人
+                  </h2>
+                </div>
+                <button onClick={() => setComparePickerOpen(false)} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
+                  <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                {Array.from(compareSelected).map((id, idx) => {
-                  const c = candidates.find(x => x.id === id)
-                  if (!c) return null
+
+              {/* 当前筛选列表（含上限设置）*/}
+              <div className="flex items-center justify-between px-8 py-3 border-b shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  以下为当前列表的 {candidates.length} 位候选人，勾选 2~{maxCompare} 位进行对比
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>上限</span>
+                  <select
+                    value={maxCompare}
+                    onChange={e => {
+                      const v = Number(e.target.value)
+                      setMaxCompare(v)
+                      if (compareSelected.size > v) {
+                        const trimmed = new Set(Array.from(compareSelected).slice(0, v))
+                        setCompareSelected(trimmed)
+                      }
+                    }}
+                    className="h-9 px-2 rounded border text-sm"
+                    style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                      <option key={n} value={n}>{n} 人</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 候选人列表（滚动）*/}
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                {candidates.map((c, idx) => {
+                  const isChecked = compareSelected.has(c.id)
                   return (
-                    <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm"
-                      style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCompareColor(idx) }} />
-                      {c.name}
-                      <button onClick={() => toggleCompare(id)} style={{ color: 'var(--color-on-surface-variant)' }}>
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
+                    <div
+                      key={c.id}
+                      onClick={() => toggleCompare(c.id)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors"
+                      style={{ background: isChecked ? 'var(--color-primary-fixed)' : 'var(--color-surface-container-low)', marginBottom: 8 }}
+                    >
+                      {/* 勾选圈 */}
+                      <div className="w-6 h-6 rounded border-2 flex items-center justify-center shrink-0"
+                        style={{ borderColor: isChecked ? 'var(--color-primary)' : 'var(--color-outline-variant)',
+                                 background: isChecked ? 'var(--color-primary)' : 'transparent' }}>
+                        {isChecked && <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>✓</span>}
+                      </div>
+                      {/* 色标 + 头像 + 信息 */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: getCompareColor(idx) }} />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
+                          style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
+                          {c.av}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                            {c.job_title && (
+                              <span className="text-sm px-2 py-0.5 rounded-lg font-medium shrink-0" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
+                                {c.job_title}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 items-center mt-1">
+                            {c.skills.slice(0, 3).map(s => (
+                              <span key={s} className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}>{s}</span>
+                            ))}
+                            {c.skills.length > 3 && (
+                              <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>+{c.skills.length - 3}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {/* 综合分数 */}
+                      <span className="text-lg font-bold tabular-nums shrink-0" style={{ color: matchColor(c.match) }}>{c.match ?? '—'}</span>
+                    </div>
                   )
                 })}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCompareSelected(new Set())} className="text-base transition-colors hover:text-[var(--color-on-surface)]"
-                style={{ color: 'var(--color-on-surface-variant)' }}>
-                清空
-              </button>
-              <button
-                onClick={runCompare}
-                disabled={compareSelected.size < 2 || compareLoading}
-                data-compare-btn
-                className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
-                style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)', border: '1px solid var(--color-outline-variant)' }}
-              >
-                {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
-                雷达对比 ({compareSelected.size})
-              </button>
-              <button
-                onClick={() => { setShowDeepPanel(true); runDeepCompare() }}
-                disabled={compareSelected.size < 2 || deepCompareLoading}
-                className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
-                style={{ background: 'var(--color-primary)', color: 'white' }}
-              >
-                {deepCompareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="text-lg">🦌</span>}
-                AI 深度对比 ({compareSelected.size})
-              </button>
-            </div>
+
+              {/* 底部操作 */}
+              <div className="flex items-center justify-between px-8 py-4 border-t shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                <span className="text-base" style={{ color: 'var(--color-on-surface)', opacity: 0.7 }}>
+                  已选 <span className="font-semibold tabular-nums">{compareSelected.size}</span>/{maxCompare}
+                </span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setCompareSelected(new Set())} className="text-base transition-colors hover:text-[var(--color-on-surface)]"
+                    style={{ color: 'var(--color-on-surface-variant)' }}>
+                    清空选择
+                  </button>
+                  <button onClick={() => setComparePickerOpen(false)} className="h-11 px-6 rounded-lg text-base font-medium"
+                    style={{ border: '1px solid var(--color-outline-variant)', color: 'var(--color-on-surface)', background: 'var(--color-surface)' }}>
+                    取消
+                  </button>
+                  <button
+                    onClick={confirmCompare}
+                    disabled={compareSelected.size < 2}
+                    className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50"
+                    style={{ background: 'var(--color-primary)', color: 'white' }}
+                  >
+                    {comparePickerMode === 'deep' ? <span className="text-lg">🦌</span> : <GitCompare className="h-5 w-5" />}
+                    开始{comparePickerMode === 'deep' ? ' AI 深度对比' : '雷达对比'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
