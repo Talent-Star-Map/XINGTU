@@ -133,14 +133,42 @@ async def run(args):
         return
 
     t0 = time.time()
-    for i, ch in enumerate(pending):
-        ctx = _fetch_context(driver, ch["date"])
-        reason = await attribute_async(llm, ch, ctx)
-        _set_reason(driver, ch["change_id"], reason, os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
-        if (i + 1) % 5 == 0:
-            elapsed = time.time() - t0
-            print(f"   进度 {i+1}/{len(pending)}  耗时 {elapsed:.1f}s")
-        await asyncio.sleep(0.3)
+    # 提前批量拉所有 context (1 次 query 拿全,避免循环里 N 次 query)
+    contexts: Dict[str, List[str]] = {}
+    with driver.session() as s:
+        for ch in pending:
+            d = ch["date"]
+            if d is None:
+                contexts[ch["change_id"]] = []
+                continue
+            ctx_rows = s.run(
+                """
+                MATCH (a:Article)
+                WHERE a.publish_time IS NOT NULL
+                  AND abs(duration.between(a.publish_time, $date).days) <= 30
+                RETURN a.title AS title LIMIT 5
+                """,
+                date=d,
+            )
+            contexts[ch["change_id"]] = [r["title"] for r in ctx_rows if r.get("title")]
+
+    # 信号量限并发(避免打爆 DeepSeek rate limit),默认 10 并发
+    sem = asyncio.Semaphore(10)
+    completed = 0
+    lock = asyncio.Lock()
+
+    async def one(ch):
+        nonlocal completed
+        async with sem:
+            reason = await attribute_async(llm, ch, contexts.get(ch["change_id"], []))
+            _set_reason(driver, ch["change_id"], reason, os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
+            async with lock:
+                completed += 1
+                if completed % 10 == 0 or completed == len(pending):
+                    elapsed = time.time() - t0
+                    print(f"   进度 {completed}/{len(pending)}  耗时 {elapsed:.1f}s")
+
+    await asyncio.gather(*(one(ch) for ch in pending))
 
     print(f"✅ LLM 归因完成: {len(pending)} 条, 总耗时 {time.time() - t0:.1f}s")
     close_neo4j()

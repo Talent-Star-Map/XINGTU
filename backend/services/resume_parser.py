@@ -213,7 +213,7 @@ def deepseek_extract(text: str) -> dict | None:
             json={
                 'model': 'deepseek-chat',
                 'messages': [
-                    {'role': 'system', 'content': 'You are a job requirement parser. Extract technical skills, programming languages, frameworks, tools, platforms and technologies explicitly mentioned in the text. Only include skills with clear textual evidence. Return ONLY JSON: {"name":"","phone":"","email":"","skills":["skill1","skill2"],"education":"","school":"","experience":"","target_position":"","bio":""}'},
+                    {'role': 'system', 'content': '你是一个中文简历解析助手。从简历文本中精确提取以下字段,只填有明确文本证据的内容,没有就留空字符串。\n- name: 姓名\n- phone: 手机号(11位数字)\n- email: 邮箱\n- school: 学校全称(如"河南工业大学")\n- education: 学历 + 专业 + 学历层次,如"本科·数据科学与大数据技术",如果没有专业就只填"本科"\n- experience: 工作/项目经验摘要,1-2 句话,包含岗位角色和项目经历(如"光伏板智能检测项目负责人;数字孪生驱动的智慧园区研发")\n- target_position: 期望岗位/求职意向(如"Python后端开发"、"AI工程师"),从"期望岗位""求职意向""意向岗位"等关键词附近推断,没有就留空\n- bio: 个人简介/自我评价,200字以内\n- skills: 技术技能标签数组(编程语言/框架/工具/平台)\n\n严格只返回 JSON,不要 markdown 包裹,不要任何解释。格式:{"name":"","phone":"","email":"","school":"","education":"","experience":"","target_position":"","bio":"","skills":[]}'},
                     {'role': 'user', 'content': f'简历内容：\n{text[:5000]}'}
                 ],
                 'temperature': 0.1, 'max_tokens': 1000,
