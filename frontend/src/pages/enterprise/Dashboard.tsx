@@ -111,7 +111,7 @@ export default function Dashboard() {
             <Rocket className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
             <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>企业工作台</span>
           </div>
-          <h1 className="text-2xl font-extrabold" style={{ color: 'var(--color-on-surface)' }}>欢迎回来，探索者</h1>
+          <h1 className="text-2xl font-extrabold" style={{ color: 'var(--color-on-surface)' }}>欢迎回来，<span className="gradient-text">HR</span></h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>基于多源异构数据与知识图谱，精准定位你的招聘方向</p>
         </div>
       </motion.div>

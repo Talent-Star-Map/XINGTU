@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
 
@@ -71,9 +71,13 @@ export default function EnterpriseShell({ onLogout }: Props) {
       <header className="shrink-0 border-b z-50" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
         <div className="flex items-center justify-between h-20 px-14 mx-auto">
           <div className="flex items-center gap-12">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>星图</span>
-              <span className="text-sm px-2.5 py-1 rounded font-medium" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
+            <div className="flex items-center gap-2.5 pl-1">
+              <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-primary-fixed)' }}
+                animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
+                <Star className="h-5.5 w-5.5" style={{ color: 'var(--color-primary)' }} />
+              </motion.div>
+              <span className="text-xl font-extrabold gradient-text">星图</span>
+              <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
             </div>
             <nav className="hidden md:flex items-center gap-1.5">
               {navItems.map(item => {
