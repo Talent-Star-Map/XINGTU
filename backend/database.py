@@ -68,6 +68,27 @@ class Admin(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+
+class ReviewTask(Base):
+    """管理员人工审核任务表 — AI 生成内容(new_job / skill_change)review gate
+
+    与 SQL 字段对照见 backend/sql/review_tasks.sql。
+    - target_id 存 Neo4j 节点 id(:Job.id 或 :ChangeEvent.change_id),字符串
+    - content_snapshot / modified_content 都是 JSON,Model 上用 JSON 列存 dict
+    """
+    __tablename__ = 'review_tasks'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_type = Column(String(20), nullable=False)               # new_job | skill_change
+    target_id = Column(String(64), nullable=False)               # Neo4j 节点 id
+    target_kind = Column(String(20), nullable=False)             # Job | ChangeEvent
+    content_snapshot = Column(JSON, nullable=False)
+    modified_content = Column(JSON)
+    status = Column(String(20), default='pending')               # pending|approved|rejected|modified
+    reviewer_id = Column(Integer)
+    review_comment = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+    reviewed_at = Column(DateTime)
+
 class VerifyCode(Base):
     __tablename__ = 'verify_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -324,7 +345,12 @@ class Message(Base):
     created_at = Column(DateTime, default=func.now())
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    # create_all 已自带 checkfirst,但多表 FK 顺序可能与已有表冲突导致 1050
+    # 失败时不阻塞启动 — 真正缺表由运维补 DDL
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:  # noqa: BLE001
+        print(f'[WARN] init_db 失败(可能表已存在),继续启动: {e}')
 
 def get_session():
     return SessionLocal()

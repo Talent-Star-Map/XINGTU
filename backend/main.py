@@ -18,9 +18,14 @@ from routers.learning_api import router as learning_router
 from routers.admin import router as admin_router
 from routers.resume_center import router as resume_router
 from routers.kg import router as kg_router
-from routers.chat import router as kg_chat_router
+try:
+    from routers.chat import router as kg_chat_router  # 需要 langchain_core,缺失则跳过
+except Exception as _e:  # noqa: BLE001
+    print(f"[WARN] routers.chat 加载失败(可选): {_e}")
+    kg_chat_router = None
 from routers.apply_api import router as apply_router
 from routers.jobseeker_msg_api import router as jobseeker_msg_router
+from routers.trend import router as trend_router
 import os
 
 @asynccontextmanager
@@ -53,10 +58,16 @@ app.include_router(admin_router)
 app.include_router(resume_router)
 # ── 岗位图谱 (Neo4j + LangChain) ──
 app.include_router(kg_router)
-app.include_router(kg_chat_router)
+if kg_chat_router is not None:
+    app.include_router(kg_chat_router)
+# ── 管理员人工审核（AI 生成内容 review gate） ──
+from routers.review import router as review_router
+app.include_router(review_router)
 # ── 投递 + 求职者消息（通信闭环） ──
 app.include_router(apply_router)
 app.include_router(jobseeker_msg_router)
+# ── 趋势洞察(Neo4j + AI 新岗位/能力 diff) ──
+app.include_router(trend_router)
 
 @app.get('/api/health')
 def health():
