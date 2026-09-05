@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity, MessageSquare } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav, type JSPage } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
 
 const PAGE_KEYS: JSPage[] = [
   'dashboard', 'skill-graph', 'resume', 'resume-center', 'match', 'job-detail',
-  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality',
+  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality', 'messages',
 ]
 
 const isPage = (v: string): v is JSPage => (PAGE_KEYS as string[]).includes(v)
@@ -21,6 +21,7 @@ const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
   { key: 'match', icon: LineChart, label: '岗位' },
+  { key: 'messages', icon: MessageSquare, label: '消息' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
   { key: 'resume-center', icon: FileText, label: '简历中心' },
@@ -40,6 +41,7 @@ const JSLearning = lazy(() => import('../pages/jobseeker/LearningPath'))
 const JSTrend = lazy(() => import('../pages/jobseeker/Trend'))
 const JSProfileHome = lazy(() => import('../pages/jobseeker/ProfileHome'))
 const JSMySkillGraph = lazy(() => import('../pages/jobseeker/MySkillGraph'))
+const JSMessages = lazy(() => import('../pages/jobseeker/Messages'))
 const QualityDashboard = lazy(() => import('../pages/enterprise/QualityDashboard'))
 const TutuChat = lazy(() => import('./TutuChat'))
 
@@ -56,6 +58,7 @@ const pages: Record<JSPage, ComponentType> = {
   'profile-home': JSProfileHome,
   'my-skill-graph': JSMySkillGraph,
   quality: QualityDashboard,
+  messages: JSMessages,
 }
 
 interface Props { onLogout: () => void }
@@ -74,6 +77,27 @@ export default function JobseekerShell({ onLogout }: Props) {
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
+
+  // 消息未读徽标 — 切页刷新 + 20 秒轮询 + 读到消息时立即刷新
+  // （只靠切页刷新不够：关掉聊天弹窗并没有切页，红点会一直挂着）
+  const [msgUnread, setMsgUnread] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    let u: any = null
+    try { u = JSON.parse(localStorage.getItem('xingtu_user') || 'null') } catch { /* ignore */ }
+    if (!u?.id) return
+
+    const refresh = () => {
+      fetch(`/api/jobseeker/unread-total?jobseeker_id=${u.id}`)
+        .then(r => r.json())
+        .then(d => { if (!cancelled && d.success) setMsgUnread(d.data.unread_total || 0) })
+        .catch(() => {})
+    }
+    refresh()
+    window.addEventListener('xingtu:msg-read', refresh)
+    const timer = setInterval(refresh, 20000)
+    return () => { cancelled = true; clearInterval(timer); window.removeEventListener('xingtu:msg-read', refresh) }
+  }, [])
 
   const setPage = useCallback((p: JSPage) => {
     setPageState(p)

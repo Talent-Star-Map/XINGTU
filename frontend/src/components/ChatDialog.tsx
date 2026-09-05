@@ -23,20 +23,33 @@ interface ChatDialogProps {
   onClose: () => void
   matchRecordId: number
   candidate: Candidate
+  /** 谁在用这个弹窗：enterprise（默认，TalentSearch/消息页）或 jobseeker（求职端消息页） */
+  role?: 'enterprise' | 'jobseeker'
 }
 
-export default function ChatDialog({ open, onClose, matchRecordId, candidate }: ChatDialogProps) {
+export default function ChatDialog({ open, onClose, matchRecordId, candidate, role = 'enterprise' }: ChatDialogProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const apiBase = role === 'jobseeker' ? '/api/jobseeker' : '/api/enterprise'
+
+  // 求职者端接口需要带自己的 id 做会话归属校验
+  const seekerId = (() => {
+    if (role !== 'jobseeker') return null
+    try {
+      const u = JSON.parse(localStorage.getItem('xingtu_user') || 'null')
+      return u?.id ?? null
+    } catch { return null }
+  })()
 
   // 加载消息历史
   const loadMessages = async () => {
     setLoading(true)
     try {
-      const r = await fetch(`/api/enterprise/messages/${matchRecordId}?size=100`)
+      const qs = role === 'jobseeker' ? `?size=100&jobseeker_id=${seekerId}` : '?size=100'
+      const r = await fetch(`${apiBase}/messages/${matchRecordId}${qs}`)
       const d = await r.json()
       if (d.success && d.data) {
         setMessages(d.data.messages)
@@ -53,8 +66,13 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate }: 
     if (open) {
       loadMessages()
       setInput('')
-      // 标记已读
-      fetch(`/api/enterprise/messages/read?match_record_id=${matchRecordId}`, { method: 'POST' }).catch(() => {})
+      // 标记已读 — 完成后广播事件，导航栏/列表的红点立即刷新（否则要等轮询）
+      const readQs = role === 'jobseeker'
+        ? `?match_record_id=${matchRecordId}&jobseeker_id=${seekerId}`
+        : `?match_record_id=${matchRecordId}`
+      fetch(`${apiBase}/messages/read${readQs}`, { method: 'POST' })
+        .then(() => window.dispatchEvent(new Event('xingtu:msg-read')))
+        .catch(() => {})
     }
   }, [open, matchRecordId])
 
@@ -73,17 +91,22 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate }: 
     setSending(true)
     setInput('')
     try {
-      const r = await fetch('/api/enterprise/messages', {
+      // 求职端与企业端统一 POST /messages（路径带 {id} 会抢走 /messages/read 的匹配）
+      const url = `${apiBase}/messages`
+      const body = role === 'jobseeker'
+        ? { match_record_id: matchRecordId, jobseeker_id: seekerId, content: text }
+        : { match_record_id: matchRecordId, content: text }
+      const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ match_record_id: matchRecordId, content: text }),
+        body: JSON.stringify(body),
       })
       const d = await r.json()
       if (d.success) {
         // 乐观更新：将新消息插入列表
         setMessages(prev => [...prev, {
           id: d.data.id,
-          sender_type: 'enterprise',
+          sender_type: role,
           sender_id: 0,
           content: text,
           is_read: 0,
@@ -155,7 +178,7 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate }: 
                 </div>
               ) : (
                 messages.map(msg => {
-                  const isMine = msg.sender_type === 'enterprise'
+                  const isMine = msg.sender_type === role
                   return (
                     <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-base`}

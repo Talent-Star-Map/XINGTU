@@ -21,6 +21,8 @@ from sqlalchemy import func
 from database import get_session, Job, Jobseeker, MatchRecord, Message
 from sqlalchemy import func as _func
 from services.deerflow_compare import run_deep_compare
+# 库里存的是 UTC，返回前统一转北京时间（time_util.fmt）
+from time_util import fmt
 # services 模块已迁移到 services/ 子目录
 from services.match_engine import (
     run_match_batch,
@@ -760,7 +762,7 @@ def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Q
                     'sender_id': m.sender_id,
                     'content': m.content,
                     'is_read': m.is_read,
-                    'created_at': m.created_at.strftime('%Y-%m-%d %H:%M:%S') if m.created_at else '',
+                    'created_at': fmt(m.created_at, '%Y-%m-%d %H:%M:%S'),
                 } for m in msgs],
                 'total': total,
                 'page': page,
@@ -811,7 +813,7 @@ def send_message(req: SendMessageReq):
                 'id': msg.id,
                 'sender_type': msg.sender_type,
                 'content': msg.content,
-                'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else '',
+                'created_at': fmt(msg.created_at, '%Y-%m-%d %H:%M:%S'),
             },
             'message': '消息已发送',
         }
@@ -957,7 +959,7 @@ def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le
                 'job_title': job.title if job else '',
                 'match_score': mr.match_score,
                 'last_message': last_msg or '',
-                'last_time': last_time.strftime('%Y-%m-%d %H:%M') if last_time else (mr.updated_at.strftime('%Y-%m-%d %H:%M') if mr.updated_at else ''),
+                'last_time': fmt(last_time) or fmt(mr.updated_at),
                 'unread_count': unread,
                 'status': mr.status or 'pending',
             })
