@@ -102,7 +102,9 @@ def get_jobs(
     industry: Optional[str] = None,
     skip: int = 0,
 ) -> List[Dict[str, Any]]:
-    where = []
+    # 2026-09-05 人工审核:默认只对外返回已审核通过的岗位
+    # coalesce 防御老数据(无 is_approved 字段的节点默认视为未审核)
+    where = ["coalesce(j.is_approved, false) = true"]
     params: Dict[str, Any] = {"limit": limit, "skip": skip}
     if source:
         where.append("j.source = $source")
@@ -151,6 +153,7 @@ def get_job_detail(job_id: int) -> Optional[Dict[str, Any]]:
     rows = _query(
         """
         MATCH (j:Job {id: $id})
+        WHERE coalesce(j.is_approved, false) = true
         OPTIONAL MATCH (j)-[:BELONGS_TO]->(i:Industry)
         OPTIONAL MATCH (j)-[:PUBLISHED_BY]->(c:Company)
         RETURN j, i.name AS industry, c.name AS company
@@ -188,6 +191,7 @@ def get_job_neighbors(job_id: int, depth: int = 1, limit: int = 50) -> Dict[str,
     rows = _query(
         """
         MATCH (j:Job {id: $id})
+        WHERE coalesce(j.is_approved, false) = true
         MATCH path = (j)-[*1..2]-(n)
         WITH j, collect(distinct n) AS ns
         UNWIND ns + [j] AS node
@@ -442,8 +446,9 @@ def fallback_keyword_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]
     rows = _query(
         """
         MATCH (j:Job)
-        WHERE j.title CONTAINS $q
-           OR coalesce(j.job_description, '') CONTAINS $q
+        WHERE coalesce(j.is_approved, false) = true
+          AND (j.title CONTAINS $q
+               OR coalesce(j.job_description, '') CONTAINS $q)
         RETURN j.id AS id, j.title AS title, j.source AS source,
                j.company_name AS company
         LIMIT $k
@@ -481,7 +486,8 @@ def get_personal_recommend(user_id: int, limit: int = 5) -> List[Dict[str, Any]]
         MATCH (u:User {id: $uid})-[:MASTERED]->(sk:Skill)
         WITH u, collect(sk.canonical_name) AS user_skills
         MATCH (j:Job)-[:REQUIRES]->(sk:Skill)
-        WHERE sk.canonical_name IN user_skills
+        WHERE coalesce(j.is_approved, false) = true
+          AND sk.canonical_name IN user_skills
         WITH j, count(distinct sk) AS overlap, collect(distinct sk.canonical_name) AS matched
         RETURN j.id AS id, j.title AS title, j.source AS source,
                j.company_name AS company, j.salary_min AS salary_min,
@@ -534,6 +540,7 @@ def get_overview_graph(
     rows = _query(
         """
         MATCH (j:Job)
+        WHERE coalesce(j.is_approved, false) = true
         WITH j ORDER BY j.hot_score DESC LIMIT $lj
         OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill)
         WITH j, collect(distinct sk) AS sks
@@ -545,6 +552,7 @@ def get_overview_graph(
     skills_rows = _query(
         """
         MATCH (j:Job)-[:REQUIRES]->(sk:Skill)
+        WHERE coalesce(j.is_approved, false) = true
         WITH j, sk, j.hot_score AS hs
         ORDER BY hs DESC LIMIT $lj
         WITH collect(DISTINCT sk)[..$ls] AS all_skills

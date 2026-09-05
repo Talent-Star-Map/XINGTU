@@ -31,6 +31,11 @@ except Exception:
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_neo4j_driver, close_neo4j
+# ── AI 生成内容审核(2026-09-05):增量同步时仍走 review gate ──
+try:
+    from services.review_service import submit_for_review as _submit_review
+except Exception:
+    _submit_review = None
 
 
 DB = {
@@ -109,10 +114,35 @@ def sync_new_jobs(since: datetime):
                     job.publish_time = datetime(j.publish_time),
                     job.crawl_time = datetime(j.crawl_time),
                     job.last_seen = datetime(j.crawl_time),
-                    job.ingested_at = datetime()
+                    job.ingested_at = datetime(),
+                    job.is_approved = false
                 """,
                 batch=batch,
             )
+        # ── 每条增量 Job 提交一次人工审核(失败不影响增量) ──
+        if _submit_review is not None:
+            for j in job_rows:
+                try:
+                    _submit_review(
+                        task_type='new_job',
+                        target_kind='Job',
+                        target_id=str(j.get('id')),
+                        content={
+                            'title': j.get('title'),
+                            'company_name': j.get('company_name'),
+                            'city': j.get('city'),
+                            'job_description': j.get('job_description'),
+                            'salary_min': j.get('salary_min'),
+                            'salary_max': j.get('salary_max'),
+                            'education': j.get('education'),
+                            'experience': j.get('experience'),
+                            'source': j.get('source'),
+                            'source_url': j.get('source_url'),
+                            'sync_source': 'incremental',
+                        },
+                    )
+                except Exception as ex:
+                    print(f'   [warn] submit_review(new_job {j.get("id")}) failed: {ex}')
         # 给增量 Job 补 REQUIRES 边
         for batch in _chunks(job_rows, BATCH):
             s.run(

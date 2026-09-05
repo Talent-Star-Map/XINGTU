@@ -49,6 +49,11 @@ from database import (
     close_neo4j,
 )
 from services.skill_synonyms import ADJACENT_SKILLS
+# ── AI 生成内容审核(2026-09-05):写入 Neo4j 后提交人工审核 ──
+try:
+    from services.review_service import submit_for_review as _submit_review
+except Exception:  # 脚本独立跑时容错,不让 import 失败
+    _submit_review = None
 
 # ────────────────────────────────────────────────────────────
 # MySQL 数据源 — 全部用 SQLAlchemy Session
@@ -290,10 +295,34 @@ def ingest_jobs(driver, jobs: List[Dict[str, Any]]):
                     job.crawl_time = datetime(j.crawl_time),
                     job.first_seen = datetime(j.crawl_time),
                     job.last_seen = datetime(j.crawl_time),
-                    job.ingested_at = datetime()
+                    job.ingested_at = datetime(),
+                    job.is_approved = false
                 """,
                 batch=batch,
             )
+        # ── 每条新岗位提交一次人工审核(失败不影响 ETL) ──
+        if _submit_review is not None:
+            for j in job_rows:
+                try:
+                    _submit_review(
+                        task_type='new_job',
+                        target_kind='Job',
+                        target_id=str(j.get('id')),
+                        content={
+                            'title': j.get('title'),
+                            'company_name': j.get('company_name'),
+                            'city': j.get('city'),
+                            'job_description': j.get('job_description'),
+                            'salary_min': j.get('salary_min'),
+                            'salary_max': j.get('salary_max'),
+                            'education': j.get('education'),
+                            'experience': j.get('experience'),
+                            'source': j.get('source'),
+                            'source_url': j.get('source_url'),
+                        },
+                    )
+                except Exception as ex:
+                    print(f'   [warn] submit_review(new_job {j.get("id")}) failed: {ex}')
         # Article 节点(数据集中有 893 篇)
         for batch in _chunks(article_rows, BATCH):
             s.run(
@@ -698,11 +727,32 @@ def ingest_snapshots_and_changes(driver, jobs: List[Dict[str, Any]]):
                         c.source = ch.source,
                         c.reason = null,
                         c.reason_source = null,
-                        c.ingested_at = datetime()
+                        c.ingested_at = datetime(),
+                        c.is_approved = false
                     MERGE (j)-[:HAS_CHANGE]->(c)
                     """,
                     batch=batch,
                 )
+            # ── 每条能力变更提交一次人工审核(失败不影响 ETL) ──
+            if _submit_review is not None:
+                for ch in changes:
+                    try:
+                        _submit_review(
+                            task_type='skill_change',
+                            target_kind='ChangeEvent',
+                            target_id=str(ch.get('change_id')),
+                            content={
+                                'job_id_ref': ch.get('job_id_ref'),
+                                'date': str(ch.get('date')),
+                                'type': ch.get('type'),
+                                'magnitude': ch.get('magnitude'),
+                                'before': ch.get('before'),
+                                'after': ch.get('after'),
+                                'source': ch.get('source'),
+                            },
+                        )
+                    except Exception as ex:
+                        print(f'   [warn] submit_review(skill_change {ch.get("change_id")}) failed: {ex}')
 
 
 def ingest_similar_jobs(driver, jobs: List[Dict[str, Any]]):

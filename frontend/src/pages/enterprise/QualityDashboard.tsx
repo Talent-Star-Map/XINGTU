@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Shield, CheckCircle, AlertTriangle, TrendingUp, Loader2, Crosshair, Copy, Zap, Users, FileText } from 'lucide-react'
+import ReviewModule from '../../components/admin/ReviewModule'
 
 // 拼接管理员 token 到质检接口 URL（质检 API 已加管理员鉴权，必须携带 token）
 const getToken = () => localStorage.getItem('xingtu_token') || ''
@@ -250,6 +251,11 @@ export default function QualityDashboard() {
             {(inf?.total_flagged ?? 0) === 0 && <p className="text-xs" style={{ color: 'var(--accent-green)' }}>未检测到通胀异常</p>}
           </div>
         </div>
+      </div>
+
+      {/* ─── 人工审核（AI 生成内容 review gate） ─── */}
+      <div className="mt-8">
+        <ReviewModule />
       </div>
     </div>
   )
