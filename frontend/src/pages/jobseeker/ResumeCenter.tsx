@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Copy, Loader2, Sparkles, FileText, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ResumeEditor from '../../components/resume/editor/ResumeEditor'
@@ -14,7 +15,10 @@ interface Template { id: number; name: string; template_key: string; category: s
 // 之前这里另起一份同名 ResumeSection，导致两份类型互不相容（TS2719）。
 type ResumeSection = EditorSection
 /** 列表里的简历 id 来自后端自增主键，一定是数字（新建草稿在保存后才会拿到真实 id） */
-type ResumeItem = Omit<EditorResume, 'id'> & { id: number }
+type ResumeItem = Omit<EditorResume, 'id'> & {
+  id: number
+  updated_at?: string  // 后端 _resume_to_dict 在 2026-09-05 简历工作台重命名功能里补返
+}
 
 type SortOption = 'lastEdited' | 'created' | 'nameAsc' | 'nameDesc'
 type ViewMode = 'grid' | 'list'
@@ -55,6 +59,38 @@ function withDefaultSections(resume: ResumeItem): ResumeItem {
       visible: 1,
     })),
   }
+}
+
+// ── 简历工作台:默认名派生 + 手动重命名支持(2026-09-05) ──
+// 后端 _DEFAULT_SECTION_CONTENT 里 personal_info.content.jobTitle 是空串,
+// 拿到一份简历后从 sections 里反查。section 同时带 type 和 section_type(API 返回 snake_case,
+// 本地 defaultSections 注入 camelCase,两套都查,二选一即可)。
+function getJobTitle(r: ResumeItem): string {
+  const s = r.sections.find(
+    (x: any) => x.section_type === 'personal_info' || x.type === 'personal_info',
+  )
+  return ((s?.content as any)?.jobTitle ?? '').trim()
+}
+
+/** 默认名 = 求职者简历里填写的岗位名称 + 最近一次填写保存的日期 */
+function deriveDefaultTitle(r: ResumeItem): string {
+  const job = getJobTitle(r)
+  // updated_at 优先(最近一次保存),缺失回退 created_at;slice(0,10) 取 YYYY-MM-DD
+  const date = ((r.updated_at || r.created_at) ?? '').slice(0, 10)
+  if (job && date) return `${job} - ${date}`
+  if (job) return job
+  if (date) return `简历 - ${date}`
+  return '未命名简历'
+}
+
+/** 展示用 title:
+ *   - 后端占位串('未命名简历' 或空)→ 派生
+ *   - 用户手动改过的 → 原样返回(改了就以用户为准)
+ */
+function displayTitle(r: ResumeItem): string {
+  const t = (r.title ?? '').trim()
+  if (!t || t === '未命名简历') return deriveDefaultTitle(r)
+  return t
 }
 
 function sortResumes(resumes: ResumeItem[], sort: SortOption): ResumeItem[] {
@@ -130,6 +166,50 @@ export default function ResumeCenter() {
   // 导出 loading 状态(避免双击连发)
   const [exporting, setExporting] = useState(false)
 
+  // ── 简历工作台:重命名状态(2026-09-05) ──
+  // 同时只允许一个卡片进入重命名态;renamingId 存的是后端 id(ResumeItem.id 一定 number)
+  const [renamingId, setRenamingId] = useState<number | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
+
+  const startRename = (r: ResumeItem) => {
+    setRenamingId(r.id)
+    // 用展示名(已含派生默认名)做初值,避免出现「我刚重命名进去,默认值却突然换了」的跳变
+    setRenameDraft(displayTitle(r))
+  }
+
+  const cancelRename = () => {
+    setRenamingId(null)
+    setRenameDraft('')
+  }
+
+  // 提交重命名 — PUT 必须带完整 sections(后端 SaveSectionsReq.sections 必填,空数组会清空简历)
+  const commitRename = async (r: ResumeItem) => {
+    const next = renameDraft.trim()
+    // 清空 / 与原值相同 → 不发请求,只关 input
+    if (!next || next === r.title) { cancelRename(); return }
+    cancelRename()
+    try {
+      const resp = await fetch(withToken(`/api/resume-center/${r.id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: next,
+          template_key: r.template_key,
+          sections: r.sections,
+        }),
+      })
+      const d = await resp.json()
+      if (d.success) {
+        showToast('已重命名')
+        await loadAll()  // 刷新保证 updated_at / title 同步
+      } else {
+        showToast(d.error?.message || '重命名失败')
+      }
+    } catch {
+      showToast('网络错误')
+    }
+  }
+
   // 导出处理器 — 调后端 /api/resume-center/{id}/export 拿二进制,触发浏览器下载
   const handleExport = useCallback(async (
     format: 'pdf' | 'html' | 'docx' | 'txt' | 'json',
@@ -143,7 +223,9 @@ export default function ResumeCenter() {
         token: getToken(),
         ...(fitOnePage && { fit_one_page: 'true' }),
       })
-      const r = await fetch(`/api/resume-center/${editing.id}/export?${qs}`)
+      const r = await fetch(`/api/resume-center/${editing.id}/export?${qs}`, {
+        method: 'POST',
+      })
       if (!r.ok) {
         // 后端错误是 JSON {success:false, error:{message}}
         const errJson = await r.json().catch(() => null)
@@ -388,15 +470,23 @@ export default function ResumeCenter() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {filtered.map(r => (
-                <ResumeCard key={r.id} resume={r} templateName={templateName(r.template_key)}
-                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)} />
+                <ResumeCard
+                  key={r.id} resume={r} templateName={templateName(r.template_key)}
+                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)}
+                  renamingId={renamingId} renameDraft={renameDraft} setRenameDraft={setRenameDraft}
+                  startRename={startRename} commitRename={commitRename} cancelRename={cancelRename}
+                />
               ))}
             </div>
           ) : (
             <div className="space-y-2">
               {filtered.map(r => (
-                <ResumeListItem key={r.id} resume={r} templateName={templateName(r.template_key)}
-                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)} />
+                <ResumeListItem
+                  key={r.id} resume={r} templateName={templateName(r.template_key)}
+                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)}
+                  renamingId={renamingId} renameDraft={renameDraft} setRenameDraft={setRenameDraft}
+                  startRename={startRename} commitRename={commitRename} cancelRename={cancelRename}
+                />
               ))}
             </div>
           )}
@@ -530,23 +620,33 @@ export default function ResumeCenter() {
         )}
       </AnimatePresence>
 
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm shadow-lg"
-            style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── Toast ── Portal 到 document.body,保证编辑器早 return 时也能显示 */}
+      {createPortal(
+        <AnimatePresence>
+          {toast && (
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm shadow-lg"
+              style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   )
 }
 
 // ─── 简历卡片（网格视图） ───
-function ResumeCard({ resume, templateName, onEdit, onDelete, onShare }: {
-  resume: ResumeItem; templateName: string; onEdit: () => void; onDelete: () => void; onShare: () => void
+function ResumeCard({ resume, templateName, onEdit, onDelete, onShare,
+  renamingId, renameDraft, setRenameDraft, startRename, commitRename, cancelRename }: {
+  resume: ResumeItem; templateName: string
+  onEdit: () => void; onDelete: () => void; onShare: () => void
+  renamingId: number | null; renameDraft: string
+  setRenameDraft: (v: string) => void
+  startRename: (r: ResumeItem) => void
+  commitRename: (r: ResumeItem) => void
+  cancelRename: () => void
 }) {
   return (
     <div className="group relative overflow-hidden rounded-xl border transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
@@ -572,7 +672,15 @@ function ResumeCard({ resume, templateName, onEdit, onDelete, onShare }: {
       </div>
       {/* 信息 */}
       <div className="p-2.5">
-        <div className="text-sm font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{resume.title}</div>
+        <RenameableTitle
+          resume={resume}
+          isRenaming={renamingId === resume.id}
+          draft={renameDraft}
+          setDraft={setRenameDraft}
+          startRename={startRename}
+          commitRename={commitRename}
+          cancelRename={cancelRename}
+        />
         <div className="text-xs mt-0.5 flex items-center justify-between" style={{ color: 'var(--color-on-surface-variant)' }}>
           <span className="truncate">{templateName}</span>
           <span className="shrink-0 ml-1">{resume.created_at?.slice(0, 10)}</span>
@@ -583,8 +691,15 @@ function ResumeCard({ resume, templateName, onEdit, onDelete, onShare }: {
 }
 
 // ─── 简历列表项（列表视图） ───
-function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare }: {
-  resume: ResumeItem; templateName: string; onEdit: () => void; onDelete: () => void; onShare: () => void
+function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare,
+  renamingId, renameDraft, setRenameDraft, startRename, commitRename, cancelRename }: {
+  resume: ResumeItem; templateName: string
+  onEdit: () => void; onDelete: () => void; onShare: () => void
+  renamingId: number | null; renameDraft: string
+  setRenameDraft: (v: string) => void
+  startRename: (r: ResumeItem) => void
+  commitRename: (r: ResumeItem) => void
+  cancelRename: () => void
 }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-black/5"
@@ -593,14 +708,81 @@ function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare }: {
         <TemplateThumb template={resume.template_key} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{resume.title}</div>
-        <div className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{templateName} · {resume.created_at?.slice(0, 10)}</div>
+        <RenameableTitle
+          resume={resume}
+          isRenaming={renamingId === resume.id}
+          draft={renameDraft}
+          setDraft={setRenameDraft}
+          startRename={startRename}
+          commitRename={commitRename}
+          cancelRename={cancelRename}
+        />
+        <div className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>{templateName} · {resume.created_at?.slice(0, 10)}</div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <button onClick={onEdit} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }}><Pencil className="h-4 w-4" /></button>
         <button onClick={onShare} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }}><Share2 className="h-4 w-4" /></button>
         <button onClick={onDelete} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--accent-red)' }}><Trash2 className="h-4 w-4" /></button>
       </div>
+    </div>
+  )
+}
+
+// ─── 可重命名标题(grid 卡片 / list 行共用)───
+// 默认:span + 双击进入 + hover 露 ✎
+// 重命名:input + autoFocus + 全选 + Enter 提交 / Esc 取消 / blur 提交
+// 模式参考 components/resume/editor/SectionCard.tsx
+function RenameableTitle({ resume, isRenaming, draft, setDraft, startRename, commitRename, cancelRename }: {
+  resume: ResumeItem
+  isRenaming: boolean
+  draft: string
+  setDraft: (v: string) => void
+  startRename: (r: ResumeItem) => void
+  commitRename: (r: ResumeItem) => void
+  cancelRename: () => void
+}) {
+  if (isRenaming) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onBlur={() => commitRename(resume)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commitRename(resume) }
+          if (e.key === 'Escape') { e.preventDefault(); cancelRename() }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        className="w-full text-sm font-medium px-1.5 py-0.5 rounded border outline-none"
+        style={{
+          borderColor: 'var(--accent-blue)',
+          background: 'var(--color-surface)',
+          color: 'var(--color-on-surface)',
+        }}
+      />
+    )
+  }
+  return (
+    <div
+      className="group/title flex items-center gap-1 cursor-text min-w-0"
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        startRename(resume)
+      }}
+      title="双击重命名"
+    >
+      <span
+        className="text-sm font-medium truncate flex-1 min-w-0"
+        style={{ color: 'var(--color-on-surface)' }}
+      >
+        {displayTitle(resume)}
+      </span>
+      <Pencil
+        className="h-3 w-3 shrink-0 opacity-0 group-hover/title:opacity-60 transition-opacity"
+        style={{ color: 'var(--color-on-surface-variant)' }}
+      />
     </div>
   )
 }
