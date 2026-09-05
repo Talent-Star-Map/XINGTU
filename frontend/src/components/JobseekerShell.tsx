@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav, type JSPage } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
+import MessageBell from './MessageBell'
 
 const PAGE_KEYS: JSPage[] = [
   'dashboard', 'skill-graph', 'resume', 'resume-center', 'match', 'job-detail',
@@ -21,11 +22,10 @@ const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
   { key: 'match', icon: LineChart, label: '岗位' },
-  { key: 'messages', icon: MessageSquare, label: '消息' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
   { key: 'resume-center', icon: FileText, label: '简历中心' },
-  // 质检已移至管理员端，求职端不再展示
+  // 消息已挪到导航栏右侧的铃铛(不再占一个 nav tab),质检已移至管理员端
 ]
 
 // 页面按需加载：进入哪个页面才下载哪个页面的代码，
@@ -78,27 +78,6 @@ export default function JobseekerShell({ onLogout }: Props) {
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
 
-  // 消息未读徽标 — 切页刷新 + 20 秒轮询 + 读到消息时立即刷新
-  // （只靠切页刷新不够：关掉聊天弹窗并没有切页，红点会一直挂着）
-  const [msgUnread, setMsgUnread] = useState(0)
-  useEffect(() => {
-    let cancelled = false
-    let u: any = null
-    try { u = JSON.parse(localStorage.getItem('xingtu_user') || 'null') } catch { /* ignore */ }
-    if (!u?.id) return
-
-    const refresh = () => {
-      fetch(`/api/jobseeker/unread-total?jobseeker_id=${u.id}`)
-        .then(r => r.json())
-        .then(d => { if (!cancelled && d.success) setMsgUnread(d.data.unread_total || 0) })
-        .catch(() => {})
-    }
-    refresh()
-    window.addEventListener('xingtu:msg-read', refresh)
-    const timer = setInterval(refresh, 20000)
-    return () => { cancelled = true; clearInterval(timer); window.removeEventListener('xingtu:msg-read', refresh) }
-  }, [])
-
   const setPage = useCallback((p: JSPage) => {
     setPageState(p)
     setMobileMenu(false)
@@ -150,6 +129,8 @@ export default function JobseekerShell({ onLogout }: Props) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            {/* 消息铃铛:左侧,主题切换左边;含未读红点,点开可拖拽改尺寸的小弹窗 */}
+            <MessageBell />
             <button onClick={toggle} className="p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }} aria-label="切换主题">
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
