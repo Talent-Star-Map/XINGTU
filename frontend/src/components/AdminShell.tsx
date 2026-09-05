@@ -1,9 +1,10 @@
 import { useState, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu } from 'lucide-react'
+import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu, LayoutDashboard } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 
 // 页面按需加载，避免首屏一次性加载全部管理端代码
+const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'))
 const QualityDashboard = lazy(() => import('../pages/enterprise/QualityDashboard'))
 const AdminUserManage = lazy(() => import('../pages/admin/AdminUserManage'))
 const AdminJobManage = lazy(() => import('../pages/admin/AdminJobManage'))
@@ -11,15 +12,17 @@ const AdminResourceManage = lazy(() => import('../pages/admin/AdminResourceManag
 const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
 
 // 管理员端功能模块：
-//   quality    — 质检（已有，质检已从求职端/企业端移除，统一归管理员监管）
-//   jobseekers — 求职者管理（列表/创建/删除/重置密码）
-//   enterprises— 企业管理（列表/创建/删除/重置密码）
-//   jobs       — 职位管理（列表/删除）
-//   resources  — 学习资源管理
-//   models     — 模型配置（LLM 路由层配置：大/小/多模态模型 + Mock 开关）
-type Page = 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models'
+//   dashboard   — 工作台(平台总览 + 最近动态 + 系统状态)
+//   quality     — 质检(求职/企业端已下线,统一归管理员监管)
+//   jobseekers  — 求职者管理
+//   enterprises — 企业管理
+//   jobs        — 职位管理
+//   resources   — 学习资源管理
+//   models      — 模型配置(LLM 路由层 + Mock 开关)
+type Page = 'dashboard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
+  { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'jobseekers', icon: Users, label: '求职者' },
   { key: 'enterprises', icon: Building2, label: '企业' },
   { key: 'jobs', icon: Briefcase, label: '职位' },
@@ -31,8 +34,13 @@ const navItems: { key: Page; icon: any; label: string }[] = [
 // 用包装组件给 AdminUserManage 传 role prop（懒组件放在 Suspense 内）
 const JobseekerManagePage = () => <Suspense fallback={null}><AdminUserManage role="jobseeker" /></Suspense>
 const EnterpriseManagePage = () => <Suspense fallback={null}><AdminUserManage role="enterprise" /></Suspense>
+// 工作台接 onNav 回调,卡片点击跳到对应管理页(不引入 NavContext,跟 AdminUserManage 的 role prop 模式一致)
+const AdminDashboardPage = ({ onNav }: { onNav: (p: Page) => void }) => (
+  <Suspense fallback={null}><AdminDashboard onNav={onNav} /></Suspense>
+)
 
-const pages: Record<Page, ComponentType> = {
+const pages: Record<Page, ComponentType<{ onNav?: (p: Page) => void }>> = {
+  dashboard: AdminDashboardPage as ComponentType<{ onNav?: (p: Page) => void }>,
   jobseekers: JobseekerManagePage,
   enterprises: EnterpriseManagePage,
   jobs: AdminJobManage,
@@ -44,8 +52,8 @@ const pages: Record<Page, ComponentType> = {
 interface Props { onLogout: () => void }
 
 export default function AdminShell({ onLogout }: Props) {
-  // 默认进入"求职者管理"，让管理员第一时间看到后台主功能
-  const [page, setPage] = useState<Page>('jobseekers')
+  // 默认进入"工作台",管理员登录后第一眼看到平台总览
+  const [page, setPage] = useState<Page>('dashboard')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
@@ -133,7 +141,7 @@ export default function AdminShell({ onLogout }: Props) {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
           <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
-            <PageComp />
+            <PageComp onNav={setPage} />
           </Suspense>
         </div>
       </main>

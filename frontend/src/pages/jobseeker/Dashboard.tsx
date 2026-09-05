@@ -176,145 +176,167 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 px-6 py-8 max-w-[1400px] mx-auto">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
       {/* 欢迎横幅 */}
-      <div className="relative overflow-hidden rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-        <div className="absolute -top-24 right-[-10%] h-[400px] w-[400px] rounded-full opacity-20 blur-3xl" style={{ background: 'var(--color-primary)' }} />
-        <div className="absolute -bottom-32 left-[-60px] h-[300px] w-[300px] rounded-full opacity-10 blur-3xl" style={{ background: 'var(--accent-purple)' }} />
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl p-6"
+        style={{ background: 'linear-gradient(135deg, var(--color-primary-fixed) 0%, var(--color-surface-container-lowest) 100%)' }}>
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20" style={{ background: 'var(--color-primary)' }} />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: 'var(--accent-purple)' }} />
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
-            <span className="text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>数据更新于 10 分钟前</span>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>个人工作台</span>
           </div>
-          <h1 className="text-3xl font-extrabold" style={{ color: 'var(--color-on-surface)' }}>欢迎回来，<span className="gradient-text">探索者</span></h1>
-          <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>基于多源异构数据与知识图谱，精准定位你的职业方向</p>
+          <h1 className="text-2xl font-extrabold" style={{ color: 'var(--color-on-surface)' }}>欢迎回来，<span className="gradient-text">探索者</span></h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>基于多源异构数据与知识图谱，精准定位你的职业方向</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-4">
         {statsData.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-            className="rounded-2xl border p-5 shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>{s.label}</p>
-            <p className="text-3xl font-extrabold mt-1" style={{ color: s.color }}><StatsCounter value={s.value} /></p>
-            <div className="mt-3 h-1.5 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
-              <motion.div className="h-full rounded-full" initial={{ width: 0 }} whileInView={{ width: '80%' }} viewport={{ once: true }} transition={{ duration: 1.2, delay: i * 0.1 }} style={{ background: `linear-gradient(90deg, ${s.color}66, ${s.color})` }} />
+          <motion.div key={s.label}
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+            whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+            className="rounded-2xl border p-5 shadow-sm"
+            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{s.label}</span>
+            </div>
+            <p className="text-3xl font-bold tabular-nums" style={{ color: s.color }}><StatsCounter value={s.value} /></p>
+            <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+              <motion.div className="h-full rounded-full"
+                initial={{ width: 0 }} animate={{ width: '60%' }} transition={{ duration: 0.8, delay: i * 0.1 }}
+                style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}aa)` }} />
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* 快捷功能 */}
-      <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>快捷功能</h2>
-      <div className="grid grid-cols-4 gap-4">
-        {quickActions.map((action, i) => (
-          <motion.div key={action.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-            className="rounded-2xl border p-5 cursor-pointer transition-all hover:shadow-md"
-            style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}
-            onClick={() => setPage(action.page)}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl mb-4" style={{ background: `${action.color}15` }}>
-              <action.icon className="h-6 w-6" style={{ color: action.color }} />
-            </div>
-            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>{action.label}</h3>
-            <p className="text-sm mt-1.5 leading-relaxed" style={{ color: 'var(--color-on-surface-variant)' }}>{action.desc}</p>
-          </motion.div>
-        ))}
+      <div>
+        <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--color-on-surface)' }}>快捷功能</h2>
+        <div className="grid grid-cols-4 gap-4">
+          {quickActions.map((action, i) => (
+            <motion.button key={action.label}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.05 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setPage(action.page)}
+              className="rounded-2xl border p-5 text-left transition-all shadow-sm"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center mb-3" style={{ background: `${action.color}15` }}>
+                <action.icon className="h-5 w-5" style={{ color: action.color }} />
+              </div>
+              <p className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>{action.label}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>{action.desc}</p>
+            </motion.button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      {/* 底部双栏:最近诊断 + 学习进度 */}
+      <div className="grid grid-cols-5 gap-5">
         {/* 最近诊断 */}
-        <div className="rounded-2xl border shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-          <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>最近诊断</h3>
-            <button onClick={() => setPage('match')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
-              去诊断 <ChevronRight className="h-4 w-4" />
+        <div className="col-span-3 rounded-2xl border p-5 shadow-sm"
+          style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>最近诊断</h2>
+            <button onClick={() => setPage('match')}
+              className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              style={{ color: 'var(--color-primary)' }}>
+              去诊断 <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="p-5">
-            {history.length === 0 ? (
-              <div className="text-center py-8">
-                <Target className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
-                <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>暂无诊断记录</p>
-                <button onClick={() => setPage('match')} className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
-                  开始诊断
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {history.map((item) => {
-                  const hasDetail = (item.skills?.have?.length || item.skills?.miss?.length || item.phases?.length)
-                  return (
-                  <motion.div key={item.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors"
-                    style={{ background: 'var(--color-surface-container)', opacity: hasDetail ? 1 : 0.7 }}
-                    onClick={() => handleClickDiagnosis(item)}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white shrink-0" style={{ background: getGradeColor(item.grade) }}>
-                        {item.grade}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-on-surface)' }}>{item.jobTitle}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Clock className="h-3 w-3 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }} />
-                          <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-                            {fmtDate(item.timestamp) || '未知时间'}
-                          </p>
-                          {hasDetail ? (
-                            item.missCount > 0 && (
-                              <>
-                                <span className="text-xs" style={{ color: 'var(--color-outline-variant)' }}>·</span>
-                                <span className="text-xs" style={{ color: 'var(--accent-red)' }}>
-                                  缺 {(() => {
-                                    const missSkills = (item.skills?.miss || []).map((s: any) => s.skill || s.name || s).filter(Boolean)
-                                    return missSkills.length > 0 ? missSkills.slice(0, 2).join('、') + (missSkills.length > 2 ? ` 等${missSkills.length}项` : '') : `${item.missCount} 项`
-                                  })()}
-                                </span>
-                              </>
-                            )
-                          ) : (
-                            <span className="text-xs" style={{ color: 'var(--accent-orange)' }}>· 数据已过期</span>
-                          )}
-                        </div>
+          {history.length === 0 ? (
+            <div className="text-center py-8">
+              <Target className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>暂无诊断记录</p>
+              <button onClick={() => setPage('match')} className="mt-3 px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
+                开始诊断
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {history.map((item) => {
+                const hasDetail = (item.skills?.have?.length || item.skills?.miss?.length || item.phases?.length)
+                return (
+                <motion.div key={item.id}
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + history.indexOf(item) * 0.05 }}
+                  whileHover={{ scale: 1.01, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                  onClick={() => handleClickDiagnosis(item)}
+                  className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all"
+                  style={{ background: 'var(--color-surface)', opacity: hasDetail ? 1 : 0.7 }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: getGradeColor(item.grade) }}>
+                      {item.grade}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-on-surface)' }}>{item.jobTitle}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Clock className="h-3 w-3 shrink-0" style={{ color: 'var(--color-on-surface-variant)' }} />
+                        <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
+                          {fmtDate(item.timestamp) || '未知时间'}
+                        </p>
+                        {hasDetail ? (
+                          item.missCount > 0 && (
+                            <>
+                              <span className="text-xs" style={{ color: 'var(--color-outline-variant)' }}>·</span>
+                              <span className="text-xs" style={{ color: 'var(--accent-red)' }}>
+                                缺 {(() => {
+                                  const missSkills = (item.skills?.miss || []).map((s: any) => s.skill || s.name || s).filter(Boolean)
+                                  return missSkills.length > 0 ? missSkills.slice(0, 2).join('、') + (missSkills.length > 2 ? ` 等${missSkills.length}项` : '') : `${item.missCount} 项`
+                                })()}
+                              </span>
+                            </>
+                          )
+                        ) : (
+                          <span className="text-xs" style={{ color: 'var(--accent-orange)' }}>· 数据已过期</span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <p className="text-xl font-bold" style={{ color: getGradeColor(item.grade) }}>{item.overall}</p>
-                      <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>分</p>
-                    </div>
-                  </motion.div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className="text-lg font-bold tabular-nums" style={{ color: getGradeColor(item.grade) }}>{item.overall}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>分</p>
+                  </div>
+                </motion.div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* 学习进度 */}
-        <div className="rounded-2xl border shadow-sm" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-          <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>学习进度</h3>
-            <button onClick={() => setPage('learning')} className="text-xs font-semibold flex items-center gap-1 cursor-pointer" style={{ color: 'var(--color-primary)' }}>
-              进入学习 <ChevronRight className="h-4 w-4" />
+        <div className="col-span-2 rounded-2xl border p-5 shadow-sm"
+          style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>学习进度</h2>
+            <button onClick={() => setPage('learning')}
+              className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              style={{ color: 'var(--color-primary)' }}>
+              进入学习 <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="p-5">
-            <div className="text-center py-6">
-              <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
-              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-                已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredSkills.size}</span> 项技能
-              </p>
-              <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: '#E8ECF4' }}>
-                <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredSkills.size * 5, 100)}%` }}
-                  transition={{ duration: 1 }} style={{ background: 'var(--color-primary)' }} />
-              </div>
-              <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-                {masteredSkills.size < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
-              </p>
-              <button onClick={() => setPage('my-skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
-                查看能力图谱
-              </button>
+          <div className="text-center py-6">
+            <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+              已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredSkills.size}</span> 项技能
+            </p>
+            <div className="mt-4 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+              <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredSkills.size * 5, 100)}%` }}
+                transition={{ duration: 1 }} style={{ background: 'var(--color-primary)' }} />
             </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
+              {masteredSkills.size < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
+            </p>
+            <button onClick={() => setPage('my-skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
+              查看能力图谱
+            </button>
           </div>
         </div>
       </div>
