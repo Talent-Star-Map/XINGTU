@@ -61,8 +61,10 @@ export default function EnterpriseShell({ onLogout }: Props) {
       } catch { /* 忽略 */ }
     }
     fetchUnread()
-    const interval = setInterval(fetchUnread, 30000) // 30秒轮询
-    return () => clearInterval(interval)
+    // 读到消息时立即刷新（ChatDialog 广播 xingtu:msg-read），否则红点要等下一轮轮询才消失
+    window.addEventListener('xingtu:msg-read', fetchUnread)
+    const interval = setInterval(fetchUnread, 15000) // 15秒轮询
+    return () => { clearInterval(interval); window.removeEventListener('xingtu:msg-read', fetchUnread) }
   }, [])
 
   return (

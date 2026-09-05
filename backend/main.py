@@ -19,6 +19,8 @@ from routers.admin import router as admin_router
 from routers.resume_center import router as resume_router
 from routers.kg import router as kg_router
 from routers.chat import router as kg_chat_router
+from routers.apply_api import router as apply_router
+from routers.jobseeker_msg_api import router as jobseeker_msg_router
 import os
 
 @asynccontextmanager
@@ -52,6 +54,9 @@ app.include_router(resume_router)
 # ── 岗位图谱 (Neo4j + LangChain) ──
 app.include_router(kg_router)
 app.include_router(kg_chat_router)
+# ── 投递 + 求职者消息（通信闭环） ──
+app.include_router(apply_router)
+app.include_router(jobseeker_msg_router)
 
 @app.get('/api/health')
 def health():

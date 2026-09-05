@@ -101,6 +101,14 @@ There is also no coverage tooling — **don't quote code-coverage percentages an
 
 **学习资源数据库化.** 学习资源已从 `learning_path.py` 硬编码迁移到 `skill_resources` 数据库表（33 技能 88 条资源）。`learning_path.py` 通过 `_fetch_all_resources()` 从 DB 读取，保留原有模糊匹配 + fallback 逻辑。管理员通过 `/api/admin/resources` CRUD 接口维护资源，前端管理页面 `AdminResourceManage.tsx`。
 
+**投递与沟通闭环（2026-09-05）.** 求职端岗位详情页有「去投递/联系」，双通道：企业已入驻（`enterprises.company_name` 与爬虫岗位 `company_name` 精确/双向包含匹配）→ `POST /api/apply/{job_id}` 站内投递——爬虫岗位**镜像进 enterprise_jobs**（同企业同标题去重）+ 建 match_record(status=communicating) + 落首条 jobseeker 消息，企业端「消息」页立即可见；未入驻 → 返回 `jump_url` 跳原招聘网站。求职者消息走 `/api/jobseeker/*`（会话归属校验：`mr.jobseeker_id` 必须等于请求者）。前端 `components/apply/ApplyJobCard.tsx` + `pages/jobseeker/Messages.tsx`（已在 JobseekerShell 注册 hash 路由 `#/messages`）+ `ChatDialog.tsx` 的 `role` prop 双端复用（enterprise 默认 / jobseeker）。
+
+**时间展示统一走 time_util.** `backend/time_util.py` 的 `fmt()` 把 DB 时间（UTC）转北京时间再返回。MySQL 服务器时区是 UTC（`SELECT NOW()` 比北京时间晚 8h），`func.now()` 写入的 `created_at` 全是 UTC——**任何新接口返回时间字段前必须过 `fmt()`**，否则前端显示差 8 小时。
+
+**未读红点刷新约定.** 聊天弹窗（ChatDialog）标记已读成功后广播 `window.dispatchEvent(new Event('xingtu:msg-read'))`；JobseekerShell / EnterpriseShell 监听该事件立即刷新导航徽标，另有轮询兜底（求职端 20s / 企业端 15s）。
+
+**⚠️ FastAPI 路由顺序坑（踩过）.** 同一 router 里带路径参数的动态路由（如 `POST /messages/{match_record_id}`）注册在静态路由（`POST /messages/read`）**前面**，会把 "read" 当 int 解析 → 422，标已读静默失败。静态路由放前面，或动态段统一放 body（求职端发消息已改为 `POST /messages` + body 传 match_record_id）。
+
 ## Architecture
 
 ```
@@ -108,7 +116,7 @@ XINGTU/
 ├── backend/                   # FastAPI app (Python 3.12)
 │   ├── main.py                # App entrypoint, mounts routers + /uploads static mount
 │   ├── database.py            # SQLAlchemy models: Jobseeker, Enterprise, Admin, VerifyCode, Job, MatchRecord + JWT helpers
-│   ├── routers/               # FastAPI 路由层（8 个 router 模块）
+│   ├── routers/               # FastAPI 路由层（14 个 router 模块）
 │   │   ├── auth.py            # /api/auth — register, login, profile, resume CRUD; /api/auth/admin/login
 │   │   ├── jobs.py            # /api/jobs — 岗位列表/详情/统计，实时查 jobs 表（支持 keyword/city/skill/ids 筛选 + 分页）
 │   │   ├── company.py         # /api/company — public enterprise profiles
@@ -116,7 +124,9 @@ XINGTU/
 │   │   ├── match_api.py       # /api/match — 人岗匹配分析接口
 │   │   ├── quality_api.py     # /api/quality — data quality reports + accuracy tests (admin-only, require_admin dep)
 │   │   ├── chat_api.py        # /api/chat — 图图 AI 问答（DeepSeek API, OpenAI 格式）+ 学习资源
-│   │   └── learning_api.py    # /api/learning — 技能掌握/诊断历史/学习进度（数据库存储）
+│   │   ├── learning_api.py    # /api/learning — 技能掌握/诊断历史/学习进度（数据库存储）
+│   │   ├── apply_api.py       # /api/apply — 投递渠道判定 / 站内投递 / 投递状态（2026-09-05）
+│   │   └── jobseeker_msg_api.py # /api/jobseeker — 求职者会话列表/消息读写/已读/未读数（2026-09-05）
 │   ├── services/              # 业务逻辑层（无 router，被 routers 调用）
 │   │   ├── match_engine.py    # 3-dimensional matching engine (skill/exp/salary) → match_records
 │   │   ├── match_analyzer.py  # 多维度匹配算法：技能50%/经验20%/学历15%/薪资15%

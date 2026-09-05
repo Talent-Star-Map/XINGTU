@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, MapPin, Building, Clock, Target, BookOpen, AlertCircle, Loader2, Database } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import ApplyJobCard from '../../components/apply/ApplyJobCard'
 
 interface JobDetailData {
   id: number
@@ -140,6 +141,9 @@ export default function JobDetail() {
 
         {/* 侧边栏 */}
         <div className="space-y-4">
+          {/* 投递/联系 — 入驻企业站内沟通，未入驻跳原网站 */}
+          <ApplyJobCard job={{ id: job.id, title: job.title, company: job.company || '' }} />
+
           {/* 匹配诊断卡片 */}
           <div className="rounded-2xl border p-5 lg:sticky lg:top-24" style={{ borderColor: 'var(--color-primary-fixed)', background: 'var(--color-primary-fixed)' }}>
             <div className="flex items-center gap-2 mb-3">
