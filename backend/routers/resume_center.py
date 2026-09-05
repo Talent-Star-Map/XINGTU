@@ -54,12 +54,16 @@ def _err(code: str, message: str):
 def _resume_to_dict(session, r: Resume) -> dict:
     """简历 ORM → 前端字典（含区块）"""
     sections = session.query(ResumeSection).filter(ResumeSection.resume_id == r.id).order_by(ResumeSection.sort_order).all()
+    # updated_at 优先(SQLAlchemy onupdate=func.now() 自动维护),缺失/为空时回退 created_at,
+    # 给前端的默认名派生做"最近一次填写保存日期"依据(2026-09-05 简历工作台重命名功能)
+    ts = r.updated_at or r.created_at
     return {
         'id': r.id,
         'title': r.title,
         'template_key': r.template_key,
         'language': r.language,
         'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+        'updated_at': ts.strftime('%Y-%m-%d %H:%M') if ts else '',
         'sections': [{
             'id': s.id,
             'section_type': s.section_type,
