@@ -29,8 +29,15 @@ const withToken = (path: string) => `${path}${path.includes('?') ? '&' : '?'}tok
 
 export const kgApi = {
   overview: () => getJson(withToken('/api/kg/jobs/overview')),
-  graph: (limitJobs = 200, limitSkills = 80) =>
-    getJson(withToken(`/api/kg/jobs/graph?limit_jobs=${limitJobs}&limit_skills=${limitSkills}`)),
+  graph: (limitJobs = 200, limitSkills = 80, techStack?: string | null, level?: string | null) => {
+    const p = new URLSearchParams({
+      limit_jobs: String(limitJobs),
+      limit_skills: String(limitSkills),
+    })
+    if (techStack) p.set('tech_stack', techStack)
+    if (level) p.set('level', level)
+    return getJson(withToken(`/api/kg/jobs/graph?${p.toString()}`))
+  },
   jobDetail: (id: number) => getJson(withToken(`/api/kg/jobs/${id}`)),
   jobEvolution: (id: number, metric = 'salary_avg', from?: string, to?: string) => {
     const p = new URLSearchParams({ metric })

@@ -58,9 +58,11 @@ async def jobs_overview():
 @router.get("/jobs/graph")
 async def jobs_graph(
     limit_jobs: int = Query(200, le=500),
-    limit_skills: int = Query(80, le=200),
+    limit_skills: int = Query(120, le=300),
+    tech_stack: Optional[str] = Query(None, description="技术栈: java/python/frontend/backend/ai/bigdata/test/devops/mobile/product/design"),
+    level: Optional[str] = Query(None, description="级别: entry/junior/mid/senior/lead"),
 ):
-    return _ok(kg_service.get_overview_graph(limit_jobs, limit_skills))
+    return _ok(kg_service.get_overview_graph(limit_jobs, limit_skills, tech_stack, level))
 
 
 @router.get("/jobs")
