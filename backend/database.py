@@ -7,8 +7,9 @@ from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:xingtu123@localhost:3307/xingtu')
 
 # connect_args charset=utf8mb4：双保险，确保读写连接走 UTF-8，避免中文双编码
-engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=3600,
-                       connect_args={"charset": "utf8mb4"})
+engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=1800,
+                       pool_pre_ping=True, pool_timeout=10,
+                       connect_args={"charset": "utf8mb4", "connect_timeout": 10})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
