@@ -8,7 +8,32 @@
  * 所有功能集中在这一页,不做多页跳转。
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Activity } from 'lucide-react'
+import { Activity, Layers, Briefcase } from 'lucide-react'
+
+// 技术栈 / 级别 选项 — 与后端 _TECH_STACK_KEYWORDS / _LEVEL_KEYWORDS 保持一致
+const TECH_STACK_OPTIONS: { value: string; label: string }[] = [
+  { value: '',         label: '全部技术栈' },
+  { value: 'java',     label: 'Java' },
+  { value: 'python',   label: 'Python' },
+  { value: 'frontend', label: '前端' },
+  { value: 'backend',  label: '后端' },
+  { value: 'ai',       label: 'AI / 算法' },
+  { value: 'bigdata',  label: '大数据' },
+  { value: 'test',     label: '测试' },
+  { value: 'devops',   label: '运维' },
+  { value: 'mobile',   label: '移动端' },
+  { value: 'product',  label: '产品' },
+  { value: 'design',   label: '设计' },
+]
+
+const LEVEL_OPTIONS: { value: string; label: string }[] = [
+  { value: '',        label: '全部级别' },
+  { value: 'entry',   label: '应届 / 经验不限' },
+  { value: 'junior',  label: '初级 (1-3年)' },
+  { value: 'mid',     label: '中级 (3-5年)' },
+  { value: 'senior',  label: '高级 (5-10年)' },
+  { value: 'lead',    label: '资深 (10年+)' },
+]
 import JobGraphCanvas from '../../components/kg/JobGraphCanvas'
 import KGChat from '../../components/kg/KGChat'
 import SemanticSearchBox from '../../components/kg/SemanticSearchBox'
@@ -26,11 +51,17 @@ export default function JobGraphPage() {
   const [sources, setSources] = useState<{ source: string; cnt: number }[]>([])
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  // 技术栈 / 级别 切换(传给后端做图谱过滤)
+  const [techStack, setTechStack] = useState<string>('')
+  const [level, setLevel] = useState<string>('')
 
-  // 加载总览 + 全图
+  // 加载总览 + 全图(技术栈 / 级别变化时重新拉图)
   useEffect(() => {
     setLoading(true)
-    Promise.all([kgApi.overview(), kgApi.graph(200, 80)])
+    Promise.all([
+      kgApi.overview(),
+      kgApi.graph(200, 80, techStack || null, level || null),
+    ])
       .then(([ov, g]) => {
         setOverview(ov || {})
         setSources(ov?.sources || [])
@@ -38,7 +69,7 @@ export default function JobGraphPage() {
       })
       .catch((e) => console.error('[JobGraphPage] 数据加载失败:', e))
       .finally(() => setLoading(false))
-  }, [])
+  }, [techStack, level])
 
   // 悬浮窗"查看详情"点击 — 抓详情 → 存 localStorage → 跳 JobDetail
   const onJobDetail = async (jobId: number) => {
@@ -118,6 +149,35 @@ export default function JobGraphPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 技术栈 / 级别 切换 — 触发后端 Cypher 重过滤 */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
+               style={{ background: 'var(--color-surface-container)' }}>
+            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <select
+              value={techStack}
+              onChange={(e) => setTechStack(e.target.value)}
+              className="bg-transparent text-xs outline-none cursor-pointer pr-1"
+              title="按技术栈过滤岗位"
+            >
+              {TECH_STACK_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
+               style={{ background: 'var(--color-surface-container)' }}>
+            <Briefcase className="w-3.5 h-3.5" style={{ color: 'var(--color-on-surface-variant)' }} />
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="bg-transparent text-xs outline-none cursor-pointer pr-1"
+              title="按经验级别过滤岗位"
+            >
+              {LEVEL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
           <SemanticSearchBox onPick={onPick} />
           <SourceFilter sources={sources} active={activeSources} onChange={setActiveSources} />
         </div>
@@ -176,6 +236,20 @@ export default function JobGraphPage() {
           {selectedId
             ? `当前选中: ${selectedId}`
             : '悬浮看详情 · 点击节点聚焦 · 点击空白退出'}
+        </div>
+        <div className="flex items-center gap-2">
+          {techStack && (
+            <span style={{ color: 'var(--color-primary)' }}>
+              技术栈: {TECH_STACK_OPTIONS.find((o) => o.value === techStack)?.label}
+            </span>
+          )}
+          {level && (
+            <span style={{ color: 'var(--color-primary)' }}>
+              · 级别: {LEVEL_OPTIONS.find((o) => o.value === level)?.label}
+            </span>
+          )}
+          <span>·</span>
+          <span>技能点颗粒度</span>
         </div>
         <div>
           {overview.attributed || 0} / {overview.changes || 0} 变化已归因 ·
