@@ -99,38 +99,45 @@ async def salary_distribution(limit: int = Query(10, ge=1, le=30)):
     """
     session = get_session()
     try:
+        # 优化:不再用 45 个 NOT LIKE 子句(慢且被云 MySQL 踢连接),
+        # 改为一次性取 top 200 高薪聚合行,Python 端按脏关键词 + tech_stack 过滤。
+        sql = text("""
+                SELECT title, COUNT(*) AS cnt,
+                       AVG((salary_min + salary_max) / 2) AS avg_salary
+                FROM jobs
+                WHERE data_type = 1
+                  AND salary_min IS NOT NULL
+                  AND salary_max IS NOT NULL
+                GROUP BY title
+                HAVING cnt >= 2
+                ORDER BY avg_salary DESC
+                LIMIT 200
+            """)
+        rows = session.execute(sql).fetchall()
+
         dirty_kws = ['司机', '货运', '物流', '快递', '配送', '外卖', '普工', '操作工',
                      '销售', '客服', '导购', '收银', '促销', '营业员', '业务员',
                      '保安', '保洁', '保姆', '钟点工', '月嫂', '餐饮', '服务员',
                      '厨师', '洗碗', '后厨', '主播', '直播', '管培生', '助理', '学徒',
                      '合规', '总监', '总裁', 'CEO', '合伙人', '董事长', '总经理',
                      '副总', 'VP', '管理岗', '人事', '行政', '财务', '法务', '采购']
-        dirty_params = [f'%{kw}%' for kw in dirty_kws]
-        sql_bound = text(f"""
-            SELECT title, COUNT(*) AS cnt,
-                   AVG((salary_min + salary_max) / 2) AS avg_salary
-            FROM jobs
-            WHERE data_type = 1
-              AND salary_min IS NOT NULL
-              AND salary_max IS NOT NULL
-              AND {' AND '.join([f'title NOT LIKE :d{i}' for i in range(len(dirty_kws))])}
-            GROUP BY title
-            HAVING cnt >= 2
-            ORDER BY avg_salary DESC
-            LIMIT :limit
-        """)
-        params = {**{f'd{i}': p for i, p in enumerate(dirty_params)}, 'limit': limit * 3}
-        rows = session.execute(sql_bound, params).fetchall()
+
+        def _is_dirty(title: str) -> bool:
+            return any(kw in title for kw in dirty_kws)
+
         result = []
         for r in rows:
-            avg_salary = float(r[2] or 0) / 1000  # 元 → K
+            title = r[0] or ''
+            avg_salary = float(r[2] or 0) / 1000
             if avg_salary < 1:
                 continue
-            ts = _infer_tech_stack(r[0])
-            if ts == 'other':  # 排除"总监/行政/财务"等伪岗位
+            if _is_dirty(title):
+                continue
+            ts = _infer_tech_stack(title)
+            if ts == 'other':  # 排除非技术岗
                 continue
             result.append({
-                'title': r[0],
+                'title': title,
                 'avg_salary_k': round(avg_salary, 1),
                 'count': int(r[1]),
                 'tech_stack': ts,

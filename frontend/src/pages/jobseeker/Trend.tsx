@@ -297,26 +297,25 @@ export default function Trend() {
                     <div className="rounded-xl p-4" style={{ background: 'var(--accent-green-dim)' }}>
                       <p className="text-xs font-semibold mb-2" style={{ color: 'var(--accent-green)' }}>必备技能</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {mustSkills.map(s => (
-                          <span key={s} className="text-xs px-2.5 py-1 rounded-lg"
-                            style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+                        {mustSkills.map((s: string) => (
+                          <span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
                             {s}
                           </span>
                         ))}
                       </div>
                     </div>
-                    {niceSkills.length > 0 && (
+                    {niceSkills.length > 0 ? (
                       <div className="rounded-xl p-4" style={{ background: 'var(--accent-cyan-dim)' }}>
                         <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-primary)' }}>加分技能</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {niceSkills.map(s => (
-                            <span key={s} className="text-xs px-2.5 py-1 rounded-lg"
-                              style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)' }}>
+                          {niceSkills.map((s: string) => (
+                            <span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)' }}>
                               {s}
-                          </span>
-                        ))}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
                 <div className="flex gap-4 text-xs mt-3" style={{ color: 'var(--color-on-surface-variant)' }}>
