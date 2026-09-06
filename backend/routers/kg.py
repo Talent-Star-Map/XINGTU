@@ -61,8 +61,18 @@ async def jobs_graph(
     limit_skills: int = Query(120, le=300),
     tech_stack: Optional[str] = Query(None, description="技术栈: java/python/frontend/backend/ai/bigdata/test/devops/mobile/product/design"),
     level: Optional[str] = Query(None, description="级别: entry/junior/mid/senior/lead"),
+    mode: str = Query("cluster", description="cluster=按 Cluster 聚合(消歧对齐),raw=原始 Job 节点"),
 ):
-    return _ok(kg_service.get_overview_graph(limit_jobs, limit_skills, tech_stack, level))
+    """岗位图谱。
+
+    默认 mode=cluster:同一 canonical_name 的 Job 折叠为 1 个 Cluster 节点,
+    避免「Java」/「Java工程师」/「java开发工程师」这种变体铺满画布。
+
+    mode=raw:返回所有 Job 节点(用于调试)。
+    """
+    if mode == 'raw':
+        return _ok(kg_service.get_overview_graph(limit_jobs, limit_skills, tech_stack, level))
+    return _ok(kg_service.get_cluster_graph(limit_jobs, limit_skills, tech_stack, level))
 
 
 @router.get("/jobs")

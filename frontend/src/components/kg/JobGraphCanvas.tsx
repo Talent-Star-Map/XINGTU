@@ -12,7 +12,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 export interface GraphNode {
   id: string
-  type: string   // 'Job' | 'Skill' | 'Industry' | 'Company'
+  type: string   // 'Job' | 'Skill' | 'Industry' | 'Company' | 'Cluster'
   label?: string // 显示名(API 返回的 label 字段是岗位/技能名)
   name?: string
   source?: string
@@ -20,6 +20,11 @@ export interface GraphNode {
   hot_score?: number
   city?: string
   company?: string
+  // Cluster 节点专用
+  member_count?: number
+  tech_stack?: string
+  avg_salary?: number
+  sample_members?: string[]
 }
 export interface GraphLink {
   source: string
@@ -42,14 +47,16 @@ interface Props {
 // 节点自然色(默认就是这些,不等点击) + 点击后高亮/邻居覆盖
 // 用淡色调,像水彩星图,清晰可辨不刺眼
 // Job   = 暖白恒星 (太阳 G 型,淡金)
-// Skill = 蓝白主序星 (天狼星色调,淡蓝)
+// Skill   = 蓝白主序星 (天狼星色调,淡蓝)
 // Industry = 青蓝星云 (猎户座大星云,淡青)
 // Company  = 粉红巨星 (参宿四,淡粉)
+// Cluster  = 橙红超巨星(参宿七,体量最大 — 表示一组聚合岗位)
 const STYLE: Record<string, { color: number; emissive: number; size: number; shape: 'box' | 'sphere' | 'octa' }> = {
   Job:      { color: 0xfde68a, emissive: 0xfcd34d, size: 4.5, shape: 'box' },     // 淡金恒星
   Skill:    { color: 0xbfdbfe, emissive: 0x93c5fd, size: 3.0, shape: 'sphere' },  // 淡蓝主序星
   Industry: { color: 0x99f6e4, emissive: 0x5eead4, size: 4.0, shape: 'octa' },    // 淡青星云
   Company:  { color: 0xfbcfe8, emissive: 0xf9a8d4, size: 3.8, shape: 'box' },     // 淡粉巨星
+  Cluster:  { color: 0xfdba74, emissive: 0xfb923c, size: 6.0, shape: 'octa' },    // 橙红超巨星 — 岗位聚合
   default:  { color: 0xe0e7ff, emissive: 0xc7d2fe, size: 3.0, shape: 'sphere' },
 }
 
@@ -113,12 +120,14 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
   const [hoveredNode, setHoveredNode] = useState<{
     id: string; type: string; name: string
     company?: string; city?: string; salary?: number; source?: string
+    member_count?: number; tech_stack?: string; avg_salary?: number; sample_members?: string[]
   } | null>(null)
   // 锁定弹窗 — 进入 focus 模式后,再点一下节点把弹窗钉住(鼠标移走也不会消失)
   // 再点同一节点 / 点空白 / 跳详情 = 解除锁定
   const [lockedNode, setLockedNode] = useState<{
     id: string; type: string; name: string
     company?: string; city?: string; salary?: number; source?: string
+    member_count?: number; tech_stack?: string; avg_salary?: number; sample_members?: string[]
   } | null>(null)
   const lockedPosRef = useRef<{ x: number; y: number } | null>(null)
   // 用 ref 镜像 lockedNode — 避免闭包陷阱(handler 里读到的永远是最新值)
@@ -283,6 +292,11 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
         id: n.id, type: n.type, name: labelText,
         source: n.source, salary: n.salary_max,
         city: n.city, company: n.company,
+        // Cluster 节点专用
+        member_count: n.member_count,
+        tech_stack: n.tech_stack,
+        avg_salary: n.avg_salary,
+        sample_members: n.sample_members,
       }
       scene.add(group)
       posMap.set(n.id, pos)
@@ -797,6 +811,36 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
               <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
                 📡 {displayNode.source}
               </div>
+            )}
+            {displayNode.type === 'Cluster' && (
+              <>
+                <div style={{ fontSize: 12, marginBottom: 4, color: '#fdba74', fontWeight: 700 }}>
+                  🔗 聚合 {displayNode.member_count ?? 0} 个岗位
+                </div>
+                {displayNode.tech_stack && (
+                  <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 4 }}>
+                    🧱 技术栈: <span style={{ color: '#fdba74' }}>{displayNode.tech_stack}</span>
+                  </div>
+                )}
+                {displayNode.avg_salary ? (
+                  <div style={{ fontSize: 12, marginBottom: 4, color: '#fde68a' }}>
+                    💰 均薪 ¥{Math.round(displayNode.avg_salary / 1000)}K
+                  </div>
+                ) : null}
+                {displayNode.sample_members && displayNode.sample_members.length > 0 && (
+                  <div style={{
+                    fontSize: 10, marginTop: 6, opacity: 0.7,
+                    borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6,
+                  }}>
+                    样本:
+                    <div style={{ marginTop: 2, lineHeight: 1.4 }}>
+                      {displayNode.sample_members.map((m, i) => (
+                        <div key={i}>• {m}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             {displayNode.type === 'Job' && (
               <button
