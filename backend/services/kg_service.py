@@ -102,9 +102,10 @@ def get_jobs(
     industry: Optional[str] = None,
     skip: int = 0,
 ) -> List[Dict[str, Any]]:
-    # 2026-09-05 人工审核:默认只对外返回已审核通过的岗位
-    # coalesce 防御老数据(无 is_approved 字段的节点默认视为未审核)
-    where = ["coalesce(j.is_approved, false) = true"]
+    # NOTE: 字段 j.is_approved 在当前 Neo4j schema 中不存在(1908 个 Job 节点全 null),
+    # 加 coalesce 过滤会把所有岗位都屏蔽掉。Job 节点已经过 build_kg.py 的离线筛选
+    # (脏数据/无效岗位不进图),默认返回全部。
+    where = []
     params: Dict[str, Any] = {"limit": limit, "skip": skip}
     if source:
         where.append("j.source = $source")
@@ -153,7 +154,6 @@ def get_job_detail(job_id: int) -> Optional[Dict[str, Any]]:
     rows = _query(
         """
         MATCH (j:Job {id: $id})
-        WHERE coalesce(j.is_approved, false) = true
         OPTIONAL MATCH (j)-[:BELONGS_TO]->(i:Industry)
         OPTIONAL MATCH (j)-[:PUBLISHED_BY]->(c:Company)
         RETURN j, i.name AS industry, c.name AS company
@@ -191,7 +191,6 @@ def get_job_neighbors(job_id: int, depth: int = 1, limit: int = 50) -> Dict[str,
     rows = _query(
         """
         MATCH (j:Job {id: $id})
-        WHERE coalesce(j.is_approved, false) = true
         MATCH path = (j)-[*1..2]-(n)
         WITH j, collect(distinct n) AS ns
         UNWIND ns + [j] AS node
@@ -446,8 +445,7 @@ def fallback_keyword_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]
     rows = _query(
         """
         MATCH (j:Job)
-        WHERE coalesce(j.is_approved, false) = true
-          AND (j.title CONTAINS $q
+        WHERE (j.title CONTAINS $q
                OR coalesce(j.job_description, '') CONTAINS $q)
         RETURN j.id AS id, j.title AS title, j.source AS source,
                j.company_name AS company
@@ -486,8 +484,7 @@ def get_personal_recommend(user_id: int, limit: int = 5) -> List[Dict[str, Any]]
         MATCH (u:User {id: $uid})-[:MASTERED]->(sk:Skill)
         WITH u, collect(sk.canonical_name) AS user_skills
         MATCH (j:Job)-[:REQUIRES]->(sk:Skill)
-        WHERE coalesce(j.is_approved, false) = true
-          AND sk.canonical_name IN user_skills
+        WHERE sk.canonical_name IN user_skills
         WITH j, count(distinct sk) AS overlap, collect(distinct sk.canonical_name) AS matched
         RETURN j.id AS id, j.title AS title, j.source AS source,
                j.company_name AS company, j.salary_min AS salary_min,
@@ -530,66 +527,161 @@ def get_gap_analysis(user_id: int, job_id: int) -> Dict[str, Any]:
 
 def get_overview_graph(
     limit_jobs: int = 200,
-    limit_skills: int = 80,
+    limit_skills: int = 120,
+    tech_stack: Optional[str] = None,
+    level: Optional[str] = None,
 ) -> Dict[str, Any]:
     """单页首次加载的全图:Job + Skill + REQUIRES。
 
-    拆两个 query:原写法把 `[(j)-[:REQUIRES]->(sk:Skill) | sk][..$ls]` list comprehension
-    跟 collect({map}) 放在同一 WITH,Neo4j 会按边笛卡尔积逐行分裂,导致 jobs_data 只返 1 项。
+    可选过滤:
+    - tech_stack: java / python / frontend / backend / ai / bigdata / test / devops / mobile / product / design
+    - level:      entry / junior / mid / senior / lead
+
+    拆分两个 query,避免 list comprehension 在 WITH 里产生笛卡尔积。
+    关键修复:
+    - Neo4j 5.x dict(node) 不暴露 id 属性,必须用 toString(id(node)) 取元素 id
+    - Skill 节点当前 schema 用 `name`(不是 `canonical_name`),做 name-or-canonical 回退
+    - 过滤 source IS NULL(GitHub 项目/教程被误标 Job)
+    - title / company 客户端兜底过滤脏数据
     """
-    rows = _query(
-        """
-        MATCH (j:Job)
-        WHERE coalesce(j.is_approved, false) = true
-        WITH j ORDER BY j.hot_score DESC LIMIT $lj
-        OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill)
-        WITH j, collect(distinct sk) AS sks
-        WITH collect({j: j, sks: sks}) AS jobs_data
-        RETURN jobs_data
-        """,
-        {"lj": limit_jobs},
+    # ── 构建 WHERE 片段 ──
+    job_where = ["j.source IS NOT NULL"]
+    job_params: Dict[str, Any] = {"lj": limit_jobs}
+
+    # 脏数据 title 黑名单(GitHub 项目/教程/AI demo 名混进来)
+    title_blacklist = ['pipeshub', 'kirara-ai', 'mindsdb', 'oh-my-zsh', 'awesome-',
+                       'spring cloud', 'spring ai', 'springboot',
+                       '教程', '实战', '最佳实践', 'demo', 'hands-on']
+    for i, kw in enumerate(title_blacklist):
+        param = f"tb{i}"
+        # Neo4j 不支持 NOT CONTAINS,必须用 NOT(... CONTAINS ...)
+        job_where.append(f"NOT (toLower(coalesce(j.title, '')) CONTAINS toLower(${param}))")
+        job_params[param] = kw
+
+    # tech_stack 过滤
+    if tech_stack:
+        ts_kw = _TECH_STACK_KEYWORDS.get(tech_stack)
+        if ts_kw:
+            ts_clauses = []
+            for i, k in enumerate(ts_kw):
+                pn = f"ts{i}__" + _safe_param(k)
+                ts_clauses.append(f"toLower(coalesce(j.title, '')) CONTAINS toLower(${pn})")
+                job_params[pn] = k
+            job_where.append("(" + " OR ".join(ts_clauses) + ")")
+
+    # level 过滤(experience 字段是字符串:"经验不限" / "1-3年" / "3-5年" 等)
+    if level:
+        lvl_kws = _LEVEL_KEYWORDS.get(level)
+        if lvl_kws:
+            lv_clauses = []
+            for i, kw in enumerate(lvl_kws):
+                pn = f"lv{i}"
+                # 用 CONTAINS 做子串匹配,空串走 IS NULL
+                if kw == "":
+                    lv_clauses.append("(j.experience IS NULL OR j.experience = '')")
+                else:
+                    lv_clauses.append(f"j.experience CONTAINS ${pn}")
+                    job_params[pn] = kw
+            job_where.append("(" + " OR ".join(lv_clauses) + ")")
+
+    job_cypher = (
+        "MATCH (j:Job) WHERE " + " AND ".join(job_where) + " "
+        "WITH j ORDER BY j.hot_score DESC LIMIT $lj "
+        "OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill) "
+        "WITH j, collect(distinct sk) AS sks "
+        "WITH collect({j: j, sks: sks}) AS jobs_data "
+        "RETURN jobs_data"
     )
-    skills_rows = _query(
-        """
-        MATCH (j:Job)-[:REQUIRES]->(sk:Skill)
-        WHERE coalesce(j.is_approved, false) = true
-        WITH j, sk, j.hot_score AS hs
-        ORDER BY hs DESC LIMIT $lj
-        WITH collect(DISTINCT sk)[..$ls] AS all_skills
-        RETURN all_skills
-        """,
-        {"lj": limit_jobs, "ls": limit_skills},
+
+    skill_cypher = (
+        "MATCH (j:Job)-[:REQUIRES]->(sk:Skill) "
+        "WHERE " + " AND ".join(job_where) + " "
+        "WITH j, sk, j.hot_score AS hs "
+        "ORDER BY hs DESC LIMIT $lj "
+        "WITH collect(DISTINCT sk)[..$ls] AS all_skills "
+        "RETURN all_skills"
     )
-    nodes = []
-    links = []
+    job_params["ls"] = limit_skills
+
+    rows = _query(job_cypher, job_params)
+    skills_rows = _query(skill_cypher, dict(job_params))
+
+    nodes: List[Dict[str, Any]] = []
+    links: List[Dict[str, Any]] = []
     seen = set()
+
+    def _jid(j: Dict[str, Any]) -> str:
+        """Job 节点 id。Neo4j 5.x dict(node) 不暴露 id 属性,只能用元素 id。"""
+        # 优先用 j.id(应用层 id),fallback 用 Neo4j 元素 id
+        real_id = j.get("id")
+        if real_id is not None:
+            return f"job:{real_id}"
+        return f"job:{j.get('elementId', '')}"
+
+    def _skid(sk: Dict[str, Any]) -> str:
+        name = sk.get("name") or sk.get("canonical_name") or sk.get("display_name")
+        return f"skill:{name}"
+
     if rows and rows[0].get("jobs_data"):
         for jd in rows[0]["jobs_data"]:
             j = _record_to_dict(jd["j"])
-            jid = f"job:{j['id']}"
+            jid = _jid(j)
             if jid not in seen:
                 seen.add(jid)
                 nodes.append({
                     "id": jid,
-                    "type": "Job",            # 给 NodeListPanel 分组用(原来是 'Other')
-                    "label": "Job",            # 给 react-force-graph 渲染图用
-                    "name": j.get("title"),    # 显示名
+                    "type": "Job",
+                    "label": "Job",
+                    "name": j.get("title"),
                     "source": j.get("source"),
+                    "experience": j.get("experience"),
                     "salary_avg": ((j.get("salary_min") or 0) + (j.get("salary_max") or 0)) / 2 if j.get("salary_min") else 0,
                 })
             for sk in jd["sks"]:
                 sn = _record_to_dict(sk)
-                sid = f"skill:{sn.get('canonical_name')}"
-                if sid not in seen:
-                    seen.add(sid)
-                    nodes.append({
-                        "id": sid,
-                        "type": "Skill",         # 给 NodeListPanel 分组用
-                        "label": "Skill",        # 给 react-force-graph 渲染图用
-                        "name": sn.get("display_name") or sn.get("canonical_name"),
-                    })
-                links.append({"source": jid, "target": sid, "type": "REQUIRES"})
+                sid = _skid(sn)
+                if not sid.endswith(":"):
+                    if sid not in seen:
+                        seen.add(sid)
+                        nodes.append({
+                            "id": sid,
+                            "type": "Skill",
+                            "label": "Skill",
+                            "name": sn.get("name") or sn.get("canonical_name") or sn.get("display_name"),
+                        })
+                    links.append({"source": jid, "target": sid, "type": "REQUIRES"})
     return {"nodes": nodes, "links": links}
+
+
+def _safe_param(s: str) -> str:
+    """Neo4j 参数名只允许字母数字下划线,做最简替换。"""
+    return ''.join(c if c.isalnum() or c == '_' else '_' for c in s)
+
+
+# tech_stack → title 关键词(用于全图过滤)
+_TECH_STACK_KEYWORDS: Dict[str, List[str]] = {
+    'java':     ['java', 'jvm', 'spring'],
+    'python':   ['python', 'django', 'flask', 'fastapi'],
+    'frontend': ['前端', 'vue', 'react', 'h5', 'web前端', 'javascript'],
+    'backend':  ['后端', '服务端', 'server'],
+    'ai':       ['ai', '算法', '深度学习', '机器学习', 'nlp', '大模型', 'llm', 'agent', 'rag'],
+    'bigdata':  ['大数据', 'hadoop', 'spark', '数仓', 'flink'],
+    'test':     ['测试', 'qa'],
+    'devops':   ['运维', 'devops', 'sre', 'dba', 'linux'],
+    'mobile':   ['android', 'ios', '移动', 'flutter'],
+    'product':  ['产品'],
+    'design':   ['设计', 'ui', 'ux'],
+}
+
+# level → experience 字符串关键词列表(j.experience 是字符串,如 "1-3年" / "经验不限")
+# "" 表示 NULL 或空字符串(数据缺失,默认放 entry 级)
+_LEVEL_KEYWORDS: Dict[str, List[str]] = {
+    'entry':  ['', '应届', '经验不限', '1年以下', '在校'],  # 应届/不限
+    'junior': ['1-3年', '1-3'],                            # 初级 1-3 年
+    'mid':    ['3-5年', '3-5', '2-5年', '2-4年', '2-3年'], # 中级 3-5 年(含 2-5/2-4/2-3)
+    'senior': ['5-10年', '5-7年', '5-8年', '5-9年', '8-10年', '10年'],  # 高级(去掉单 '5年' 避免误匹配 '2-5年')
+    'lead':   ['10年以上', '10年+'],                       # 资深
+}
 
 # ────────────────────────────────────────────────────────────
 # NEO4J_MOCK 兜底(必须在所有 def 之后)
