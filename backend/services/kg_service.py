@@ -653,6 +653,122 @@ def get_overview_graph(
     return {"nodes": nodes, "links": links}
 
 
+# ────────────────────────────────────────────────────────────
+# 按 Cluster 聚合的图谱(消歧 + 对齐)
+# ────────────────────────────────────────────────────────────
+
+def get_cluster_graph(
+    limit_clusters: int = 50,
+    limit_skills: int = 60,
+    tech_stack: Optional[str] = None,
+    level: Optional[str] = None,
+) -> Dict[str, Any]:
+    """按 Cluster 节点聚合的图谱(消歧 + 对齐)。
+
+    与 get_overview_graph 的差别:
+    - Job 节点先聚成 Cluster(同一 canonical_name = 1 个 cluster)
+    - 节点列表只展示 Cluster,不再展示数百个相似 Job 节点
+    - Skill 边按 cluster 聚合(成员 Job 的 skill 取并集)
+    - 节点 metadata 加 member_count / sample_title / avg_salary,前端可悬浮展示
+
+    若 Neo4j 没有 Cluster 节点,降级到 get_overview_graph。
+    """
+    cluster_cypher = (
+        "MATCH (c:Cluster) "
+        "WITH c ORDER BY c.member_count DESC LIMIT $lc "
+        "OPTIONAL MATCH (c)<-[:BELONGS_TO]-(j:Job)-[:REQUIRES]->(sk:Skill) "
+        "WITH c, collect(DISTINCT j) AS members, collect(DISTINCT sk) AS skills "
+        "RETURN c, members, skills"
+    )
+    rows = _query(cluster_cypher, {"lc": limit_clusters})
+
+    if not rows:
+        # 兜底:Neo4j 还没有 Cluster 节点,降级
+        return get_overview_graph(
+            limit_jobs=limit_clusters * 5,
+            limit_skills=limit_skills,
+            tech_stack=tech_stack,
+            level=level,
+        )
+
+    # tech_stack / level 过滤
+    def _cluster_match(c) -> bool:
+        if tech_stack and c.get("tech_stack") != tech_stack:
+            return False
+        if level:
+            kws = _LEVEL_KEYWORDS.get(level, [])
+            members = c.get("members", [])
+            exps = [m.get("experience") for m in members if m.get("experience")]
+            if not any(any(kw in (e or "") for kw in kws) for e in exps):
+                return False
+        return True
+
+    nodes: List[Dict[str, Any]] = []
+    links: List[Dict[str, Any]] = []
+    seen = set()
+
+    for rec in rows:
+        c = _record_to_dict(rec["c"]) if rec.get("c") else {}
+        members = [_record_to_dict(m) for m in rec.get("members") or []]
+        skills = [_record_to_dict(s) for s in rec.get("skills") or []]
+
+        if not _cluster_match(c):
+            continue
+
+        cid = f"cluster:{c.get('id')}"
+        if cid in seen:
+            continue
+        seen.add(cid)
+
+        # 计算聚合指标
+        member_count = c.get("member_count") or len(members)
+        sample_title = c.get("canonical_name") or (
+            members[0].get("title") if members else "(空)"
+        )
+        salaries = []
+        for m in members:
+            smin = m.get("salary_min") or 0
+            smax = m.get("salary_max") or 0
+            if smin and smax:
+                salaries.append((smin + smax) / 2)
+            elif smin:
+                salaries.append(smin)
+            elif smax:
+                salaries.append(smax)
+        avg_salary = round(sum(salaries) / len(salaries), 0) if salaries else 0
+
+        nodes.append({
+            "id": cid,
+            "type": "Cluster",
+            "label": "Cluster",
+            "name": sample_title,
+            "tech_stack": c.get("tech_stack"),
+            "member_count": member_count,
+            "avg_salary": avg_salary,
+            # 抽样 3 个代表 Job,前端悬浮展示
+            "sample_members": [
+                m.get("title") for m in members[:3] if m.get("title")
+            ],
+        })
+
+        for sk in skills:
+            sn = sk
+            sid = f"skill:{sn.get('name') or sn.get('canonical_name') or sn.get('display_name')}"
+            if sid.endswith(":"):
+                continue
+            if sid not in seen:
+                seen.add(sid)
+                nodes.append({
+                    "id": sid,
+                    "type": "Skill",
+                    "label": "Skill",
+                    "name": sn.get("name") or sn.get("canonical_name") or sn.get("display_name"),
+                })
+            links.append({"source": cid, "target": sid, "type": "REQUIRES"})
+
+    return {"nodes": nodes, "links": links}
+
+
 def _safe_param(s: str) -> str:
     """Neo4j 参数名只允许字母数字下划线,做最简替换。"""
     return ''.join(c if c.isalnum() or c == '_' else '_' for c in s)
