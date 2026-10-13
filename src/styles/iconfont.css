@@ -1,0 +1,16 @@
+@font-face {
+  font-family: 'xingtu-icons';
+  src: url('/static/fonts/xingtu-icons.woff2') format('woff2'),
+       url('/static/fonts/xingtu-icons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+.iconfont {
+  font-family: 'xingtu-icons' !important;
+  font-size: 1em;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
