@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+__pycache__
+*.py[cod]
+.venv
+venv
+browser_data
+logs
+backups
+*.zip
+*.tar.gz
+*.pem
+*.key

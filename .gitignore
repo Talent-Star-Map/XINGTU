@@ -5,9 +5,22 @@ __pycache__/
 venv/
 env/
 .env
-.env.example
 .idea/
 .vscode/
 *.log
 logs/
 browser_data/
+
+# Local credentials and exported runtime state
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.zip
+*.tar
+*.tar.gz
+backups/
+backup/
+storage_state*.json

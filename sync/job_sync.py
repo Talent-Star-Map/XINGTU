@@ -1,234 +1,94 @@
-"""岗位数据同步模块。
-
-将本地 job_info 中未同步的记录同步到云服务器 jobs 表。
-岗位数据的 data_type = 1，文章数据的 data_type = 2。
-"""
-
+"""Provenance-keyed job synchronization. Replaces the article-shaped mapping."""
 import json
 import os
+from datetime import datetime
+from pathlib import Path
 
 import pymysql
-
 from database.mysql import get_connection
 
-SERVER_DB_HOST = os.environ.get("SERVER_DB_HOST", "180.76.227.159")
-SERVER_DB_PORT = int(os.environ.get("SERVER_DB_PORT", "3308"))
-SERVER_DB_NAME = os.environ.get("SERVER_DB_NAME", "xingtu")
-SERVER_DB_USER = os.environ.get("SERVER_DB_USER", "root")
-SERVER_DB_PASSWORD = os.environ.get("SERVER_DB_PASSWORD", "REMOVED_SECRET")
-
-
-INSERT_COLUMNS = (
-    "data_type",
-    "source",
-    "source_url",
-    "title",
-    "skill_tags",
-    "technology_field",
-    "author",
-    "summary",
-    "article_type",
-    "content",
-    "quality_score",
-    "hot_score",
-    "trend_score",
-    "view_count",
-    "like_count",
-    "collect_count",
-    "comment_count",
-    "publish_time",
-    "crawl_time",
-    "update_time",
-)
+COLUMNS = ('data_type','source','source_url','title','skill_tags','technology_field',
+           'company_name','city','area','salary_min','salary_max','salary_months',
+           'education','experience','job_type','company_type','job_description',
+           'summary','publish_time','crawl_time','update_time')
 
 
 def get_server_connection():
-    """连接云服务器 MySQL。"""
-    return pymysql.connect(
-        host=SERVER_DB_HOST,
-        port=SERVER_DB_PORT,
-        user=SERVER_DB_USER,
-        password=SERVER_DB_PASSWORD,
-        database=SERVER_DB_NAME,
-        charset="utf8mb4",
-    )
-
-
-def get_unsynced_jobs():
-    """查询 job_info 中 sync_status = 0 的记录，关联 job_raw 获取 source_url。"""
-    connection = get_connection()
-    cursor = connection.cursor(pymysql.cursors.DictCursor)
-    try:
-        sql = """
-        SELECT
-            j.id,
-            j.raw_id,
-            j.job_name,
-            j.company_name,
-            j.city,
-            j.area,
-            j.salary_min,
-            j.salary_max,
-            j.salary_months,
-            j.education,
-            j.experience,
-            j.job_type,
-            j.job_category,
-            j.company_type,
-            j.skills,
-            j.job_description,
-            j.publish_time,
-            j.crawl_time,
-            j.salary_unit,
-            r.source_url
-        FROM job_info j
-        LEFT JOIN job_raw r ON j.raw_id = r.id
-        WHERE j.sync_status = 0
-        """
-        cursor.execute(sql)
-        return cursor.fetchall()
-    finally:
-        cursor.close()
-        connection.close()
-
-
-def check_job_exists(source_url):
-    """检查云服务器 jobs 是否已存在该 source_url 的记录。"""
-    if not source_url:
-        return False
-    connection = get_server_connection()
-    cursor = connection.cursor()
-    try:
-        cursor.execute(
-            "SELECT id FROM jobs WHERE source_url = %s LIMIT 1",
-            (source_url,),
-        )
-        return cursor.fetchone() is not None
-    finally:
-        cursor.close()
-        connection.close()
+    return pymysql.connect(host=os.environ['SERVER_DB_HOST'], port=int(os.environ['SERVER_DB_PORT']),
+                           user=os.environ['SERVER_DB_USER'], password=os.environ['SERVER_DB_PASSWORD'],
+                           database=os.environ['SERVER_DB_NAME'], charset='utf8mb4',
+                           connect_timeout=10, read_timeout=30, write_timeout=30)
 
 
 def job_to_dict(job):
-    """将 job_info 记录映射为云服务器 jobs 表的字段。"""
-    skills = job.get("skills")
+    skills = job.get('skills') or []
     if isinstance(skills, str):
-        try:
-            skills = json.loads(skills)
-        except (json.JSONDecodeError, TypeError):
-            skills = []
-    if not skills:
-        skills = []
-
-    description = job.get("job_description") or ""
-    summary = description[:500] if description else ""
-
-    return {
-        "data_type": 1,
-        "source": "智联招聘",
-        "source_url": job.get("source_url") or "",
-        "title": job.get("job_name") or "",
-        "skill_tags": json.dumps(skills, ensure_ascii=False),
-        "technology_field": job.get("job_category") or "",
-        "author": job.get("company_name") or "",
-        "summary": summary,
-        "article_type": None,
-        "content": description,
-        "quality_score": None,
-        "hot_score": None,
-        "trend_score": None,
-        "view_count": 0,
-        "like_count": 0,
-        "collect_count": 0,
-        "comment_count": 0,
-        "publish_time": job.get("publish_time"),
-        "crawl_time": job.get("crawl_time"),
-        "update_time": job.get("crawl_time"),
-    }
+        skills = json.loads(skills)
+    if not isinstance(skills,list):
+        raise ValueError('skills must be a JSON array')
+    url = str(job.get('source_url') or '').strip()
+    if not url.startswith(('https://','http://')):
+        raise ValueError('source URL required for production synchronization')
+    source_name = str(job.get('source') or '').strip()
+    if not source_name:
+        raise ValueError('source name required for production synchronization')
+    description = job.get('job_description') or ''
+    data = {name: job.get(name) for name in COLUMNS}
+    data.update(data_type=1, source=source_name, source_url=url,
+                title=job.get('job_name') or '', skill_tags=json.dumps(skills,ensure_ascii=False),
+                technology_field=job.get('job_category'), job_description=description,
+                summary=description[:500], update_time=datetime.utcnow())
+    return data
 
 
-def insert_job_to_cloud(job_dict):
-    """将单条岗位数据插入云服务器 jobs 表。"""
-    placeholders = ", ".join(["%s"] * len(INSERT_COLUMNS))
-    sql = "INSERT INTO jobs ({columns}) VALUES ({placeholders})".format(
-        columns=", ".join(INSERT_COLUMNS),
-        placeholders=placeholders,
-    )
-    values = tuple(job_dict.get(col) for col in INSERT_COLUMNS)
-
-    connection = get_server_connection()
-    cursor = connection.cursor()
+def sync_jobs(backfill=False):
+    source = get_connection()
+    dest = get_server_connection()
+    counts = {'inserted':0,'updated':0,'failed':0}
     try:
-        cursor.execute(sql, values)
-        connection.commit()
-        return cursor.lastrowid
-    except Exception as exc:
-        connection.rollback()
-        print("[ERROR] 岗位插入云服务器失败: %s" % exc)
-        return None
+        with source.cursor(pymysql.cursors.DictCursor) as q:
+            q.execute('SELECT j.*, r.source_url, r.source FROM job_info j LEFT JOIN job_raw r ON j.raw_id=r.id'
+                      + ('' if backfill else ' WHERE j.sync_status=0'))
+            rows=q.fetchall()
+        if backfill:
+            with dest.cursor(pymysql.cursors.DictCursor) as q:
+                q.execute('SELECT * FROM jobs WHERE data_type=1 AND source_url IS NOT NULL AND source_url<>%s', ('',))
+                before=q.fetchall()
+            directory=Path('/app/logs/repair_backups'); directory.mkdir(parents=True,exist_ok=True)
+            path=directory/f'jobs_before_backfill_{datetime.utcnow():%Y%m%dT%H%M%S}.json'
+            path.write_text(json.dumps(before,ensure_ascii=False,default=str),encoding='utf-8')
+            path.chmod(0o600)
+        for row in rows:
+            try:
+                data=job_to_dict(row)
+                with dest.cursor() as q:
+                    q.execute('SELECT id FROM jobs WHERE data_type=1 AND source_url=%s ORDER BY id LIMIT 1 FOR UPDATE',(data['source_url'],))
+                    existing=q.fetchone()
+                    if existing:
+                        # Backfill cannot erase populated fields when source has no value.
+                        changed={k:v for k,v in data.items() if v is not None and v!='' and k not in ('data_type','source_url')}
+                        q.execute('UPDATE jobs SET '+','.join(f'`{k}`=%s' for k in changed)+' WHERE id=%s',tuple(changed.values())+(existing[0],))
+                        kind='updated'
+                    else:
+                        q.execute('INSERT INTO jobs ('+','.join(COLUMNS)+') VALUES ('+','.join(['%s']*len(COLUMNS))+')',tuple(data[k] for k in COLUMNS))
+                        kind='inserted'
+                dest.commit()
+                with source.cursor() as q:
+                    q.execute('UPDATE job_info SET sync_status=1 WHERE id=%s',(row['id'],))
+                source.commit()
+                counts[kind]+=1
+            except Exception as exc:
+                dest.rollback(); source.rollback(); counts['failed']+=1
+                print(json.dumps({'sync_failed_id':row['id'],'error_type':type(exc).__name__}),flush=True)
+        counts['status']='failed' if counts['failed'] else ('succeeded' if rows else 'unchanged')
+        print(json.dumps({'sql_sync':counts}),flush=True)
+        if counts['failed']:
+            raise RuntimeError(f"{counts['failed']} job records failed synchronization")
+        return counts
     finally:
-        cursor.close()
-        connection.close()
+        source.close(); dest.close()
 
 
-def update_sync_status(job_ids):
-    """将指定 job_info 记录的 sync_status 批量更新为 1。"""
-    if not job_ids:
-        return 0
-    placeholders = ", ".join(["%s"] * len(job_ids))
-    sql = "UPDATE job_info SET sync_status = 1 WHERE id IN ({})".format(placeholders)
-
-    connection = get_connection()
-    cursor = connection.cursor()
-    try:
-        cursor.execute(sql, tuple(job_ids))
-        connection.commit()
-        return cursor.rowcount
-    except Exception as exc:
-        connection.rollback()
-        print("[ERROR] 更新 job_info sync_status 失败: %s" % exc)
-        return 0
-    finally:
-        cursor.close()
-        connection.close()
-
-
-def sync_jobs():
-    """岗位数据同步入口。
-
-    流程：
-    1. 读取 job_info 中 sync_status = 0 的数据
-    2. 通过 source_url 检查云服务器是否已存在
-    3. 不存在则插入 jobs 表（data_type=1）
-    4. 成功插入后更新 job_info.sync_status = 1
-    """
-    jobs = get_unsynced_jobs()
-    print("待同步岗位数量: %d" % len(jobs))
-
-    if not jobs:
-        print("没有需要同步的岗位数据")
-        return
-
-    inserted_ids = []
-    skipped = 0
-    failed = 0
-
-    for job in jobs:
-        source_url = job.get("source_url")
-        if check_job_exists(source_url):
-            skipped += 1
-            inserted_ids.append(job["id"])
-            continue
-
-        job_dict = job_to_dict(job)
-        new_id = insert_job_to_cloud(job_dict)
-        if new_id:
-            inserted_ids.append(job["id"])
-        else:
-            failed += 1
-
-    updated = update_sync_status(inserted_ids) if inserted_ids else 0
-
-    print("岗位同步完成: 插入 %d 条, 跳过(已存在) %d 条, 失败 %d 条" % (
-        len(inserted_ids) - skipped, skipped, failed
-    ))
+if __name__=='__main__':
+    import sys
+    sync_jobs(backfill='--backfill' in sys.argv)

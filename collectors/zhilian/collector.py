@@ -904,8 +904,49 @@ class ZhilianCollector:
                     else:
 
                         log_warning(
-                            "没有解析到详情数据"
+                            "没有解析到详情数据(可能 Security Verification),改用列表页数据入库"
                         )
+
+                        # 详情页被风控时,用列表页已有的数据构造 JobRaw
+                        fallback_source_id = None
+                        if job_url:
+                            m = re.search(r"/([^/?]+)\.html?", job_url)
+                            if m:
+                                fallback_source_id = m.group(1)
+
+                        fb_city = None
+                        fb_area = None
+                        fb_exp = None
+                        fb_edu = None
+                        if len(info_list) >= 1:
+                            fb_area = info_list[0]
+                            fb_city = info_list[0].split("·")[0]
+                        if len(info_list) >= 2:
+                            fb_exp = info_list[1]
+                        if len(info_list) >= 3:
+                            fb_edu = info_list[2]
+
+                        fb_job = JobRaw(
+                            source="智联招聘",
+                            source_job_id=fallback_source_id,
+                            source_url=job_url,
+                            raw_job_name=job_name,
+                            raw_company_name=company,
+                            raw_salary=salary,
+                            raw_city=fb_city,
+                            raw_area=fb_area,
+                            raw_education=fb_edu,
+                            raw_experience=fb_exp,
+                            raw_job_type=None,
+                            raw_description=None,
+                            raw_company_info=None,
+                            publish_time=None,
+                            raw_skills=list(skills) if skills else [],
+                            crawl_time=datetime.now(),
+                            create_time=datetime.now(),
+                        )
+                        jobs.append(fb_job)
+                        log_success("列表页 fallback 数据入库(无详情)")
 
                     if len(info_list) >= 3:
 

@@ -37,11 +37,11 @@ INSERT_COLUMNS = (
 )
 
 
-SERVER_DB_HOST = os.environ.get("SERVER_DB_HOST", "180.76.227.159")
+SERVER_DB_HOST = os.environ.get("SERVER_DB_HOST", "127.0.0.1")
 SERVER_DB_PORT = int(os.environ.get("SERVER_DB_PORT", "3308"))
 SERVER_DB_NAME = os.environ.get("SERVER_DB_NAME", "xingtu")
 SERVER_DB_USER = os.environ.get("SERVER_DB_USER","root")
-SERVER_DB_PASSWORD = os.environ.get("SERVER_DB_PASSWORD","REMOVED_SECRET")
+SERVER_DB_PASSWORD = os.environ.get("SERVER_DB_PASSWORD","")
 
 
 def get_server_connection():

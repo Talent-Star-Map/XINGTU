@@ -4,13 +4,14 @@ This module is reserved for centralized configuration management.
 No runtime configuration logic is implemented at the current stage.
 """
 
+import os
 from datetime import datetime, timedelta
 
 MYSQL_CONFIG = {
     "host": "localhost",
     "port": 3307,
     "user": "root",
-    "password": "REMOVED_SECRET",
+    "password": os.environ.get("MYSQL_PASSWORD", ""),
     "database": "talent_map",
     "charset": "utf8mb4",
 }
