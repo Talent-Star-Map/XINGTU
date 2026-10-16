@@ -1,3 +1,15 @@
+> 2026-10-16 线上版本归档：当前岗位采集入口为 `python -u -m repair_pipeline.scheduler`，
+> 每天北京时间 14:30、23:10 运行腾讯与智联两个来源，随后同步 SQL 与图谱。
+> `run.py` 和下方早期说明保留作历史参考，当前生产入口以上述命令为准。
+>
+> 部署时先将 `.env.example` 复制为 `.env`，在本地填写数据库、图数据库及 API 凭据，
+> 然后运行 `docker compose up -d --build`。容器中 `127.0.0.1` 指容器本身，
+> 请按实际部署填写数据库主机（例如 `host.docker.internal` 或数据库服务名）。
+> 密码与 token 已取消代码内默认值；`.env`、浏览器登录状态、日志和备份不进入 Git 或构建镜像。
+> 岗位修复调度需 Linux（进程锁使用 `fcntl`），Windows 上请通过 Docker 运行。
+> GitHub 采集与实体分析仍使用 `run_github.sh`、`scripts/run_analyzer.sh` 独立执行；
+> 旧脚本中的日志目录需与本机部署位置对应。AI 岗位发现模块未包含于本次线上容器快照。
+
 # job - spider_collector
 CSDN / 稀土掘金 / 智联招聘 /GitHub 定时采集项目
 
@@ -627,7 +639,7 @@ MYSQL_DATABASE=自己的数据库名
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
-MYSQL_PASSWORD=123456
+MYSQL_PASSWORD=请填写本地密码
 MYSQL_DATABASE=job_analysis_db
 ```
 

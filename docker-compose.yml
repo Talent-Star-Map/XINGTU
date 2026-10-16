@@ -1,0 +1,15 @@
+services:
+  job-collector:
+    build: .
+    container_name: xingtu-collector
+    command: ["python", "-u", "-m", "repair_pipeline.scheduler"]
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./browser_data:/app/browser_data
+      - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
