@@ -1,0 +1,12 @@
+[Unit]
+Description=XINGTU private on-server logical backup
+After=docker.service
+Requires=docker.service
+RequiresMountsFor=/data
+ConditionPathIsMountPoint=/data
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 /data/xingtu/daily_backup_new.py
+TimeoutStartSec=30min

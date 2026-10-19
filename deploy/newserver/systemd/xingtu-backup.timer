@@ -1,0 +1,9 @@
+[Unit]
+Description=XINGTU nightly backup Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Asia/Shanghai
+Persistent=false
+
+[Install]
+WantedBy=timers.target

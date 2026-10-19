@@ -31,6 +31,8 @@ import pymysql
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from deployment_db_config import mysql_connection_config
+
 from database import get_neo4j_driver, DATABASE_URL
 
 
@@ -100,10 +102,7 @@ def main():
 
     # ── 1. 抽取 MySQL jobs ──
     print('[1/4] 抽取 MySQL jobs ...')
-    conn = pymysql.connect(
-        host='180.76.227.159', port=3308, user='root', password=os.environ["MYSQL_PASSWORD"],
-        database='xingtu', charset='utf8mb4', connect_timeout=10,
-    )
+    conn = pymysql.connect(**mysql_connection_config(), connect_timeout=10)
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         sql = 'SELECT id, title, skill_tags, source FROM jobs WHERE data_type=1 AND title IS NOT NULL'
         if args.limit:

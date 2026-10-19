@@ -1,0 +1,14 @@
+secrets/*
+!secrets/.gitignore
+!secrets/*.example
+app/
+collector/
+mysql/
+mongo/
+mongo-config/
+neo4j/
+neo4j-logs/
+uploads/
+collector_state/
+*.source.tar
+*result.json

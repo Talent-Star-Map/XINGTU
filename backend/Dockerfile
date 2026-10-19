@@ -26,9 +26,9 @@ ENV CHROMIUM_PATH=/usr/bin/chromium \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
-COPY requirements.txt .
+COPY requirements.txt runtime-constraints.txt ./
 # pip 走国内镜像，避免下载慢/挂死
-RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
+RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt -c runtime-constraints.txt
 COPY . .
 EXPOSE 8081
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8081"]

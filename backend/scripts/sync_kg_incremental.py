@@ -30,6 +30,8 @@ except Exception:
 
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from deployment_db_config import mysql_connection_config
 from database import get_neo4j_driver, close_neo4j
 # ── AI 生成内容审核(2026-09-05):增量同步时仍走 review gate ──
 try:
@@ -38,11 +40,7 @@ except Exception:
     _submit_review = None
 
 
-DB = {
-    "host": "180.76.227.159", "port": 3308,
-    "user": "root", "password": os.environ["MYSQL_PASSWORD"],
-    "database": "xingtu", "charset": "utf8mb4",
-}
+DB = mysql_connection_config()
 
 BATCH = 500
 

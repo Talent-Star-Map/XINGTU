@@ -1,0 +1,110 @@
+name: xingtu
+services:
+  mysql:
+    image: mysql:8.0.46
+    container_name: xingtu-mysql
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/mysql.env
+        format: raw
+    environment:
+      TZ: UTC
+      MYSQL_DATABASE: xingtu
+      MYSQL_ROOT_HOST: "%"
+    command: ["--innodb-buffer-pool-size=1G", "--max-connections=150", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--default-time-zone=+00:00"]
+    ports: ["127.0.0.1:3308:3306"]
+    volumes: ["./mysql:/var/lib/mysql"]
+    mem_limit: 3g
+    healthcheck:
+      test: ["CMD-SHELL", "export MYSQL_PWD=$$MYSQL_ROOT_PASSWORD; mysqladmin ping -h127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    logging: &logs
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  mongo:
+    image: mongo:7.0.40
+    container_name: xingtu-mongo
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/mongo.env
+        format: raw
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    ports: ["127.0.0.1:27017:27017"]
+    volumes: ["./mongo:/data/db", "./mongo-config:/data/configdb"]
+    mem_limit: 1536m
+    logging: *logs
+  neo4j:
+    image: neo4j:5.20.0
+    container_name: xingtu-neo4j
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/neo4j.env
+        format: raw
+    environment:
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 1G
+    ports: ["127.0.0.1:7474:7474", "127.0.0.1:7687:7687"]
+    volumes: ["./neo4j:/data", "./neo4j-logs:/logs"]
+    mem_limit: 3g
+    logging: *logs
+  api:
+    profiles: [app]
+    build:
+      context: ./app/backend
+    image: xingtu-api:f5afef1-deploy1
+    container_name: xingtu-api
+    command: ["python", "-m", "scripts.deployment_start"]
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/api.env
+        format: raw
+    environment:
+      FRONTEND_BASE_URL: http://frontend
+    ports: ["127.0.0.1:8081:8081"]
+    volumes: ["./uploads:/app/uploads"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/api/health', timeout=4).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    depends_on:
+      mysql: {condition: service_healthy}
+      neo4j: {condition: service_started}
+    mem_limit: 2g
+    logging: *logs
+  frontend:
+    profiles: [app]
+    build:
+      context: ./app/frontend
+    image: xingtu-frontend:dfb9ba6
+    container_name: xingtu-frontend
+    restart: unless-stopped
+    ports: ["127.0.0.1:3000:80"]
+    depends_on:
+      api: {condition: service_healthy}
+    mem_limit: 256m
+    logging: *logs
+  job-collector:
+    profiles: [collection]
+    build:
+      context: ./collector
+    image: xingtu-collector:ca55d9c
+    container_name: xingtu-collector
+    command: ["python", "-u", "-m", "repair_pipeline.scheduler"]
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/collector.env
+        format: raw
+    environment:
+      TZ: Asia/Shanghai
+    volumes: ["./collector_state/browser_data:/app/browser_data", "./collector_state/logs:/app/logs"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      mongo: {condition: service_started}
+      neo4j: {condition: service_started}
+    mem_limit: 2560m
+    logging: *logs

@@ -22,6 +22,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Literal
 from uuid import uuid4
+from urllib.parse import quote
 
 from fastapi import APIRouter, Query, HTTPException, UploadFile, File
 from fastapi.responses import Response
@@ -769,6 +770,12 @@ def resume_print_data(token: str):
         session.close()
 
 
+def _download_header(filename: str) -> str:
+    """ASCII response header with the original Unicode filename in RFC 5987 form."""
+    extension = filename.rsplit('.', 1)[-1]
+    return 'attachment; filename="resume.' + extension + '"; filename*=UTF-8\'\'' + quote(filename, safe='')
+
+
 @router.post('/{resume_id}/export')
 async def resume_export(
     resume_id: int,
@@ -799,7 +806,7 @@ async def resume_export(
             return Response(
                 content=payload,
                 media_type='application/json',
-                headers={'Content-Disposition': f'attachment; filename="{filename_base}.json"'},
+                headers={'Content-Disposition': _download_header(f'{filename_base}.json')},
             )
 
         if format == 'txt':
@@ -808,7 +815,7 @@ async def resume_export(
             return Response(
                 content=payload,
                 media_type='text/plain; charset=utf-8',
-                headers={'Content-Disposition': f'attachment; filename="{filename_base}.txt"'},
+                headers={'Content-Disposition': _download_header(f'{filename_base}.txt')},
             )
 
         if format == 'docx':
@@ -817,7 +824,7 @@ async def resume_export(
             return Response(
                 content=payload,
                 media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                headers={'Content-Disposition': f'attachment; filename="{filename_base}.docx"'},
+                headers={'Content-Disposition': _download_header(f'{filename_base}.docx')},
             )
 
         # ── PDF / HTML: Playwright 渲染 ──────────────────────────────
@@ -833,7 +840,7 @@ async def resume_export(
             return Response(
                 content=html_bytes,
                 media_type='text/html; charset=utf-8',
-                headers={'Content-Disposition': f'attachment; filename="{filename_base}.html"'},
+                headers={'Content-Disposition': _download_header(f'{filename_base}.html')},
             )
 
         # pdf
@@ -841,7 +848,7 @@ async def resume_export(
         return Response(
             content=pdf_bytes,
             media_type='application/pdf',
-            headers={'Content-Disposition': f'attachment; filename="{filename_base}.pdf"'},
+            headers={'Content-Disposition': _download_header(f'{filename_base}.pdf')},
         )
     except HTTPException:
         raise
