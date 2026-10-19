@@ -94,7 +94,8 @@ export default function Dashboard() {
   const shortcuts = [
     { label: '人才星', desc: '查看匹配的候选人', page: 'talent' as const, icon: Search, color: '#3b82f6' },
     { label: '岗位管理', desc: '发布与编辑岗位', page: 'jobs' as const, icon: Briefcase, color: '#8b5cf6' },
-    { label: '市场洞察', desc: '技能需求与趋势', page: 'market' as const, icon: BarChart3, color: '#10b981' },
+    { label: '岗位图谱', desc: '本企业岗位—技能关系', page: 'market' as const, icon: TrendingUp, color: '#10b981' },
+    { label: '市场洞察', desc: '城市、薪资与技能结构', page: 'board' as const, icon: BarChart3, color: '#f97316' },
     // 行业报告页面在 EnterpriseShell 里注册的 key 是 industry，不是 report
     { label: '行业报告', desc: '行业人才分布', page: 'industry' as const, icon: FileText, color: '#f59e0b' },
   ]
@@ -148,7 +149,7 @@ export default function Dashboard() {
       {/* 快捷功能卡片 */}
       <div>
         <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--color-on-surface)' }}>快捷功能</h2>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           {shortcuts.map((item, i) => {
             const Icon = item.icon
             return (

@@ -1,23 +1,26 @@
 import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star, BarChart3 } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
+import './enterprise/ent-theme.css'
 
 // 企业端导航项
 type Page = EPPage
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
+  { key: 'board', icon: BarChart3, label: '市场洞察' },
   { key: 'jobs', icon: Briefcase, label: '岗位管理' },
   { key: 'talent', icon: Users, label: '人才星' },
   { key: 'messages', icon: MessageSquare, label: '消息' },
-  { key: 'market', icon: TrendingUp, label: '市场洞察' },
+  { key: 'market', icon: TrendingUp, label: '岗位图谱' },
   { key: 'industry', icon: FileText, label: '行业报告' },
 ]
 
 // 页面按需加载，避免首屏一次性加载全部业务代码
 const EPDashboard = lazy(() => import('../pages/enterprise/Dashboard'))
+const EPBoard = lazy(() => import('../pages/enterprise/MarketBoard'))
 const EPJobs = lazy(() => import('../pages/enterprise/JobManage'))
 const EPTalent = lazy(() => import('../pages/enterprise/TalentSearch'))
 const EPMessages = lazy(() => import('../pages/enterprise/Conversations'))
@@ -26,7 +29,7 @@ const EPIndustry = lazy(() => import('../pages/enterprise/IndustryReport'))
 const EPCompany = lazy(() => import('../pages/enterprise/CompanyProfile'))
 
 const pages: Record<Page, ComponentType> = {
-  dashboard: EPDashboard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
+  dashboard: EPDashboard, board: EPBoard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
   market: EPMarket, industry: EPIndustry, company: EPCompany,
 }
 
@@ -68,11 +71,11 @@ export default function EnterpriseShell({ onLogout }: Props) {
   }, [])
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="ent-theme flex flex-col h-full w-full" style={{ background: 'var(--color-background)' }}>
       {/* ── 顶部导航 ── */}
       <header className="shrink-0 border-b z-50" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
-        <div className="flex items-center justify-between h-20 px-14 mx-auto">
-          <div className="flex items-center gap-12">
+        <div className="flex items-center justify-between h-20 px-6 xl:px-14 mx-auto">
+          <div className="flex items-center gap-5 xl:gap-10">
             <div className="flex items-center gap-2.5 pl-1">
               <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-primary-fixed)' }}
                 animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
@@ -81,12 +84,12 @@ export default function EnterpriseShell({ onLogout }: Props) {
               <span className="text-xl font-extrabold gradient-text">星图</span>
               <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
             </div>
-            <nav className="hidden md:flex items-center gap-1.5">
+            <nav className="hidden md:flex items-center gap-0.5 xl:gap-1.5">
               {navItems.map(item => {
                 const active = page === item.key
                 return (
                   <button key={item.key} onClick={() => setPage(item.key)}
-                    className="relative px-5 py-2.5 rounded-md transition-colors flex items-center gap-2.5"
+                    className="relative px-2.5 xl:px-4 py-2.5 rounded-md transition-colors flex items-center gap-2 whitespace-nowrap"
                     style={{ color: active ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)' }}
                   >
                     {active && (
@@ -97,8 +100,8 @@ export default function EnterpriseShell({ onLogout }: Props) {
                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                       />
                     )}
-                    <item.icon className="h-5 w-5 relative z-10" />
-                    <span className="relative z-10 text-base font-medium">{item.label}</span>
+                    <item.icon className="h-5 w-5 relative z-10 shrink-0" />
+                    <span className="relative z-10 text-[13px] xl:text-[15px] font-medium whitespace-nowrap">{item.label}</span>
                     {/* 消息未读徽标 */}
                     {item.key === 'messages' && unreadCount > 0 && (
                       <span className="relative z-10 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold"

@@ -30,7 +30,7 @@ export default function MarketInsight() {
       <div className="px-14 py-12 space-y-12">
         {/* ── 顶部 — utility copy，无营销文案 ── */}
         <header>
-          <h1 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>市场洞察</h1>
+          <h1 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>岗位图谱</h1>
           <p className="text-base mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
             数据来源：jobs 表（爬虫聚合）· 实时
           </p>

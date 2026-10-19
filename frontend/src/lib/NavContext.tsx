@@ -15,7 +15,7 @@ export const JSNav = {
 }
 
 // 企业端导航
-export type EPPage = 'dashboard' | 'jobs' | 'talent' | 'market' | 'industry' | 'company' | 'messages'
+export type EPPage = 'dashboard' | 'board' | 'jobs' | 'talent' | 'market' | 'industry' | 'company' | 'messages'
 
 // 导航参数 — 用于页面间传递上下文
 export interface EPNavParams {

@@ -60,7 +60,7 @@ export default function RoleSelect() {
                   </motion.div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold" style={{ color: 'var(--color-on-surface)' }}>企业入口</h3>
-                    <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>岗位管理、人才搜索、市场洞察、行业报告</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>岗位管理、人才搜索、岗位图谱、市场洞察、行业报告</p>
                   </div>
                   <motion.div className="shrink-0" whileHover={{ x: 5 }}>
                     <ArrowRight className="h-5 w-5" style={{ color: 'var(--accent-purple)' }} />

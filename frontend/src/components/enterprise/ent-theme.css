@@ -1,0 +1,181 @@
+/* ent-theme.css — 企业端视觉身份(明暗双主题)
+ *
+ * 第一性原理(调研结论,见会话 Sources):
+ *  1. 暗色底用深灰而非纯黑(#14161f 一路),绘图区再亮一档,避免高饱和色"发光渗色"
+ *  2. 暗色不用辉光/阴影做层级 — 靠表面亮度递进(Material dark theme)
+ *  3. 数据色暗色降饱和提亮、亮色用标准饱和;语义色(涨/跌/缺口)两态固定色相
+ *  4. 文本对比度 ≥4.5:1,图形相邻对比 ≥3:1(实现后有脚本校验)
+ *  作用域仅企业端壳与子页面,不污染求职端/管理端。
+ */
+
+/* ── 亮色:冷纸面 + 紫墨 ── */
+.ent-theme {
+  --color-background: #f6f7fb;
+  --color-surface: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f2f8;
+  --color-surface-container: #eaecf4;
+  --color-surface-container-high: #e2e5ef;
+  --color-surface-container-highest: #d9dce8;
+  --color-surface-variant: #e2e5ef;
+  --color-surface-dim: #e8eaf2;
+  --color-on-surface: #171a26;
+  --color-on-surface-variant: #565d70;
+  --color-outline: #7b8194;
+  --color-outline-variant: #dde0ea;
+
+  --color-primary: #5b4bd6;
+  --color-primary-container: #e9e6fb;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #372b8f;
+  --color-primary-fixed: #eceafd;
+  --color-primary-fixed-dim: #d8d3f8;
+  --color-on-primary-fixed: #241a6e;
+  --color-on-primary-fixed-variant: #4c3ec0;
+  --color-secondary: #0e7490;
+  --color-secondary-container: #dff3f8;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #0b4b5e;
+
+  --color-error: #be123c;
+  --color-error-container: #fde5ea;
+  --color-on-error: #ffffff;
+
+  --accent-cyan: #0e7490;
+  --accent-cyan-dim: rgba(14, 116, 144, 0.1);
+  --accent-purple: #6d28d9;
+  --accent-purple-dim: rgba(109, 40, 217, 0.08);
+  --accent-green: #047857;
+  --accent-green-dim: rgba(4, 120, 87, 0.1);
+  --accent-orange: #b45309;
+  --accent-orange-dim: rgba(180, 83, 9, 0.12);
+  --accent-red: #be123c;
+  --accent-red-dim: rgba(190, 18, 60, 0.08);
+  --accent-red-strong: #be123c;
+
+  --color-neutral: #6b7280;
+  --color-neutral-dim: rgba(107, 114, 128, 0.12);
+
+  --bg-deep: #f6f7fb;
+  --bg-body: #f6f7fb;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #eef0f7;
+  --bg-card: #ffffff;
+  --border-subtle: #e4e6f0;
+  --border-default: #cdd2e0;
+  --border-accent: rgba(91, 75, 214, 0.3);
+  --text-primary: #171a26;
+  --text-secondary: #565d70;
+  --text-dim: #8a8fa0;
+  --glow-primary: none;
+  --color-scrim: rgba(23, 26, 38, 0.45);
+
+  /* 图谱数据色:岗位=品牌紫,技能=青;亮色标准饱和 */
+  --ent-job: #5b4bd6;
+  --ent-skill: #0e7490;
+}
+
+/* ── 暗色:深灰蓝底,表面亮度递进,数据色降饱和提亮 ── */
+[data-theme="dark"] .ent-theme {
+  --color-background: #14161f;
+  --color-surface: #1b1e2a;
+  --color-surface-container-lowest: #171a24;
+  --color-surface-container-low: #202432;
+  --color-surface-container: #262b3b;
+  --color-surface-container-high: #2e3446;
+  --color-surface-container-highest: #363d52;
+  --color-surface-variant: #2e3446;
+  --color-surface-dim: #101219;
+  --color-on-surface: #e4e6ee;
+  --color-on-surface-variant: #9aa1b5;
+  --color-outline: #6b7288;
+  --color-outline-variant: #2e3342;
+
+  --color-primary: #a99df5;
+  --color-primary-container: #332a63;
+  --color-on-primary: #241a6e;
+  --color-on-primary-container: #d8d3f8;
+  --color-primary-fixed: rgba(169, 157, 245, 0.16);
+  --color-primary-fixed-dim: rgba(169, 157, 245, 0.28);
+  --color-on-primary-fixed: #e6e2fc;
+  --color-on-primary-fixed-variant: #b7adf8;
+  --color-secondary: #6fc3d9;
+  --color-secondary-container: #123c49;
+  --color-on-secondary: #062b36;
+  --color-on-secondary-container: #bfe9f4;
+
+  --color-error: #e08090;
+  --color-error-container: #4a1523;
+  --color-on-error: #400513;
+
+  --accent-cyan: #6fc3d9;
+  --accent-cyan-dim: rgba(111, 195, 217, 0.14);
+  --accent-purple: #b3a5f7;
+  --accent-purple-dim: rgba(179, 165, 247, 0.16);
+  --accent-green: #5fbf9a;
+  --accent-green-dim: rgba(95, 191, 154, 0.14);
+  --accent-orange: #d9a441;
+  --accent-orange-dim: rgba(217, 164, 65, 0.16);
+  --accent-red: #e08090;
+  --accent-red-dim: rgba(224, 128, 144, 0.14);
+  --accent-red-strong: #e05c72;
+
+  --color-neutral: #8b93a7;
+  --color-neutral-dim: rgba(139, 147, 167, 0.16);
+
+  --bg-deep: #14161f;
+  --bg-body: #14161f;
+  --bg-surface: #1b1e2a;
+  --bg-elevated: #262b3b;
+  --bg-hover: #2e3446;
+  --bg-card: #202432;
+  --border-subtle: #2e3342;
+  --border-default: #3a4156;
+  --border-accent: rgba(169, 157, 245, 0.4);
+  --text-primary: #e4e6ee;
+  --text-secondary: #9aa1b5;
+  --text-dim: #6b7288;
+  --glow-primary: none;
+  --color-scrim: rgba(8, 9, 14, 0.6);
+
+  /* 暗色数据色:降饱和提亮,避免渗色 */
+  --ent-job: #a99df5;
+  --ent-skill: #6fc3d9;
+}
+
+/* 实体仪表面板:亮色靠浅阴影,暗色靠更亮表面 + 细边(Material 暗色不用阴影做层级) */
+.ent-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: 0 1px 2px rgba(16, 20, 34, 0.06), 0 4px 12px rgba(16, 20, 34, 0.06);
+}
+[data-theme="dark"] .ent-panel {
+  background: var(--color-surface-container-low);
+  box-shadow: none;
+}
+
+/* 实时状态点:功能性指示,不做辉光 */
+.ent-pulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--accent-green);
+}
+.ent-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1px solid var(--accent-green);
+  opacity: 0;
+  animation: ent-pulse-ring 2.4s ease-out infinite;
+}
+@keyframes ent-pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ent-pulse::after { animation: none; opacity: 0; }
+}
