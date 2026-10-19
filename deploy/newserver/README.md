@@ -60,7 +60,7 @@ docker compose --profile app --profile collection ps
 
 API 通过 `python -m scripts.deployment_start` 等待 MySQL 和 Neo4j 就绪后启动；仅这个部署配置使用该入口。根目录开发 Compose 保持原行为。Nginx 允许 10MiB 请求体，关闭 API 响应缓冲并设置 300 秒超时；访问日志只记录 URL 路径，避免把查询参数中的 JWT 写入日志。
 
-在队友电脑建立隧道，替换 `<NEW_SERVER_IP>` 后保持终端开启：
+团队日常使用优先按 [团队便捷连接](../team-access/README.md) 一次设置，然后双击桌面入口；自动连接和重连，不必手动保持终端。下列命令保留为管理员手动诊断方式，不能与自动连接同时占用相同端口：
 
 ```bash
 ssh -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -N -L 13000:127.0.0.1:3000 -L 13308:127.0.0.1:3308 -L 17474:127.0.0.1:7474 -L 17687:127.0.0.1:7687 -L 37017:127.0.0.1:27017 root@<NEW_SERVER_IP>

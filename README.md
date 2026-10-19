@@ -4,6 +4,8 @@
 
 新服务器六服务部署、数据盘布局和 SSH 访问方式见 [新服务器 Docker 部署](deploy/newserver/README.md)。运行凭据和数据库备份不通过 Git 共享。
 
+团队连接新机：首次双击 [Setup.cmd](deploy/team-access/Setup.cmd)，以后使用桌面 `XINGTU Web` / `XINGTU Graph`，连接在后台自动重连。Navicat、Neo4j Desktop 与本地热重载开发配置见 [团队便捷连接](deploy/team-access/README.md)。
+
 ---
 
 ## 快速开始
@@ -21,7 +23,7 @@ docker compose up -d
 ### 方式二：本地开发（改代码用）
 
 ```bash
-# 1. 启动数据库（云服务器已部署可跳过此步，本地后端直连云库）
+# 1. 本地数据库；使用新机云库时改按上方“团队便捷连接”，不要公网直连数据库。
 docker compose up -d mysql    # MySQL on localhost:3307
 
 # 2. 启动后端

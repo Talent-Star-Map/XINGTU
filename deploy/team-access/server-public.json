@@ -1,0 +1,16 @@
+{
+  "host": "47.120.76.16",
+  "port": 22,
+  "user": "xingtu-connect",
+  "hostKeyType": "ssh-ed25519",
+  "hostKey": "AAAAC3NzaC1lZDI1NTE5AAAAIGvPiY4sWD7Sce0aIPWjvXS7qI/YwiXtzuiiPTLvCvhR",
+  "fingerprint": "SHA256:RLE44HriSVp0BUv7q/rlr+UYxkU24jhx9pjOUIn0eSA",
+  "forwards": {
+    "13000": 3000,
+    "18081": 8081,
+    "13308": 3308,
+    "17474": 7474,
+    "17687": 7687,
+    "37017": 27017
+  }
+}
