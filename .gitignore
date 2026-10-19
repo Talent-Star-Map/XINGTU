@@ -71,3 +71,16 @@ backend/match_cache/
 
 # 个人开发配置（含密钥引用、个人规范）
 CLAUDE.md
+
+# Sensitive local configuration and private backups
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+backups/
+tmp/
+*.pem
+*.key
+*.p12
+*.pfx

@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 
 router = APIRouter(prefix='/api/auth', tags=['auth'])
 
-SMTP_HOST = 'smtp.qq.com'; SMTP_PORT = 465; SMTP_USER = '3757913901@qq.com'; SMTP_PASS = 'REMOVED_SECRET'
+SMTP_HOST = 'smtp.qq.com'; SMTP_PORT = 465; SMTP_USER = '3757913901@qq.com'; SMTP_PASS = os.getenv('SMTP_PASSWORD', '')
 
 class RegisterReq(BaseModel):
     account: str; password: str; code: str; role: str = 'jobseeker'; username: str = ''

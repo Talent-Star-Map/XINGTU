@@ -48,7 +48,7 @@ cd frontend && npm install && npm run dev  # Vite on localhost:5173
 
 **Resume parsing depends on external APIs.** `backend/resume_parser.py` and `backend/quality_checker.py` likely call external LLM services. They won't work without network access or proper API keys.
 
-**Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`LONGCAT_API_KEY` 等运行配置，已提交供团队共享。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
+**Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`LONGCAT_API_KEY` 等运行配置，禁止提交；仅在运行环境配置。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
 
 **图图 AI 问答.** `chat_api.py` 调用 LongCat API（`https://api.longcat.chat/anthropic/v1/messages`，Anthropic Messages 格式）。需配置 `LONGCAT_API_KEY` / `LONGCAT_MODEL` / `LONGCAT_BASE_URL`。API 不可用时自动回退到本地关键词知识库。新增 `/api/chat/resources` 端点根据技能返回真实学习链接（`learning_path.py`）。
 
@@ -83,7 +83,7 @@ XINGTU/
 │   ├── mock_data/             # Seed scripts (idempotent)
 │   │   ├── seed.py            # 10 test jobseekers + 10 test jobs + 10 preset match_records
 │   │   └── seed_admin.py      # Default admin account (admin@xingtu.com / Admin1234)
-│   ├── .env                   # 运行配置（数据库+API Key），已提交供团队共享
+│   ├── .env                   # 运行配置（数据库+API Key），禁止提交；仅在运行环境配置
 │   ├── test_data/             # Seed test data for quality endpoints
 │   └── uploads/               # 用户上传文件（运行时生成，.gitignore 已忽略）
 ├── frontend/          # React 19 + Vite 5 + TypeScript

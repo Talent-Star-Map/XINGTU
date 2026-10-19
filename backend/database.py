@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@localhost:3307/xingtu')
+DATABASE_URL = os.environ['DATABASE_URL']
 
 engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=3600)
 SessionLocal = sessionmaker(bind=engine)

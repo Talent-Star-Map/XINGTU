@@ -4,15 +4,15 @@ services:
     container_name: xingtu-mysql
     environment:
       # 生产环境强密码（本地 Navicat 连接用）
-      MYSQL_ROOT_PASSWORD: REMOVED_SECRET
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in local .env}
       MYSQL_DATABASE: xingtu
-    # 端口映射：宿主机 3307 → 容器 3306，让本地 Navicat 可以连接云服务器 MySQL
+    # 端口映射：宿主机 3307 → 容器 3306，仅允许本机或 SSH 隧道访问 MySQL
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pXingtu123"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h localhost -uroot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -28,8 +28,8 @@ services:
         condition: service_healthy
     environment:
       # Docker 内部走容器名 mysql:3306（不是宿主机 3307）
-      DATABASE_URL: mysql+pymysql://root:REMOVED_SECRET@mysql:3306/xingtu
-      JWT_SECRET: REMOVED_SECRET
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in local .env}
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET of at least 32 characters}
     restart: unless-stopped
 
   frontend:
