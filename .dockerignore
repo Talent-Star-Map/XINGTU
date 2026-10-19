@@ -13,3 +13,12 @@ backups
 *.tar.gz
 *.pem
 *.key
+
+.env
+.env.*
+**/.env
+**/.env.*
+backups/
+tmp/
+*.pem
+*.key

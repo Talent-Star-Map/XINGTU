@@ -24,3 +24,16 @@ browser_data/
 backups/
 backup/
 storage_state*.json
+
+# Sensitive local configuration and private backups
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+backups/
+tmp/
+*.pem
+*.key
+*.p12
+*.pfx
