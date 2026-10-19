@@ -488,7 +488,9 @@ export default function MarketBoard() {
     }
   }, [benchmark, selectedJobId])
   useEffect(() => {
-    const onFs = () => setPresent(!!document.fullscreenElement)
+    const onFs = () => {
+      if (!document.fullscreenElement) setPresent(false)
+    }
     document.addEventListener('fullscreenchange', onFs)
     return () => document.removeEventListener('fullscreenchange', onFs)
   }, [])
@@ -498,10 +500,18 @@ export default function MarketBoard() {
   const openJobs = (title: string, query: DrawerQuery, subtitle?: string) => setDrawer({ title, query, subtitle })
 
   const togglePresent = async () => {
+    if (present) {
+      setPresent(false)
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen() } catch { /* 忽略退出失败 */ }
+      }
+      return
+    }
+    // 先进入页面内演示层；全屏只是增强，被浏览器/嵌入容器拦截也不影响演示
+    setPresent(true)
     try {
       if (!document.fullscreenElement) await boardRef.current?.requestFullscreen?.()
-      else await document.exitFullscreen?.()
-    } catch { /* 浏览器拒绝全屏时保持普通模式 */ }
+    } catch { /* 全屏不可用时保持页面内演示层 */ }
   }
 
   const selectedJob = useMemo(
@@ -625,7 +635,8 @@ export default function MarketBoard() {
   }, [overview])
 
   return (
-    <div ref={boardRef} className="min-h-full"
+    <div ref={boardRef}
+      className={present ? 'fixed inset-0 z-[95] overflow-y-auto' : 'min-h-full'}
       style={{
         background: c.dark
           ? 'radial-gradient(1200px 420px at 18% -10%, rgba(109,94,252,0.16), transparent), radial-gradient(900px 380px at 92% 0%, rgba(14,165,233,0.10), transparent), var(--color-background)'
@@ -658,6 +669,12 @@ export default function MarketBoard() {
                 <span className="rounded-full px-2 py-0.5" style={{ background: 'var(--color-surface-container)' }}>
                   口径：data_type=1，去重后
                 </span>
+                {present && (
+                  <span className="rounded-full px-2 py-0.5 font-semibold"
+                    style={{ background: 'rgba(109,94,252,0.14)', color: 'var(--color-primary)' }}>
+                    演示中 · 导航与筛选已隐藏
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -691,7 +708,7 @@ export default function MarketBoard() {
         ) : null}
 
         {/* 筛选 */}
-        {tab === 'benchmark' ? (
+        {!present && (tab === 'benchmark' ? (
           <div className="flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[11px]"
             style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', color: 'var(--color-on-surface-variant)' }}>
             <Target className="h-3.5 w-3.5" />
@@ -727,7 +744,7 @@ export default function MarketBoard() {
               {overview?.meta.is_filtered ? '（已筛选）' : ''}
             </span>
           </div>
-        )}
+        ))}
 
         {/* Tabs */}
         <div className="flex items-center gap-2">
@@ -765,7 +782,7 @@ export default function MarketBoard() {
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
                 <BoardCard index="01" title="城市人才市场矩阵" subtitle="横轴岗位量，纵轴薪资中位数，气泡大小=薪资样本量；点击城市下钻"
                   className="xl:col-span-7">
-                  <ResponsiveContainer width="100%" height={328}>
+                  <ResponsiveContainer width="100%" height={present ? 400 : 328}>
                     <ScatterChart margin={{ top: 12, right: 20, bottom: 16, left: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                       <XAxis type="number" dataKey="jobs" name="岗位量" scale="sqrt" domain={[0, 'dataMax']}
@@ -805,9 +822,9 @@ export default function MarketBoard() {
 
                 <BoardCard index="02" title="技术领域结构" subtitle="面积=岗位量，颜色=领域；点击领域下钻"
                   className="xl:col-span-5">
-                  <ResponsiveContainer width="100%" height={328}>
+                  <ResponsiveContainer width="100%" height={present ? 400 : 328}>
                     <Treemap data={fieldTreemapData} dataKey="jobs" nameKey="name" aspectRatio={4 / 3}
-                      stroke="none" content={<FieldTreemapContent />}
+                      stroke="none" isAnimationActive={false} content={<FieldTreemapContent />}
                       onClick={(node: any) => {
                         if (node?.field) openJobs(`${node.field} 岗位`, { field: node.field }, `${node.jobs} 个岗位 · 中位 ${node.salary?.p50 != null ? `${node.salary.p50}K` : '样本不足'}`)
                       }}>
@@ -823,7 +840,7 @@ export default function MarketBoard() {
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
                 <BoardCard index="03" title="薪资分布与累计曲线" subtitle={`有效薪资样本 ${overview.kpis.salary_samples} 条，P25 ${fmtK(overview.kpis.p25_salary_k)} · P50 ${fmtK(overview.kpis.median_salary_k)} · 仅统计月薪`}
                   className="xl:col-span-6">
-                  <ResponsiveContainer width="100%" height={252}>
+                  <ResponsiveContainer width="100%" height={present ? 300 : 252}>
                     <ComposedChart data={histWithCum} margin={{ top: 12, right: 14, bottom: 4, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
                       <XAxis dataKey="label" tick={{ fontSize: 9, fill: c.axis }} tickLine={false} axisLine={{ stroke: c.axisLine }} interval={0} />
@@ -964,7 +981,7 @@ export default function MarketBoard() {
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
                 <BoardCard index="01" title="技能需求 × 薪资溢价象限" subtitle="横轴需求岗位数，纵轴相对市场薪资中位的溢价；气泡大小=薪资样本量；点击查看岗位"
                   className="xl:col-span-7">
-                  <ResponsiveContainer width="100%" height={340}>
+                  <ResponsiveContainer width="100%" height={present ? 380 : 340}>
                     <ScatterChart margin={{ top: 12, right: 18, bottom: 16, left: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                       <XAxis type="number" dataKey="x" name="需求岗位" scale="sqrt" domain={[0, 'dataMax']}
@@ -1090,9 +1107,9 @@ export default function MarketBoard() {
                 <BoardCard index="05" title="岗位簇景观" subtitle="面积=当前筛选下的成员岗位数；颜色=技术栈；点击查看簇内岗位"
                   className="xl:col-span-8">
                   {clusterData.length ? (
-                    <ResponsiveContainer width="100%" height={330}>
+                    <ResponsiveContainer width="100%" height={present ? 400 : 330}>
                       <Treemap data={clusterData} dataKey="member_count" nameKey="name" aspectRatio={5 / 3}
-                        stroke="none" content={<ClusterTreemapContent />}
+                        stroke="none" isAnimationActive={false} content={<ClusterTreemapContent />}
                         onClick={(node: any) => {
                           if (node?.id != null) openJobs(`岗位簇 · ${node.name}`, { cluster_id: node.id }, `${node.member_count} 个成员岗位 · 主城市 ${node.top_city}`)
                         }}>
@@ -1282,6 +1299,13 @@ export default function MarketBoard() {
         )}
       </div>
 
+      {present && (
+        <button onClick={togglePresent}
+          className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-full px-4 py-2.5 text-[12px] font-semibold text-white shadow-2xl"
+          style={{ background: 'linear-gradient(135deg, #6d5efc, #4f46e5)' }}>
+          <Minimize2 className="h-4 w-4" /> 退出演示
+        </button>
+      )}
       <JobDrawer open={!!drawer} onClose={() => setDrawer(null)}
         title={drawer?.title || ''} subtitle={drawer?.subtitle} query={drawer?.query || {}} token={token} />
       <DataNote open={noteOpen} onClose={() => setNoteOpen(false)} overview={overview} />
