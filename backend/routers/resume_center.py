@@ -19,19 +19,22 @@
 import json
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from database import (
     get_session, verify_token, get_session,
-    Resume, ResumeSection, ResumeShare, ResumeTemplate,
+    Resume, ResumeSection, ResumeShare, ResumeTemplate, CrawledJob,
 )
 from services.resume_gen import generate_resume, optimize_section
+from services.resume_import import build_sections, build_title
 from services import print_token
+from time_util import fmt as _fmt_time
 
 router = APIRouter(prefix='/api/resume-center', tags=['resume-center'])
 
@@ -62,8 +65,9 @@ def _resume_to_dict(session, r: Resume) -> dict:
         'title': r.title,
         'template_key': r.template_key,
         'language': r.language,
-        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
-        'updated_at': ts.strftime('%Y-%m-%d %H:%M') if ts else '',
+        # 库里 created_at 是 UTC（MySQL 服务器时区），必须转北京时间再给前端
+        'created_at': _fmt_time(r.created_at),
+        'updated_at': _fmt_time(ts),
         'sections': [{
             'id': s.id,
             'section_type': s.section_type,
@@ -220,6 +224,290 @@ def resume_create(req: CreateReq, token: str = Query(...)):
         session.close()
 
 
+# ════════════════════════════════════════════════════════════════════
+# 导入旧简历（pdf/docx/doc/txt）→ 可编辑简历
+# ════════════════════════════════════════════════════════════════════
+_IMPORT_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'resumes')
+os.makedirs(_IMPORT_DIR, exist_ok=True)
+_IMPORT_EXTS = {'pdf', 'docx', 'doc', 'txt'}
+_IMPORT_MAX_BYTES = 8 * 1024 * 1024
+
+
+@router.post('/import')
+async def resume_import(
+    file: UploadFile = File(..., description='旧简历文件：pdf/docx/doc/txt'),
+    token: str = Query(...),
+    template_key: str = Query('classic'),
+):
+    """上传旧简历，解析后直接生成一份可编辑简历
+
+    解析复用 `services/resume_parser.parse_resume`（LLM 优先、规则兜底），
+    这里只负责落库形态：把扁平字段映射成编辑器认识的区块结构。
+    解析结果同时写一份 `<文件>.json` 缓存，和 `/api/auth/resume-parse` 的
+    缓存同目录同命名，人岗匹配接口随后能直接复用它，不必让用户再传一次。
+    """
+    user_id = _get_user_id(token)
+    filename = file.filename or ''
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in _IMPORT_EXTS:
+        raise HTTPException(400, '仅支持 pdf/docx/doc/txt 格式')
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, '文件内容为空')
+    if len(content) > _IMPORT_MAX_BYTES:
+        raise HTTPException(400, '文件不能超过 8MB')
+
+    stored = f'{user_id}_import_{uuid4().hex[:8]}.{ext}'
+    path = os.path.join(_IMPORT_DIR, stored)
+    with open(path, 'wb') as f:
+        f.write(content)
+
+    from services.resume_parser import parse_resume
+    parsed = parse_resume(path)
+    if not parsed.get('success'):
+        return _err('PARSE_ERROR', parsed.get('message') or '简历解析失败')
+
+    data = parsed.get('data') or {}
+    quality = data.get('quality') or {}
+
+    # 解析缓存：人岗匹配 / 诊断会读这个目录下最新的 json
+    try:
+        with open(path + '.json', 'w', encoding='utf-8') as cf:
+            json.dump({
+                **data,
+                'filename': filename,
+                'parsed_at': datetime.now().isoformat(),
+                'source': 'resume-center-import',
+            }, cf, ensure_ascii=False)
+    except Exception:
+        pass  # 缓存写失败不影响导入本身
+
+    sections = build_sections(data)
+    warnings: list[str] = []
+    types = {s['section_type'] for s in sections}
+    if 'skills' not in types:
+        warnings.append('没有识别到技能，建议手动补充后再做匹配分析')
+    if 'work_experience' not in types and 'projects' not in types:
+        warnings.append('没有识别到工作或项目经历')
+    if parsed.get('data', {}).get('method') == 'rule_based':
+        warnings.append('当前走的是规则解析，经历可能不完整，可配置 DEEPSEEK_API_KEY 提升效果')
+
+    session = get_session()
+    try:
+        r = Resume(
+            user_id=user_id,
+            title=build_title(data)[:200],
+            template_key=template_key or 'classic',
+            language='zh',
+        )
+        session.add(r)
+        session.commit()
+        session.refresh(r)
+        for sec in sections:
+            session.add(ResumeSection(
+                resume_id=r.id,
+                section_type=sec['section_type'],
+                title=sec['title'],
+                content=sec['content'],
+                sort_order=sec['sort_order'],
+                visible=1,
+            ))
+        session.commit()
+        payload = _resume_to_dict(session, r)
+        payload['import_meta'] = {
+            'method': data.get('method', ''),
+            'filename': filename,
+            'confidence_avg': quality.get('confidence_avg', 0),
+            'verified_count': quality.get('verified_count', 0),
+            'unconfirmed_count': quality.get('unconfirmed_count', 0),
+            'section_types': [s['section_type'] for s in sections],
+            'warnings': warnings,
+        }
+        return {'success': True, 'data': payload, 'message': '导入完成，请核对内容后保存'}
+    except Exception as e:
+        session.rollback()
+        return _err('IMPORT_ERROR', f'导入失败: {e}')
+    finally:
+        session.close()
+
+
+# ════════════════════════════════════════════════════════════════════
+# 复制简历
+# ════════════════════════════════════════════════════════════════════
+@router.post('/{resume_id}/duplicate')
+def resume_duplicate(resume_id: int, token: str = Query(...)):
+    """复制一份简历（含全部区块），标题加「副本」后缀"""
+    user_id = _get_user_id(token)
+    session = get_session()
+    try:
+        src = session.query(Resume).filter(
+            Resume.id == resume_id, Resume.user_id == user_id,
+        ).first()
+        if not src:
+            return _err('NOT_FOUND', f'简历不存在: id={resume_id}')
+
+        title = f'{src.title or "未命名简历"} - 副本'
+        copy = Resume(
+            user_id=user_id, title=title[:200],
+            template_key=src.template_key, language=src.language,
+        )
+        session.add(copy)
+        session.commit()
+        session.refresh(copy)
+
+        for sec in session.query(ResumeSection).filter(
+            ResumeSection.resume_id == resume_id,
+        ).order_by(ResumeSection.sort_order).all():
+            session.add(ResumeSection(
+                resume_id=copy.id,
+                section_type=sec.section_type,
+                title=sec.title,
+                content=json.loads(json.dumps(sec.content, ensure_ascii=False)) if sec.content else sec.content,
+                sort_order=sec.sort_order,
+                visible=sec.visible,
+            ))
+        session.commit()
+        return {'success': True, 'data': _resume_to_dict(session, copy), 'message': '已复制'}
+    except Exception as e:
+        session.rollback()
+        return _err('DUPLICATE_ERROR', f'复制失败: {e}')
+    finally:
+        session.close()
+
+
+# ════════════════════════════════════════════════════════════════════
+# 简历 ↔ 岗位匹配分析（复用人岗匹配引擎，不另写算法）
+# ════════════════════════════════════════════════════════════════════
+class ResumeAnalyzeReq(BaseModel):
+    job_id: int = Field(..., description='目标岗位 id（jobs 表）')
+    salary_min: int = Field(0, description='期望月薪下限（元），0=不填按中性分')
+    salary_max: int = Field(0, description='期望月薪上限（元）')
+
+
+def _flatten_resume_skills(sections: dict[str, dict]) -> list[str]:
+    """技能区块的 categories 摊平成技能列表。
+
+    技能区块为空时退回工作/项目里填的技术栈——用户常常只在这两处写了技术名词，
+    直接判 0 分会误伤。
+    """
+    skills: list[str] = []
+    for cat in (sections.get('skills') or {}).get('categories', []) or []:
+        for s in cat.get('skills', []) or []:
+            name = str(s).strip()
+            if name and name not in skills:
+                skills.append(name)
+    if skills:
+        return skills
+    for key in ('work_experience', 'projects'):
+        for item in (sections.get(key) or {}).get('items', []) or []:
+            for t in item.get('technologies', []) or []:
+                name = str(t).strip()
+                if name and name not in skills:
+                    skills.append(name)
+    return skills
+
+
+def _skill_popularity_map() -> dict[str, float]:
+    """只查 skill_tags 一列算技能热度，绕开 load_all_jobs()
+
+    load_all_jobs() 会把全表 ORM 对象逐条转成字典（3500+ 岗位实测 17 秒），
+    而评分里每条缺失技能都要查一次热度。直接用它会把单个岗位的分析拖到分钟级，
+    交互式弹窗等不起。这里只取一列，几百毫秒。
+    """
+    from services.skill_synonyms import normalize_preprocess
+
+    session = get_session()
+    try:
+        rows = session.query(CrawledJob.skill_tags).filter(CrawledJob.data_type == 1).all()
+    finally:
+        session.close()
+
+    counts: dict[str, int] = {}
+    for (tags,) in rows:
+        for tag in (tags or []):
+            key = normalize_preprocess(str(tag))
+            if key:
+                counts[key] = counts.get(key, 0) + 1
+    total = max(len(rows), 1)
+    return {k: round(v / total, 3) for k, v in counts.items()}
+
+
+@router.post('/{resume_id}/analyze')
+def resume_analyze(resume_id: int, req: ResumeAnalyzeReq, token: str = Query(...)):
+    """用这份简历去比对一个岗位，返回五维评分 + 命中/缺失技能 + 改进建议
+
+    评分直接调 `compute_match_score`，与求职端诊断、企业端批量匹配同一套权重，
+    这里不做任何二次加权，避免同一个岗位在不同页面算出两个分。
+    """
+    user_id = _get_user_id(token)
+    session = get_session()
+    try:
+        r = session.query(Resume).filter(
+            Resume.id == resume_id, Resume.user_id == user_id,
+        ).first()
+        if not r:
+            return _err('NOT_FOUND', f'简历不存在: id={resume_id}')
+        rows = session.query(ResumeSection).filter(
+            ResumeSection.resume_id == resume_id,
+        ).order_by(ResumeSection.sort_order).all()
+        content_by_type = {s.section_type: (s.content or {}) for s in rows}
+    finally:
+        session.close()
+
+    from routers.jobs import load_job_by_id
+    from services.match_analyzer import compute_match_score, extract_profile_features, _parse_experience
+
+    job = load_job_by_id(req.job_id)
+    if not job:
+        return _err('JOB_NOT_FOUND', f'岗位不存在: id={req.job_id}')
+
+    skills = _flatten_resume_skills(content_by_type)
+    if not skills:
+        return _err('NO_SKILLS', '这份简历还没有技能内容，先补充技能区块再做匹配分析')
+
+    personal = content_by_type.get('personal_info') or {}
+    profile = extract_profile_features(skills, 'skill_list')
+    profile['raw_source'] = 'resume_center'
+    profile['education'] = str(personal.get('educationLevel') or '')
+    profile['salary_min'] = max(0, int(req.salary_min or 0))
+    profile['salary_max'] = max(0, int(req.salary_max or 0))
+    years_text = str(personal.get('yearsOfExperience') or '').strip()
+    if years_text:
+        years = _parse_experience(years_text)
+        if years is not None:
+            profile['experience_years'] = years
+
+    # 传预计算的热度表 + 空岗位池：避免 compute_match_score 内部回源全表
+    result = compute_match_score(profile, job, {}, _skill_popularity_map(), [])
+    return {
+        'success': True,
+        'data': {
+            'analysis': result,
+            'job': {
+                'id': job.get('id'),
+                'title': job.get('title', ''),
+                'company': job.get('company', ''),
+                'location': job.get('location', ''),
+                'salary': job.get('salary', ''),
+                'education': job.get('education', ''),
+                'experience': job.get('experience', ''),
+                'skills': job.get('skills', [])[:12],
+            },
+            'profile_echo': {
+                'skill_count': len(skills),
+                'skills': skills[:20],
+                'education': profile['education'],
+                'experience_years': profile.get('experience_years'),
+                'salary_min': profile['salary_min'],
+                'salary_max': profile['salary_max'],
+                'location': str(personal.get('location') or ''),
+            },
+        },
+        'message': 'ok',
+    }
+
+
 @router.get('/{resume_id}')
 def resume_detail(resume_id: int, token: str = Query(...)):
     """简历详情"""
@@ -321,22 +609,119 @@ def template_list():
 # ════════════════════════════════════════════════════════════════════
 # 分享
 # ════════════════════════════════════════════════════════════════════
+class ShareReq(BaseModel):
+    expire_days: int = Field(0, ge=0, le=365, description='有效期天数，0=永久')
+
+
 @router.post('/share/{resume_id}')
-def resume_share(resume_id: int, token: str = Query(...)):
-    """生成分享 token"""
+def resume_share(resume_id: int, token: str = Query(...), req: ShareReq | None = None):
+    """生成或复用分享 token
+
+    同一份简历已有有效链接时直接返回原链接，避免用户每点一次分享就多出一条
+    永不失效的记录。有效期只在新生成时生效（改有效期＝撤销重建）。
+    """
     user_id = _get_user_id(token)
     session = get_session()
     try:
         r = session.query(Resume).filter(Resume.id == resume_id, Resume.user_id == user_id).first()
         if not r:
             return _err('NOT_FOUND', f'简历不存在: id={resume_id}')
+
+        now = datetime.utcnow()
+        existing = (
+            session.query(ResumeShare)
+            .filter(ResumeShare.resume_id == resume_id)
+            .order_by(ResumeShare.id.desc())
+            .all()
+        )
+        for s in existing:
+            if s.expire_at is None or s.expire_at > now:
+                return {
+                    'success': True,
+                    'data': {
+                        'token': s.token,
+                        'visit_count': s.visit_count or 0,
+                        'expire_at': _fmt_time(s.expire_at),
+                        'reused': True,
+                    },
+                    'message': '分享链接已存在',
+                }
+
         token_str = uuid4().hex[:16]
-        share = ResumeShare(resume_id=resume_id, token=token_str)
-        session.add(share); session.commit()
-        return {'success': True, 'data': {'token': token_str}, 'message': '分享链接已生成'}
+        days = int(req.expire_days) if req else 0
+        share = ResumeShare(
+            resume_id=resume_id,
+            token=token_str,
+            expire_at=(now + timedelta(days=days)) if days > 0 else None,
+        )
+        session.add(share)
+        session.commit()
+        return {
+            'success': True,
+            'data': {
+                'token': token_str,
+                'visit_count': 0,
+                'expire_at': _fmt_time(share.expire_at),
+                'reused': False,
+            },
+            'message': '分享链接已生成',
+        }
     except Exception as e:
         session.rollback()
         return _err('SHARE_ERROR', f'生成分享链接失败: {e}')
+    finally:
+        session.close()
+
+
+@router.get('/share-info/{resume_id}')
+def resume_share_info(resume_id: int, token: str = Query(...)):
+    """查询某份简历的分享状态（链接、访问次数、有效期）"""
+    user_id = _get_user_id(token)
+    session = get_session()
+    try:
+        r = session.query(Resume).filter(Resume.id == resume_id, Resume.user_id == user_id).first()
+        if not r:
+            return _err('NOT_FOUND', f'简历不存在: id={resume_id}')
+        share = (
+            session.query(ResumeShare)
+            .filter(ResumeShare.resume_id == resume_id)
+            .order_by(ResumeShare.id.desc())
+            .first()
+        )
+        if not share:
+            return {'success': True, 'data': {'exists': False}, 'message': 'ok'}
+        expired = bool(share.expire_at and share.expire_at <= datetime.utcnow())
+        return {
+            'success': True,
+            'data': {
+                'exists': not expired,
+                'expired': expired,
+                'token': share.token,
+                'visit_count': share.visit_count or 0,
+                'expire_at': _fmt_time(share.expire_at),
+                'created_at': _fmt_time(share.created_at),
+            },
+            'message': 'ok',
+        }
+    finally:
+        session.close()
+
+
+@router.delete('/share/{resume_id}')
+def resume_share_revoke(resume_id: int, token: str = Query(...)):
+    """撤销分享（删除该简历的全部分享链接）"""
+    user_id = _get_user_id(token)
+    session = get_session()
+    try:
+        r = session.query(Resume).filter(Resume.id == resume_id, Resume.user_id == user_id).first()
+        if not r:
+            return _err('NOT_FOUND', f'简历不存在: id={resume_id}')
+        n = session.query(ResumeShare).filter(ResumeShare.resume_id == resume_id).delete()
+        session.commit()
+        return {'success': True, 'data': {'revoked': n}, 'message': '分享已撤销'}
+    except Exception as e:
+        session.rollback()
+        return _err('SHARE_ERROR', f'撤销失败: {e}')
     finally:
         session.close()
 
@@ -349,6 +734,8 @@ def resume_share_page(share_token: str):
         share = session.query(ResumeShare).filter(ResumeShare.token == share_token).first()
         if not share:
             return _err('NOT_FOUND', '分享链接不存在或已失效')
+        if share.expire_at and share.expire_at <= datetime.utcnow():
+            return _err('EXPIRED', '分享链接已过期，请联系简历所有者重新生成')
         r = session.query(Resume).filter(Resume.id == share.resume_id).first()
         if not r:
             return _err('NOT_FOUND', '简历不存在')

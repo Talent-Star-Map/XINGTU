@@ -5,6 +5,8 @@ import { EditorCanvas } from './EditorCanvas'
 import { EditorPreviewPanel } from './EditorPreviewPanel'
 import type { EditorResume, EditorSection as ResumeSection } from './types'
 import { DEFAULT_SECTION_CONTENT, SECTION_LABELS } from './icons'
+import MatchAnalysisDialog from '../analyze/MatchAnalysisDialog'
+import { computeResumeHealth, collectResumeSkills } from '../../../lib/resumeHealth'
 
 // ──────────────── 类型 ────────────────
 type ResumeItem = EditorResume
@@ -36,6 +38,12 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
   const [previewZoom, setPreviewZoom] = useState(0.8)
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved'>('saved')
   const [optimizingId, setOptimizingId] = useState<string | null>(null)
+  const [analyzeOpen, setAnalyzeOpen] = useState(false)
+
+  // 健康度纯前端算，每次内容变化即时更新；分析弹窗要读库里的已保存内容，
+  // 所以点「匹配分析」前先强制保存一次，避免刚改完 800ms 内分析的是旧版本。
+  const health = useMemo(() => computeResumeHealth(resume.sections as any), [resume.sections])
+  const hasSkills = useMemo(() => collectResumeSkills(resume.sections as any).length > 0, [resume.sections])
 
   // 撤销/重做栈 — 存的是 sections 数组的深拷贝(只对 sections 变化做记录)
   const undoStackRef = useRef<string[]>([])
@@ -254,6 +262,18 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
     }
   }, [resume.language, pushUndo, scheduleAutoSave, onPlaceholder])
 
+  // ── 打开匹配分析（先落盘，保证分析的是最新内容）──
+  const openAnalyze = useCallback(async () => {
+    try {
+      await onSave(resume)
+    } catch {
+      // 保存失败也允许打开，弹窗里会明确提示分析失败的原因
+    } finally {
+      setAutoSaveState('saved')
+    }
+    setAnalyzeOpen(true)
+  }, [onSave, resume])
+
   // 组件卸载时,如果有未保存的变更,立即保存一次
   useEffect(() => {
     return () => {
@@ -281,6 +301,8 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
         exporting={exporting}
         language={resume.language || 'zh'}
         onLanguageChange={(lang) => updateLanguage(lang)}
+        health={health}
+        onAnalyze={openAnalyze}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -318,6 +340,16 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
           onTemplateChange={updateTemplate}
         />
       </div>
+
+      {analyzeOpen && (
+        <MatchAnalysisDialog
+          resumeId={resume.id}
+          resumeTitle={resume.title}
+          hasSkills={hasSkills}
+          onClose={() => setAnalyzeOpen(false)}
+          onToast={onPlaceholder}
+        />
+      )}
     </div>
   )
 }

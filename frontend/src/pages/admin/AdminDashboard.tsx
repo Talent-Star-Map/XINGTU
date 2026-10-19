@@ -3,8 +3,9 @@ import { motion } from 'framer-motion'
 import {
   ArrowRight, Loader2, Users, Building2, Briefcase, Target,
   ShieldCheck, BookOpen, Cpu, Shield, Database, Activity,
-  Wrench, type LucideIcon,
+  Wrench, FileText, type LucideIcon,
 } from 'lucide-react'
+import DashboardInsights from '../../components/admin/DashboardInsights'
 
 // ─── token 注入(与其他 admin 页面一致) ────────────────────────────
 const getToken = () => localStorage.getItem('xingtu_token') || ''
@@ -16,6 +17,9 @@ interface AdminStats {
   jobseeker_count: number
   enterprise_count: number
   job_count: number
+  crawled_job_count: number
+  article_count: number
+  resume_count: number
   match_count: number
   admin_count: number
 }
@@ -48,14 +52,14 @@ interface LLMConfigSummary {
   }
 }
 
-interface Page { key: 'dashboard'|'jobseekers'|'enterprises'|'jobs'|'resources'|'models'|'quality' }
+interface Page { key: 'dashboard'|'jobseekers'|'enterprises'|'jobs'|'resources'|'models'|'quality'|'databoard' }
 
 interface Props {
   onNav: (p: Page['key']) => void
 }
 
 // ─── 常量 ──────────────────────────────────────────────────────────
-const METRIC_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
+const METRIC_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#0ea5e9', '#f59e0b', '#ef4444']
 
 // 类型标签样式 + 图标(最近动态列表里用)
 const TYPE_META: Record<RecentItem['type'], { label: string; icon: LucideIcon; bg: string; fg: string }> = {
@@ -75,13 +79,13 @@ const QUICK_ACTIONS: Array<{
   label: string; desc: string; icon: LucideIcon; color: string
   page?: Page['key']; placeholder?: string
 }> = [
+  { label: '数据大屏',     desc: '全平台指标一块屏看完',   icon: Database,     color: '#0ea5e9', page: 'databoard' },
   { label: '求职者管理', desc: '查看/重置/删除账号',     icon: Users,        color: '#3b82f6', page: 'jobseekers' },
   { label: '入驻企业管理', desc: '审核企业资质',           icon: Building2,    color: '#8b5cf6', page: 'enterprises' },
   { label: '职位管理',     desc: '维护平台岗位',           icon: Briefcase,    color: '#10b981', page: 'jobs' },
   { label: '学习资源管理', desc: '技能学习资料维护',       icon: BookOpen,     color: '#f59e0b', page: 'resources' },
   { label: '模型配置',     desc: 'LLM 路由层 + Mock 开关', icon: Cpu,          color: '#06b6d4', page: 'models' },
   { label: '质检管理',     desc: '求职/企业端已下线,仅管理员可见', icon: Shield, color: '#ef4444', page: 'quality' },
-  { label: '数据治理大屏', desc: '后续 PR 接入',           icon: Database,     color: '#94a3b8', placeholder: '数据治理大屏开发中,后续 PR 接入' },
 ]
 
 // ─── 工具 ──────────────────────────────────────────────────────────
@@ -185,11 +189,15 @@ export default function AdminDashboard({ onNav }: Props) {
   }
   if (!stats) return null
 
-  // ── 指标卡(4 张) ────────────────────────────────────────────────
+  // ── 指标卡(6 张) ────────────────────────────────────────────────
+  // 企业岗位与采集岗位必须分开：前者是企业自己发布的，后者是爬虫采集的市场岗位，
+  // 合成一个「岗位总数」会让平台看起来只有十来条岗位。
   const metrics = [
     { label: '求职者总数', value: stats.jobseeker_count, icon: Users },
     { label: '企业总数',   value: stats.enterprise_count, icon: Building2 },
-    { label: '岗位总数',   value: stats.job_count,        icon: Briefcase },
+    { label: '企业岗位',   value: stats.job_count,        icon: Briefcase, hint: '企业发布' },
+    { label: '采集岗位',   value: stats.crawled_job_count, icon: Database, hint: '爬虫采集' },
+    { label: '在线简历',   value: stats.resume_count,     icon: FileText },
     { label: '匹配记录',   value: stats.match_count,      icon: Target },
   ]
 
@@ -215,8 +223,8 @@ export default function AdminDashboard({ onNav }: Props) {
         </div>
       </motion.div>
 
-      {/* ── 4 张核心指标卡 ────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* ── 6 张核心指标卡 ────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {metrics.map((m, i) => {
           const Icon = m.icon
           const color = METRIC_COLORS[i]
@@ -225,29 +233,30 @@ export default function AdminDashboard({ onNav }: Props) {
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
               whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-              className="rounded-2xl border p-5 shadow-sm"
+              className="rounded-2xl border p-4 shadow-sm"
               style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{m.label}</span>
+                <span className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  {m.label}
+                  {m.hint && <span className="ml-1 text-[10px] opacity-70">· {m.hint}</span>}
+                </span>
                 <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: `${color}15` }}>
                   <Icon className="h-4 w-4" style={{ color }} />
                 </div>
               </div>
-              <p className="text-3xl font-bold tabular-nums" style={{ color }}>{m.value.toLocaleString()}</p>
-              <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
-                <motion.div className="h-full rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${color}, ${color}aa)` }}
-                  initial={{ width: 0 }} animate={{ width: '60%' }} transition={{ duration: 0.8, delay: i * 0.1 }} />
-              </div>
+              <p className="text-2xl font-bold tabular-nums" style={{ color }}>{m.value.toLocaleString()}</p>
             </motion.div>
           )
         })}
       </div>
 
+      {/* ── 数据洞察（趋势 / 分布 / 漏斗） ─────────────────────────── */}
+      <DashboardInsights />
+
       {/* ── 快捷入口(7 张) ────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--color-on-surface)' }}>快捷入口</h2>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map((item, i) => {
             const Icon = item.icon
             const handle = () => {

@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../../ThemeProvider'
 import { useEffect, useRef, useState } from 'react'
+import HealthBadge from './HealthBadge'
+import type { HealthReport } from '../../../lib/resumeHealth'
 
 /** 导出格式 — 与后端 POST /api/resume-center/{id}/export?format=... 对齐 */
 type ExportFormat = 'pdf' | 'html' | 'docx' | 'txt' | 'json'
@@ -42,13 +44,17 @@ interface Props {
   exporting?: boolean
   language: string
   onLanguageChange: (lang: 'zh' | 'en') => void
+  /** 简历健康度（纯前端计算），传入才显示胶囊 */
+  health?: HealthReport
+  /** 打开「简历 ↔ 岗位匹配分析」弹窗 */
+  onAnalyze?: () => void
 }
 
 export function EditorToolbar({
   title, onTitleChange, onBack, onShare,
   autoSaveState, undoCount, redoCount, onUndo, onRedo,
   onPlaceholder, onExport, exporting,
-  language, onLanguageChange,
+  language, onLanguageChange, health, onAnalyze,
 }: Props) {
   const { theme, toggle } = useTheme()
 
@@ -105,6 +111,8 @@ export function EditorToolbar({
 
       {/* 右侧:工具按钮 */}
       <div className="flex items-center gap-0.5 shrink-0">
+        {health && <HealthBadge report={health} />}
+        <span className="mx-1 h-5 w-px bg-zinc-200" />
         {/* 撤销/重做 */}
         <button onClick={onUndo} disabled={undoCount === 0} className="h-8 w-8 inline-flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-100 disabled:opacity-30" title="撤销">
           <Undo2 className="h-4 w-4" />
@@ -161,8 +169,10 @@ export function EditorToolbar({
         <button onClick={onShare} className="h-8 px-2 inline-flex items-center gap-1 rounded text-xs text-zinc-600 hover:bg-zinc-100" title="分享">
           <Share2 className="h-3.5 w-3.5" /> 分享
         </button>
-        <button onClick={() => onPlaceholder('JD 匹配分析开发中,后续 PR 接入 LLM 评分')} className="h-8 px-2 inline-flex items-center gap-1 rounded text-xs text-zinc-600 hover:bg-zinc-100" title="JD 匹配">
-          <FileSearch className="h-3.5 w-3.5" /> JD匹配
+        <button onClick={() => onAnalyze?.()} disabled={!onAnalyze}
+          className="h-8 px-2 inline-flex items-center gap-1 rounded text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40"
+          title="选一个平台岗位，看这份简历与它的匹配度和差距">
+          <FileSearch className="h-3.5 w-3.5" /> 匹配分析
         </button>
         <button onClick={() => onPlaceholder('简历翻译开发中,后续 PR 接入 DeepSeek 流式 NDJSON 翻译')} className="h-8 px-2 inline-flex items-center gap-1 rounded text-xs text-zinc-600 hover:bg-zinc-100" title="翻译">
           <LangIcon className="h-3.5 w-3.5" /> 翻译

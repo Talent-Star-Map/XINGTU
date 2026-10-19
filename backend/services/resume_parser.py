@@ -87,6 +87,17 @@ def rule_based_extract(text: str) -> dict:
         if m:
             result['name'] = m.group(1)
             break
+    # 兜底：简历首屏常把姓名单独放一行（没有「姓名：」标签），
+    # 取前 6 行里第一个 2~4 字的中文短行，排除常见标题
+    if not result['name']:
+        skip = {'个人简历', '求职简历', '简历', '个人信息', '联系方式'}
+        for line in text.splitlines()[:6]:
+            s_line = line.strip()
+            if s_line in skip:
+                continue
+            if re.fullmatch(r'[\u4e00-\u9fa5]{2,4}', s_line):
+                result['name'] = s_line
+                break
 
     # 技能关键词（与前端 ManualSkillInput 同步）
     skill_keywords = [
@@ -161,11 +172,13 @@ def rule_based_extract(text: str) -> dict:
             break
 
     # 学校
-    m = re.search(r'(?:学校|院校|毕业院校|大学)[：:]*[ \t]*(\S{2,20})', text)
+    # 注意不能用「大学」当标签再取后面的词：简历里「河南工业大学  本科」这种写法
+    # 会把「本科」当成学校名（之前线上就抽成 school='本科'）。标签必须带冒号。
+    m = re.search(r'(?:学校|院校|毕业院校)[：:]\s*(\S{2,20})', text)
     if m:
-        result['school'] = m.group(1)
-    elif '大学' in text:
-        m = re.search(r'(\S{2,15}大学)', text)
+        result['school'] = re.sub(r'^(毕业于|就读于|来自)', '', m.group(1))
+    else:
+        m = re.search(r'([\u4e00-\u9fa5A-Za-z]{2,15}(?:大学|学院))', text)
         if m:
             result['school'] = re.sub(r'^(毕业于|就读于|来自)', '', m.group(1))
 
@@ -201,10 +214,34 @@ def rule_based_extract(text: str) -> dict:
 
 
 def deepseek_extract(text: str) -> dict | None:
-    """调用 DeepSeek API 做精确简历解析"""
+    """调用 DeepSeek API 做精确简历解析
+
+    除了扁平的姓名/学历/技能字段，还要求返回分条的经历（工作、教育、项目），
+    简历中心的「导入旧简历」需要这些数组才能生成可编辑的区块；其它调用方
+    （人岗匹配的画像提取）只读 skills/education/experience，多出来的字段不影响它。
+    """
     api_key = os.getenv('DEEPSEEK_API_KEY', '')
     if not api_key:
         return None
+    system_prompt = (
+        '你是一个中文简历解析助手。从简历文本中精确提取字段，只填有明确文本证据的内容，'
+        '没有就留空字符串或空数组，禁止编造公司、学校、时间。\n'
+        '扁平字段：\n'
+        '- name 姓名；phone 11位手机号；email 邮箱；\n'
+        '- school 学校全称；education 学历+专业，如"本科·数据科学与大数据技术"；\n'
+        '- experience 工作/项目经验摘要(1-2句)；target_position 期望岗位；\n'
+        '- bio 个人简介/自我评价(200字以内)；skills 技术技能标签数组；\n'
+        '- location 现居城市；github GitHub 主页(没有就空)。\n'
+        '分条字段(没有就返回空数组，不要用一条空记录占位)：\n'
+        '- work_experience: [{company, position, location, startDate, endDate, current, '
+        'description, technologies[], highlights[]}]，时间格式 YYYY-MM，在职则 endDate 留空且 current=true；\n'
+        '- education_items: [{institution, degree, field, startDate, endDate, highlights[]}]；\n'
+        '- projects: [{name, role, startDate, endDate, description, technologies[], highlights[]}]；\n'
+        '- certifications: [{name, issuer, date}]；\n'
+        '- languages: [{language, proficiency}]。\n'
+        'highlights 是每段经历下 2-4 条成果要点，尽量保留原文里的数字与指标。\n'
+        '严格只返回 JSON，不要 markdown 包裹，不要任何解释。'
+    )
     try:
         import requests
         resp = requests.post(
@@ -213,12 +250,12 @@ def deepseek_extract(text: str) -> dict | None:
             json={
                 'model': 'deepseek-chat',
                 'messages': [
-                    {'role': 'system', 'content': '你是一个中文简历解析助手。从简历文本中精确提取以下字段,只填有明确文本证据的内容,没有就留空字符串。\n- name: 姓名\n- phone: 手机号(11位数字)\n- email: 邮箱\n- school: 学校全称(如"河南工业大学")\n- education: 学历 + 专业 + 学历层次,如"本科·数据科学与大数据技术",如果没有专业就只填"本科"\n- experience: 工作/项目经验摘要,1-2 句话,包含岗位角色和项目经历(如"光伏板智能检测项目负责人;数字孪生驱动的智慧园区研发")\n- target_position: 期望岗位/求职意向(如"Python后端开发"、"AI工程师"),从"期望岗位""求职意向""意向岗位"等关键词附近推断,没有就留空\n- bio: 个人简介/自我评价,200字以内\n- skills: 技术技能标签数组(编程语言/框架/工具/平台)\n\n严格只返回 JSON,不要 markdown 包裹,不要任何解释。格式:{"name":"","phone":"","email":"","school":"","education":"","experience":"","target_position":"","bio":"","skills":[]}'},
-                    {'role': 'user', 'content': f'简历内容：\n{text[:5000]}'}
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': f'简历内容：\n{text[:6000]}'}
                 ],
-                'temperature': 0.1, 'max_tokens': 1000,
+                'temperature': 0.1, 'max_tokens': 2600,
             },
-            timeout=30
+            timeout=45
         )
         raw = resp.json()['choices'][0]['message']['content'].strip()
         # 清理可能的markdown包裹
@@ -240,11 +277,19 @@ def parse_resume(file_path: str) -> dict:
     # 规则兜底
     rule_result = rule_based_extract(text)
 
-    # 合并
-    if llm_result:
-        final = {**rule_result, **llm_result}  # 大模型结果覆盖
-    else:
-        final = rule_result
+    # 合并：大模型结果优先，但空值不覆盖规则抽取到的内容。
+    # 原因：模型经常把 name/school 这类字段留空（或返回空数组），
+    # 直接 {**rule, **llm} 会把规则已经正确抽到的姓名冲掉。
+    final = dict(rule_result)
+    for key, value in (llm_result or {}).items():
+        if isinstance(value, str):
+            if value.strip():
+                final[key] = value.strip()
+        elif isinstance(value, list):
+            if value:
+                final[key] = value
+        elif value not in (None, ''):
+            final[key] = value
 
     # 质检：置信度评分 + 原文溯源
     from services.quality_checker import score_skills, trace_skills

@@ -43,6 +43,9 @@
   --color-inverse-primary: #B4C5FF;
   --accent-cyan: #0052D9;
   --accent-cyan-dim: rgba(0, 82, 217, 0.08);
+  /* 简历模块用的蓝色别名（历史组件按这个名字写，这里补上，避免整块发白） */
+  --accent-blue: #0052D9;
+  --accent-blue-dim: rgba(0, 82, 217, 0.08);
   --accent-purple: #5B21B6;
   --accent-purple-dim: rgba(91, 33, 182, 0.08);
   --accent-green: #059669;
@@ -105,6 +108,8 @@
   --color-inverse-primary: #0052D9;
   --accent-cyan: #6B9EFF;
   --accent-cyan-dim: rgba(107, 158, 255, 0.12);
+  --accent-blue: #6B9EFF;
+  --accent-blue-dim: rgba(107, 158, 255, 0.12);
   --accent-purple: #A78BFA;
   --accent-purple-dim: rgba(167, 139, 250, 0.12);
   --accent-green: #34D399;

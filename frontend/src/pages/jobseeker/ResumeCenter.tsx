@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Copy, Loader2, Sparkles, FileText, X } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Loader2, Sparkles, FileText, X, Upload, Copy } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ResumeEditor from '../../components/resume/editor/ResumeEditor'
+import ImportResumeDialog from '../../components/resume/ImportResumeDialog'
+import ShareResumeDialog from '../../components/resume/ShareResumeDialog'
+import { templateName as tplName } from '../../lib/resumeTemplateNames'
 import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
 // ─── token 注入 ───
@@ -156,9 +159,11 @@ export default function ResumeCenter() {
   const [genForm, setGenForm] = useState({ job_title: '', years_of_experience: 3, skills: '', industry: '', template_key: 'classic' })
   const [generating, setGenerating] = useState(false)
 
-  // 分享
-  const [shareOpen, setShareOpen] = useState(false)
-  const [shareLink, setShareLink] = useState('')
+  // 分享（弹窗内部自己读写分享状态）
+  const [shareTarget, setShareTarget] = useState<ResumeItem | null>(null)
+
+  // 导入旧简历
+  const [importOpen, setImportOpen] = useState(false)
 
   // 当前编辑中的简历（进编辑器）
   const [editing, setEditing] = useState<ResumeItem | null>(null)
@@ -348,34 +353,42 @@ export default function ResumeCenter() {
     } catch { showToast('网络错误') }
   }
 
-  // ── 分享 ──
-  const shareResume = async (id: number) => {
+  // ── 复制简历 ──
+  const duplicateResume = async (id: number) => {
     try {
-      const r = await fetch(withToken(`/api/resume-center/share/${id}`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      const r = await fetch(withToken(`/api/resume-center/${id}/duplicate`), { method: 'POST' })
       const d = await r.json()
-      if (d.success) {
-        const link = `${window.location.origin}/share/${d.data.token}`
-        setShareLink(link)
-        setShareOpen(true)
-      } else showToast(d.error?.message || '生成分享失败')
+      if (d.success) { showToast('已复制一份'); await loadAll() }
+      else showToast(d.error?.message || '复制失败')
     } catch { showToast('网络错误') }
   }
 
-  const copyShare = async () => {
-    try { await navigator.clipboard.writeText(shareLink); showToast('已复制到剪贴板') } catch { showToast('复制失败，请手动复制') }
-  }
+  // 模板中文名：数据库里存的是英文 key，统一走 lib 里的显示名映射
+  const templateName = (key: string) => tplName(key)
 
-  // 模板名
-  const templateName = (key: string) => templates.find(t => t.template_key === key)?.name || key
+  // Toast 挂到 body：编辑器分支会早 return，放在任一分支的 JSX 里都会漏掉另一处
+  const toastNode = createPortal(
+    <AnimatePresence>
+      {toast && (
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm shadow-lg"
+          style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
+          {toast}
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
 
   // ── 编辑器视图(JadeAI 风格三栏:模块导航 + 表单编辑 + 实时预览) ──
   if (editing) {
     return (
+      <>
       <ResumeEditor
         resume={editing}
         templates={templates}
         onBack={() => setEditing(null)}
-        onShare={() => shareResume(editing.id)}
+        onShare={() => setShareTarget(editing)}
         onPlaceholder={(msg) => showToast(typeof msg === 'string' ? msg : '')}
         onExport={handleExport}
         exporting={exporting}
@@ -392,6 +405,16 @@ export default function ResumeCenter() {
           }
         }}
       />
+      {shareTarget && (
+        <ShareResumeDialog
+          resumeId={shareTarget.id}
+          resumeTitle={displayTitle(shareTarget)}
+          onClose={() => setShareTarget(null)}
+          onToast={showToast}
+        />
+      )}
+      {toastNode}
+      </>
     )
   }
 
@@ -413,6 +436,12 @@ export default function ResumeCenter() {
               className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5"
               style={{ background: 'var(--accent-blue)', color: '#fff' }}>
               <Wand2 className="h-4 w-4" /> AI 生成简历
+            </button>
+            <button onClick={() => setImportOpen(true)}
+              className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
+              style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}
+              title="上传已有的 PDF / Word 简历，自动整理成在线简历">
+              <Upload className="h-4 w-4" /> 导入旧简历
             </button>
             <button onClick={() => setCreateOpen(true)} data-tour="dash-create"
               className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
@@ -465,14 +494,15 @@ export default function ResumeCenter() {
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
-              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>{searchQuery ? '没有匹配的简历' : '还没有简历，点击右上角「AI 生成简历」创建'}</p>
+              <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>{searchQuery ? '没有匹配的简历' : '还没有简历，可以「导入旧简历」「AI 生成」或从模板新建'}</p>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {filtered.map(r => (
                 <ResumeCard
                   key={r.id} resume={r} templateName={templateName(r.template_key)}
-                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)}
+                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => setShareTarget(r)}
+                  onDuplicate={() => duplicateResume(r.id)}
                   renamingId={renamingId} renameDraft={renameDraft} setRenameDraft={setRenameDraft}
                   startRename={startRename} commitRename={commitRename} cancelRename={cancelRename}
                 />
@@ -483,7 +513,8 @@ export default function ResumeCenter() {
               {filtered.map(r => (
                 <ResumeListItem
                   key={r.id} resume={r} templateName={templateName(r.template_key)}
-                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => shareResume(r.id)}
+                  onEdit={() => setEditing(r)} onDelete={() => deleteResume(r.id)} onShare={() => setShareTarget(r)}
+                  onDuplicate={() => duplicateResume(r.id)}
                   renamingId={renamingId} renameDraft={renameDraft} setRenameDraft={setRenameDraft}
                   startRename={startRename} commitRename={commitRename} cancelRename={cancelRename}
                 />
@@ -514,7 +545,7 @@ export default function ResumeCenter() {
                     <div className="rounded-lg bg-white dark:bg-zinc-700 h-28 overflow-hidden ring-1 ring-zinc-200/50">
                       <TemplateThumb template={t.template_key} />
                     </div>
-                    <div className="mt-1.5 text-xs truncate" style={{ color: 'var(--color-on-surface)' }}>{t.name}</div>
+                    <div className="mt-1.5 text-xs truncate" style={{ color: 'var(--color-on-surface)' }}>{templateName(t.template_key)}</div>
                   </button>
                 ))}
               </div>
@@ -572,7 +603,7 @@ export default function ResumeCenter() {
                   <select value={genForm.template_key} onChange={e => setGenForm({ ...genForm, template_key: e.target.value })}
                     className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
                     style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}>
-                    {templates.map(t => <option key={t.id} value={t.template_key}>{t.name}</option>)}
+                    {templates.map(t => <option key={t.id} value={t.template_key}>{templateName(t.template_key)}</option>)}
                   </select>
                 </div>
               </div>
@@ -591,57 +622,39 @@ export default function ResumeCenter() {
         )}
       </AnimatePresence>
 
-      {/* ── 分享弹窗 ── */}
-      <AnimatePresence>
-        {shareOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}
-            onClick={() => setShareOpen(false)}>
-            <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 10 }}
-              className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--color-surface-container-lowest)' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                  <Share2 className="h-4 w-4" style={{ color: 'var(--accent-blue)' }} /> 分享简历
-                </h3>
-                <button onClick={() => setShareOpen(false)} style={{ color: 'var(--color-on-surface-variant)' }}><X className="h-4 w-4" /></button>
-              </div>
-              <div className="flex items-center gap-2">
-                <input value={shareLink} readOnly className="flex-1 h-9 px-3 rounded-lg text-sm border outline-none"
-                  style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-                <button onClick={copyShare} className="h-9 px-3 rounded-lg text-sm font-medium flex items-center gap-1"
-                  style={{ background: 'var(--accent-blue)', color: '#fff' }}>
-                  <Copy className="h-4 w-4" /> 复制
-                </button>
-              </div>
-              <p className="text-xs mt-3" style={{ color: 'var(--color-on-surface-variant)' }}>任何有链接的人都可以查看这份简历</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Toast ── Portal 到 document.body,保证编辑器早 return 时也能显示 */}
-      {createPortal(
-        <AnimatePresence>
-          {toast && (
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm shadow-lg"
-              style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>
-              {toast}
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body,
+      {/* ── 导入旧简历弹窗 ── */}
+      {importOpen && (
+        <ImportResumeDialog
+          onClose={() => setImportOpen(false)}
+          onToast={showToast}
+          onImported={async (r) => {
+            setImportOpen(false)
+            await loadAll()
+            setEditing(r as any)
+          }}
+        />
       )}
+
+      {/* ── 分享弹窗（有效期、访问次数、撤销都在弹窗内） ── */}
+      {shareTarget && (
+        <ShareResumeDialog
+          resumeId={shareTarget.id}
+          resumeTitle={displayTitle(shareTarget)}
+          onClose={() => setShareTarget(null)}
+          onToast={showToast}
+        />
+      )}
+
+      {toastNode}
     </div>
   )
 }
 
 // ─── 简历卡片（网格视图） ───
-function ResumeCard({ resume, templateName, onEdit, onDelete, onShare,
+function ResumeCard({ resume, templateName, onEdit, onDelete, onShare, onDuplicate,
   renamingId, renameDraft, setRenameDraft, startRename, commitRename, cancelRename }: {
   resume: ResumeItem; templateName: string
-  onEdit: () => void; onDelete: () => void; onShare: () => void
+  onEdit: () => void; onDelete: () => void; onShare: () => void; onDuplicate: () => void
   renamingId: number | null; renameDraft: string
   setRenameDraft: (v: string) => void
   startRename: (r: ResumeItem) => void
@@ -659,11 +672,14 @@ function ResumeCard({ resume, templateName, onEdit, onDelete, onShare,
         {/* 悬停操作 */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
           style={{ background: 'rgba(0,0,0,0.25)' }}>
-          <button onClick={onEdit} className="mx-1 p-2 rounded-lg bg-white text-zinc-700 hover:bg-zinc-100">
+          <button onClick={onEdit} className="mx-1 p-2 rounded-lg bg-white text-zinc-700 hover:bg-zinc-100" title="编辑">
             <Pencil className="h-4 w-4" />
           </button>
-          <button onClick={onShare} className="mx-1 p-2 rounded-lg bg-white text-zinc-700 hover:bg-zinc-100">
+          <button onClick={onShare} className="mx-1 p-2 rounded-lg bg-white text-zinc-700 hover:bg-zinc-100" title="分享">
             <Share2 className="h-4 w-4" />
+          </button>
+          <button onClick={onDuplicate} className="mx-1 p-2 rounded-lg bg-white text-zinc-700 hover:bg-zinc-100" title="复制一份">
+            <Copy className="h-4 w-4" />
           </button>
           <button onClick={onDelete} className="mx-1 p-2 rounded-lg bg-white text-red-500 hover:bg-red-50">
             <Trash2 className="h-4 w-4" />
@@ -691,10 +707,10 @@ function ResumeCard({ resume, templateName, onEdit, onDelete, onShare,
 }
 
 // ─── 简历列表项（列表视图） ───
-function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare,
+function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare, onDuplicate,
   renamingId, renameDraft, setRenameDraft, startRename, commitRename, cancelRename }: {
   resume: ResumeItem; templateName: string
-  onEdit: () => void; onDelete: () => void; onShare: () => void
+  onEdit: () => void; onDelete: () => void; onShare: () => void; onDuplicate: () => void
   renamingId: number | null; renameDraft: string
   setRenameDraft: (v: string) => void
   startRename: (r: ResumeItem) => void
@@ -720,8 +736,9 @@ function ResumeListItem({ resume, templateName, onEdit, onDelete, onShare,
         <div className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>{templateName} · {resume.created_at?.slice(0, 10)}</div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onEdit} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }}><Pencil className="h-4 w-4" /></button>
-        <button onClick={onShare} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }}><Share2 className="h-4 w-4" /></button>
+        <button onClick={onEdit} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }} title="编辑"><Pencil className="h-4 w-4" /></button>
+        <button onClick={onShare} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }} title="分享"><Share2 className="h-4 w-4" /></button>
+        <button onClick={onDuplicate} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--color-on-surface-variant)' }} title="复制一份"><Copy className="h-4 w-4" /></button>
         <button onClick={onDelete} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--accent-red)' }}><Trash2 className="h-4 w-4" /></button>
       </div>
     </div>

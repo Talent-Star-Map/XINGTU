@@ -1,6 +1,7 @@
 import { useDeferredValue } from 'react'
 import { ZoomIn, ZoomOut, Search } from 'lucide-react'
 import { ResumePreview } from '../ResumePreview'
+import { templateName } from '../../../lib/resumeTemplateNames'
 
 interface Props {
   resume: any  // 后端 ResumeItem 结构
@@ -34,7 +35,7 @@ export function EditorPreviewPanel({ resume, zoom, onZoomChange, templates, onTe
           style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}
           title="切换模板"
         >
-          {templates.map(t => <option key={t.id} value={t.template_key}>{t.name}</option>)}
+          {templates.map(t => <option key={t.id} value={t.template_key}>{templateName(t.template_key)}</option>)}
         </select>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={decrease} className="h-7 w-7 inline-flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-100" title="缩小">

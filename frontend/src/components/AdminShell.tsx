@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu, LayoutDashboard } from 'lucide-react'
+import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu, LayoutDashboard, Activity } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 
 // 页面按需加载，避免首屏一次性加载全部管理端代码
@@ -10,6 +10,7 @@ const AdminUserManage = lazy(() => import('../pages/admin/AdminUserManage'))
 const AdminJobManage = lazy(() => import('../pages/admin/AdminJobManage'))
 const AdminResourceManage = lazy(() => import('../pages/admin/AdminResourceManage'))
 const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
+const AdminDataBoard = lazy(() => import('../pages/admin/AdminDataBoard'))
 
 // 管理员端功能模块：
 //   dashboard   — 工作台(平台总览 + 最近动态 + 系统状态)
@@ -19,10 +20,12 @@ const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
 //   jobs        — 职位管理
 //   resources   — 学习资源管理
 //   models      — 模型配置(LLM 路由层 + Mock 开关)
-type Page = 'dashboard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models'
+//   databoard   — 数据大屏(全平台指标与图表,答辩演示用)
+type Page = 'dashboard' | 'databoard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
+  { key: 'databoard', icon: Activity, label: '数据大屏' },
   { key: 'jobseekers', icon: Users, label: '求职者' },
   { key: 'enterprises', icon: Building2, label: '企业' },
   { key: 'jobs', icon: Briefcase, label: '职位' },
@@ -38,9 +41,13 @@ const EnterpriseManagePage = () => <Suspense fallback={null}><AdminUserManage ro
 const AdminDashboardPage = ({ onNav }: { onNav: (p: Page) => void }) => (
   <Suspense fallback={null}><AdminDashboard onNav={onNav} /></Suspense>
 )
+const AdminDataBoardPage = ({ onNav }: { onNav?: (p: Page) => void }) => (
+  <Suspense fallback={null}><AdminDataBoard onNav={onNav} /></Suspense>
+)
 
 const pages: Record<Page, ComponentType<{ onNav?: (p: Page) => void }>> = {
   dashboard: AdminDashboardPage as ComponentType<{ onNav?: (p: Page) => void }>,
+  databoard: AdminDataBoardPage as ComponentType<{ onNav?: (p: Page) => void }>,
   jobseekers: JobseekerManagePage,
   enterprises: EnterpriseManagePage,
   jobs: AdminJobManage,

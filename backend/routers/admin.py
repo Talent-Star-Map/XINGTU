@@ -79,15 +79,24 @@ def _hash_password(password: str) -> str:
 # ════════════════════════════════════════════════════════════════════════
 @router.get('/stats')
 def admin_stats():
-    """管理员首页统计卡片：返回求职者/企业/职位/匹配记录总数"""
+    """管理员首页统计卡片
+
+    注意口径：`job_count` 只算 enterprise_jobs（企业自己发布的），求职者端浏览的
+    jobs 表是爬虫采集的另一份数据，必须单独返回 `crawled_job_count`，
+    否则「平台岗位总数」会把 600 多条采集岗位漏掉。
+    """
     session = get_session()
     try:
+        from database import CrawledJob, Resume
         return {
             'success': True,
             'data': {
                 'jobseeker_count': session.query(Jobseeker).count(),
                 'enterprise_count': session.query(Enterprise).count(),
                 'job_count': session.query(Job).count(),
+                'crawled_job_count': session.query(CrawledJob).filter(CrawledJob.data_type == 1).count(),
+                'article_count': session.query(CrawledJob).filter(CrawledJob.data_type == 2).count(),
+                'resume_count': session.query(Resume).count(),
                 'match_count': session.query(MatchRecord).count(),
                 'admin_count': session.query(Admin).count(),
             },
