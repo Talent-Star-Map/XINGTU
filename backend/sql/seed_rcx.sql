@@ -28,9 +28,12 @@
 -- ============================================================
 
 -- 1.1 删除测试求职者关联的匹配记录
+--     注意：这里必须用 `test_js%@test.com` 而不是 `%@test.com`。
+--     sql/seed_users.sql 建的求职者测试账号 xing@test.com 也匹配 `%@test.com`，
+--     用宽通配会把它的登录账号一起删掉，导致求职端无法登录。
 DELETE FROM `match_records`
 WHERE `jobseeker_id` IN (
-  SELECT id FROM `jobseekers` WHERE `email` LIKE '%@test.com'
+  SELECT id FROM `jobseekers` WHERE `email` LIKE 'test_js%@test.com'
 );
 
 -- 1.2 删除测试岗位关联的匹配记录（标题前缀 [测试]）
@@ -40,7 +43,7 @@ WHERE `job_id` IN (
 );
 
 -- 1.3 删除测试求职者
-DELETE FROM `jobseekers` WHERE `email` LIKE '%@test.com';
+DELETE FROM `jobseekers` WHERE `email` LIKE 'test_js%@test.com';
 
 -- 1.4 删除测试岗位
 DELETE FROM `enterprise_jobs` WHERE `title` LIKE '[测试]%';

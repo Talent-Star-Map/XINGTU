@@ -4,12 +4,19 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, func, T
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@localhost:3307/xingtu')
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@localhost:3306/xingtu')
 
 # connect_args charset=utf8mb4：双保险，确保读写连接走 UTF-8，避免中文双编码
-engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=1800,
-                       pool_pre_ping=True, pool_timeout=10,
-                       connect_args={"charset": "utf8mb4", "connect_timeout": 10})
+# 连接池参数只对 MySQL 有效——SQLite 用 SingletonThreadPool，收到 pool_size /
+# pool_recycle / pool_timeout 会直接抛 TypeError（tests/test_our_modules.py 走
+# sqlite:///:memory:，必须走这个分支才能成功 import database）
+_IS_SQLITE = DATABASE_URL.startswith('sqlite')
+if _IS_SQLITE:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, pool_size=5, pool_recycle=1800,
+                           pool_pre_ping=True, pool_timeout=10,
+                           connect_args={"charset": "utf8mb4", "connect_timeout": 10})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 

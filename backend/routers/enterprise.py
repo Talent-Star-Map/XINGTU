@@ -16,9 +16,12 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 from typing import Optional
-from sqlalchemy import func
+from sqlalchemy import func, text
+import bisect
+import json
 
 from database import get_session, Job, Jobseeker, MatchRecord, Message
+from database import verify_token, get_neo4j_driver
 from sqlalchemy import func as _func
 from services.deerflow_compare import run_deep_compare
 # 库里存的是 UTC，返回前统一转北京时间（time_util.fmt）
@@ -979,3 +982,188 @@ def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le
         return _err('CONVERSATIONS_ERROR', f'获取对话列表失败: {e}')
     finally:
         session.close()
+
+
+# ────────────────────────────────────────────────────────────
+# 市场洞察 — 从 HR 需求出发的二维图谱
+# ────────────────────────────────────────────────────────────
+
+def _split_skills(raw):
+    return [s.strip() for s in (raw or '').replace('、', ',').split(',') if s.strip()]
+
+
+@router.get('/market-graph')
+def market_graph(token: str = Query('', description='企业端 JWT')):
+    """市场洞察二维图谱 — 三层节点，从本公司在招岗位（HR 需求）出发：
+    OwnJob(enterprise_jobs active) → Skill(skills_required) → 市场属性
+    （市场需求数 / 人才池供给 / 市场均价 / 涨跌 / Neo4j 热度）。
+    主体为 SQL + 内存聚合；Neo4j hot_score 仅作增强，连不上自动降级。
+    """
+    payload = verify_token(token) if token else None
+    if not payload or payload.get('role') != 'enterprise':
+        return _err('UNAUTHORIZED', '需要企业端登录')
+    eid = payload.get('user_id')
+
+    session = get_session()
+    try:
+        own_jobs = (session.query(Job)
+                    .filter(Job.enterprise_id == eid, Job.status == 'active')
+                    .order_by(Job.id).all())
+        own_ids = [j.id for j in own_jobs]
+        cnt_rows = ([] if not own_ids else
+                    session.query(MatchRecord.job_id, _func.count())
+                    .filter(MatchRecord.job_id.in_(own_ids))
+                    .group_by(MatchRecord.job_id).all())
+        cand_map = {jid: c for jid, c in cnt_rows}
+        market_rows = session.execute(text(
+            "SELECT skill_tags, salary_min, salary_max FROM jobs WHERE data_type = 1"
+        )).fetchall()
+        change_rows = session.execute(text(
+            "SELECT added_skills, removed_skills FROM job_skill_changes"
+        )).fetchall()
+        seeker_rows = session.execute(text("SELECT skills FROM jobseekers")).fetchall()
+    finally:
+        session.close()
+
+    # 市场侧聚合：每个技能的需求岗位数 + 薪资样本
+    own_skill_sets = {j.id: {s.casefold() for s in _split_skills(j.skills_required)} for j in own_jobs}
+    job_bench = {j.id: [] for j in own_jobs}
+    demand, skill_sal, sal_mids = {}, {}, []
+    for tags_raw, smin, smax in market_rows:
+        mid = (smin + smax) / 2 if smin is not None and smax is not None else None
+        if mid:
+            sal_mids.append(mid)
+        try:
+            tags = json.loads(tags_raw) if isinstance(tags_raw, str) else (tags_raw or [])
+        except (ValueError, TypeError):
+            tags = []
+        seen = set()
+        for t in tags:
+            k = str(t).strip().casefold()
+            if not k or k in seen:
+                continue
+            seen.add(k)
+            demand[k] = demand.get(k, 0) + 1
+            if mid:
+                skill_sal.setdefault(k, []).append(mid)
+        # 市场岗位薪资按技能重合度归入各岗位的对标样本（一个市场岗位只计一次）
+        if mid:
+            for jid, kset in own_skill_sets.items():
+                if kset & seen:
+                    job_bench[jid].append(mid)
+
+    # 技能涨跌：job_skill_changes 的 added/removed 计数
+    added_c, removed_c = {}, {}
+    for add_raw, rem_raw in change_rows:
+        for raw, bucket in ((add_raw, added_c), (rem_raw, removed_c)):
+            try:
+                arr = json.loads(raw) if isinstance(raw, str) else (raw or [])
+            except (ValueError, TypeError):
+                arr = []
+            for t in arr:
+                k = str(t).strip().casefold()
+                if k:
+                    bucket[k] = bucket.get(k, 0) + 1
+
+    # 人才池供给：jobseekers.skills 命中计数
+    supply = {}
+    for (skills_raw,) in seeker_rows:
+        for k in {s.casefold() for s in _split_skills(skills_raw)}:
+            supply[k] = supply.get(k, 0) + 1
+
+    # Neo4j 热度（可选增强，失败降级为 None，前端按需求数定节点大小）
+    hot_map = {}
+    try:
+        driver = get_neo4j_driver()
+        with driver.session() as ns:
+            for r in ns.run("MATCH (e:Entity) RETURN e.name AS n, e.hot_score AS h"):
+                if r['n']:
+                    hot_map[str(r['n']).strip().casefold()] = float(r['h'] or 0)
+    except Exception:
+        hot_map = {}
+
+    sal_mids.sort()
+
+    def percentile(mid_k, sample):
+        # 少于 5 个同技能对标岗位时不给分位,避免单样本误导
+        vals = sample or sal_mids
+        if len(vals) < 5 or not mid_k:
+            return None
+        return round(100.0 * bisect.bisect_left(vals, mid_k * 1000) / len(vals), 1)
+
+    def pctl(vals, q):
+        if not vals:
+            return None
+        s = sorted(vals)
+        idx = min(len(s) - 1, max(0, int(round(q * (len(s) - 1)))))
+        return round(s[idx] / 1000, 1)
+
+    nodes, links, skill_nodes = [], [], {}
+    for j in own_jobs:
+        skills = _split_skills(j.skills_required)
+        bench = sorted(job_bench.get(j.id) or sal_mids)
+        nodes.append({
+            'id': f'job:{j.id}', 'type': 'OwnJob', 'label': j.title,
+            'salary_min_k': j.salary_min, 'salary_max_k': j.salary_max,
+            'market_p25_k': pctl(bench, 0.25), 'market_p50_k': pctl(bench, 0.5),
+            'market_p75_k': pctl(bench, 0.75), 'bench_count': len(bench),
+            'candidate_count': cand_map.get(j.id, 0),
+            'market_percentile': percentile(
+                (j.salary_min + j.salary_max) / 2 if j.salary_min and j.salary_max else None, bench),
+            'skills': skills,
+        })
+        for s in skills:
+            k = s.casefold()
+            links.append({'source': f'job:{j.id}', 'target': f'skill:{k}', 'type': 'REQUIRES'})
+            if k in skill_nodes:
+                continue
+            sals = skill_sal.get(k, [])
+            node = {
+                'id': f'skill:{k}', 'type': 'Skill', 'label': s,
+                'demand': demand.get(k, 0),
+                'supply': supply.get(k, 0),
+                'hot_score': hot_map.get(k),
+                'market_avg_salary_k': round(sum(sals) / len(sals) / 1000, 1) if sals else None,
+                'added': added_c.get(k, 0), 'removed': removed_c.get(k, 0),
+                'net': added_c.get(k, 0) - removed_c.get(k, 0),
+            }
+            skill_nodes[k] = node
+            nodes.append(node)
+
+    # 每个岗位的"高需求零供给"技能数 — 决定招聘难度
+    for n in nodes:
+        if n['type'] == 'OwnJob':
+            n['shortage_skills'] = sum(
+                1 for s in n['skills']
+                if skill_nodes.get(s.casefold(), {}).get('supply', 9) <= 1
+                and skill_nodes.get(s.casefold(), {}).get('demand', 0) >= 10
+            )
+
+    def trend_items(keys):
+        items = [{'name': k, 'net': added_c.get(k, 0) - removed_c.get(k, 0),
+                  'added': added_c.get(k, 0), 'removed': removed_c.get(k, 0)}
+                 for k in keys if added_c.get(k, 0) + removed_c.get(k, 0) > 0]
+        return sorted(items, key=lambda x: -abs(x['net']))
+
+    rising = [i for i in trend_items(skill_nodes) if i['net'] > 0][:6]
+    declining = [i for i in trend_items(skill_nodes) if i['net'] < 0][:6]
+    if not rising and not declining:
+        overall = trend_items(set(added_c) | set(removed_c))
+        rising = [i for i in overall if i['net'] > 0][:6]
+        declining = [i for i in overall if i['net'] < 0][:6]
+
+    return {
+        'success': True,
+        'data': {
+            'nodes': nodes,
+            'links': links,
+            'stats': {
+                'jobs': len(own_jobs),
+                'skills': len(skill_nodes),
+                'links': len(links),
+                'candidates': sum(cand_map.values()),
+            },
+            'trends': {'rising': rising, 'declining': declining},
+        },
+        'message': 'ok',
+    }

@@ -1,8 +1,229 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Search, ChevronDown, Loader2, RefreshCw, Mail, X, TrendingUp, GitCompare } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ChatDialog from '../../components/ChatDialog'
+import CompareStudio, { compareColor as getCompareColor } from '../../components/enterprise/CompareStudio'
 import { EPNav } from '../../lib/NavContext'
+
+// 候选人展开行的五维进度条配置(雷达区已迁移至 CompareStudio)
+const DIMENSION_BARS = [
+  { key: 'skill', label: '技能', color: 'var(--color-primary)' },
+  { key: 'exp', label: '经验', color: 'var(--accent-cyan)' },
+  { key: 'edu', label: '学历', color: 'var(--accent-orange)' },
+  { key: 'location', label: '地域', color: 'var(--accent-green)' },
+  { key: 'salary', label: '薪资', color: 'var(--accent-purple)' },
+]
+
+const COMPARE_TABS = [
+  { key: 'overview', label: '综合画像' },
+  { key: 'skills', label: '技能' },
+  { key: 'background', label: '背景' },
+  { key: 'salary', label: '薪资期望' },
+  { key: 'ai', label: 'AI 深度分析' },
+] as const
+
+// 解析 "15K-25K" 这类期望薪资字符串
+function parseSalaryRange(s: string): { lo: number; hi: number } | null {
+  const nums = (s.match(/\d+(?:\.\d+)?/g) || []).map(Number)
+  if (!nums.length) return null
+  const lo = nums[0]
+  const hi = nums.length > 1 ? nums[1] : nums[0]
+  return { lo: Math.min(lo, hi), hi: Math.max(lo, hi) }
+}
+
+const EDU_LADDER = ['高中', '大专', '本科', '硕士', '博士']
+
+const eduLevel = (edu: string) => {
+  const i = EDU_LADDER.findIndex((x) => (edu || '').includes(x))
+  return i
+}
+
+const expYears = (exp: string) => {
+  const m = (exp || '').match(/(\d+)/)
+  return m ? Number(m[1]) : 0
+}
+
+// ─── 技能可视化:覆盖度条形 + 技能 × 候选人矩阵 ──────────────────────────
+function SkillMatrix({ candidates }: { candidates: Candidate[] }) {
+  const rows = useMemo(() => {
+    const m = new Map<string, Set<number>>()
+    candidates.forEach((c) => (c.skills || []).forEach((s) => {
+      if (!m.has(s)) m.set(s, new Set())
+      m.get(s)!.add(c.id)
+    }))
+    return [...m.entries()]
+      .map(([skill, ids]) => ({ skill, ids, count: ids.size }))
+      .sort((a, b) => b.count - a.count || a.skill.localeCompare(b.skill))
+  }, [candidates])
+
+  const commonCount = rows.filter((r) => r.count === candidates.length).length
+
+  return (
+    <div className="space-y-7">
+      {/* 覆盖度 */}
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>技能覆盖</h3>
+          <span className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
+            共同 {commonCount} 项 · 合计 {rows.length} 项
+          </span>
+        </div>
+        <div className="space-y-2.5">
+          {candidates.map((c, idx) => {
+            const total = (c.skills || []).length
+            const common = (c.skills || []).filter((s) => rows.find((r) => r.skill === s)?.count === candidates.length).length
+            const unique = total - common
+            return (
+              <div key={c.id} className="flex items-center gap-2.5 text-xs">
+                <span className="w-20 truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                <div className="flex-1 h-2 rounded-full overflow-hidden flex" style={{ background: 'var(--color-surface-container)' }}>
+                  <span style={{ width: `${(common / Math.max(1, total)) * 100}%`, background: 'var(--accent-green)', opacity: 0.8 }} />
+                  <span style={{ width: `${(unique / Math.max(1, total)) * 100}%`, background: getCompareColor(idx), opacity: 0.8 }} />
+                </div>
+                <span className="w-24 text-right tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  共 {common} / 独 {unique}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex items-center gap-4 mt-2 text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'var(--accent-green)', opacity: 0.8 }} />共同技能</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'var(--color-primary)', opacity: 0.8 }} />独有技能</span>
+        </div>
+      </div>
+
+      {/* 技能矩阵 */}
+      <div>
+        <h3 className="text-xs font-medium mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>技能矩阵</h3>
+        <div className="overflow-auto rounded-lg border" style={{ borderColor: 'var(--color-outline-variant)', maxHeight: 420 }}>
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 z-10" style={{ background: 'var(--color-surface)' }}>
+              <tr className="border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                <th className="text-left font-normal px-3 py-2" style={{ color: 'var(--color-on-surface-variant)' }}>技能</th>
+                {candidates.map((c, idx) => (
+                  <th key={c.id} className="px-2 py-2 text-center font-normal">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full" style={{ background: getCompareColor(idx) }} />
+                      <span className="truncate max-w-[80px]" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                    </span>
+                  </th>
+                ))}
+                <th className="text-right font-normal px-3 py-2" style={{ color: 'var(--color-on-surface-variant)' }}>覆盖</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.skill} className="border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                  <td className="px-3 py-1.5" style={{ color: 'var(--color-on-surface)' }}>{r.skill}</td>
+                  {candidates.map((c, idx) => (
+                    <td key={c.id} className="px-2 py-1.5 text-center">
+                      {r.ids.has(c.id) ? (
+                        <span className="inline-block w-2 h-2 rounded-full" style={{ background: getCompareColor(idx) }} />
+                      ) : (
+                        <span className="inline-block w-2 h-0.5 rounded" style={{ background: 'var(--color-surface-container-highest)' }} />
+                      )}
+                    </td>
+                  ))}
+                  <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+                    {r.count}/{candidates.length}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 背景可视化:经验条形 + 学历刻度 ──────────────────────────────────────
+function BackgroundCharts({ candidates }: { candidates: Candidate[] }) {
+  const maxYears = Math.max(1, ...candidates.map((c) => expYears(c.exp)))
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      {/* 经验 */}
+      <div>
+        <h3 className="text-xs font-medium mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>工作经验(年)</h3>
+        <div className="space-y-3">
+          {candidates.map((c, idx) => (
+            <div key={c.id} className="flex items-center gap-2.5 text-xs">
+              <span className="w-20 truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+              <div className="flex-1 h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
+                <div className="h-full rounded-full" style={{ width: `${(expYears(c.exp) / maxYears) * 100}%`, background: getCompareColor(idx), opacity: 0.8 }} />
+              </div>
+              <span className="w-16 text-right tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{c.exp || '—'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 学历 */}
+      <div>
+        <h3 className="text-xs font-medium mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>学历</h3>
+        <div className="space-y-3">
+          {candidates.map((c, idx) => {
+            const lv = eduLevel(c.education)
+            return (
+              <div key={c.id} className="flex items-center gap-2.5 text-xs">
+                <span className="w-20 truncate" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                <div className="relative flex-1 h-4">
+                  <div className="absolute inset-x-0 top-1/2 h-px" style={{ background: 'var(--color-outline-variant)' }} />
+                  {EDU_LADDER.map((_, i) => (
+                    <div key={i} className="absolute top-1/2 -translate-y-1/2 w-px h-2"
+                         style={{ left: `${(i / (EDU_LADDER.length - 1)) * 100}%`, background: 'var(--color-outline-variant)' }} />
+                  ))}
+                  {lv >= 0 && (
+                    <span className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full"
+                          style={{ left: `${(lv / (EDU_LADDER.length - 1)) * 100}%`, background: getCompareColor(idx) }} />
+                  )}
+                </div>
+                <span className="w-16 text-right" style={{ color: 'var(--color-on-surface-variant)' }}>{c.education || '—'}</span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex justify-between mt-1.5 pl-[90px] pr-[70px] text-[10px]"
+             style={{ color: 'var(--color-on-surface-variant)' }}>
+          {EDU_LADDER.map((l) => <span key={l}>{l}</span>)}
+        </div>
+      </div>
+
+      {/* 城市 / 意向岗位 */}
+      <div className="lg:col-span-2">
+        <div className="grid grid-cols-2 gap-8 text-xs">
+          <div>
+            <h3 className="text-xs font-medium mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>意向城市</h3>
+            <div className="space-y-1.5">
+              {candidates.map((c, idx) => (
+                <div key={c.id} className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: getCompareColor(idx) }} />{c.name}
+                  </span>
+                  <span style={{ color: 'var(--color-on-surface-variant)' }}>{c.city || '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>意向岗位</h3>
+            <div className="space-y-1.5">
+              {candidates.map((c, idx) => (
+                <div key={c.id} className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: getCompareColor(idx) }} />{c.name}
+                  </span>
+                  <span style={{ color: 'var(--color-on-surface-variant)' }}>{c.title || '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // 岗位下拉项类型
 interface JobOption {
@@ -91,154 +312,6 @@ function matchColor(v: number | null) {
   return 'var(--color-on-surface-variant)'
 }
 
-// 动态对比颜色生成（HSL 色相均匀分布，支持任意人数）
-// 预设 10 种基础色，超出部分用 HSL 自动生成
-const COMPARE_COLOR_POOL = [
-  'var(--color-primary)',
-  'var(--accent-green)',
-  'var(--accent-purple)',
-  'var(--accent-orange)',
-  '#E91E63',  // 玫红
-  '#00BCD4',  // 青色
-  '#795548',  // 棕色
-  '#607D8B',  // 灰蓝
-  '#FF5722',  // 深橙
-  '#3F51B5',  // 靛蓝
-]
-
-function getCompareColor(idx: number): string {
-  if (idx < COMPARE_COLOR_POOL.length) return COMPARE_COLOR_POOL[idx]
-  // 超出预设池时用 HSL 自动生成：色相均匀分布，饱和度 65%，亮度 50%
-  const hue = (idx * 137.5) % 360  // 黄金角分割，确保相邻颜色区分明显
-  return `hsl(${hue}, 65%, 50%)`
-}
-
-// 五维度标签
-const DIMENSIONS = [
-  { key: 'skill', label: '技能', color: 'var(--color-primary)' },
-  { key: 'exp', label: '经验', color: 'var(--accent-purple)' },
-  { key: 'edu', label: '学历', color: 'var(--accent-orange)' },
-  { key: 'location', label: '地域', color: 'var(--accent-green)' },
-  { key: 'salary', label: '薪资', color: 'var(--color-on-surface-variant)' },
-]
-
-// ─── SVG 雷达图组件 ───────────────────────────────────────────────────
-function RadarChart({ candidates }: { candidates: Candidate[] }) {
-  const size = 320
-  const center = size / 2
-  const maxRadius = 110
-  const axes = DIMENSIONS
-  const n = axes.length
-
-  // 计算各轴的坐标点
-  const getAxisPoint = (index: number, radius: number) => {
-    const angle = (Math.PI * 2 * index) / n - Math.PI / 2
-    return {
-      x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle),
-    }
-  }
-
-  // 生成候选人的多边形点
-  const getPolygonPoints = (c: Candidate) => {
-    return axes.map((axis, i) => {
-      const score = c.match_breakdown[axis.key as keyof typeof c.match_breakdown] ?? 0
-      const radius = (score / 100) * maxRadius
-      const pt = getAxisPoint(i, radius)
-      return `${pt.x},${pt.y}`
-    }).join(' ')
-  }
-
-  // 网格圈（5层，每层20%）
-  const gridRings = [0.2, 0.4, 0.6, 0.8, 1.0]
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* 网格多边形 */}
-      {gridRings.map((ring, ri) => (
-        <polygon
-          key={ri}
-          points={axes.map((_, i) => {
-            const pt = getAxisPoint(i, maxRadius * ring)
-            return `${pt.x},${pt.y}`
-          }).join(' ')}
-          fill="none"
-          stroke="var(--color-outline-variant)"
-          strokeWidth={1}
-          opacity={0.5}
-        />
-      ))}
-
-      {/* 轴线 */}
-      {axes.map((_, i) => {
-        const pt = getAxisPoint(i, maxRadius)
-        return (
-          <line
-            key={i}
-            x1={center} y1={center}
-            x2={pt.x} y2={pt.y}
-            stroke="var(--color-outline-variant)"
-            strokeWidth={1}
-            opacity={0.5}
-          />
-        )
-      })}
-
-      {/* 候选人多边形 */}
-      {candidates.map((c, idx) => (
-        <polygon
-          key={c.id}
-          points={getPolygonPoints(c)}
-          fill={getCompareColor(idx)}
-          fillOpacity={0.12}
-          stroke={getCompareColor(idx)}
-          strokeWidth={2}
-        />
-      ))}
-
-      {/* 轴标签 */}
-      {axes.map((axis, i) => {
-        const pt = getAxisPoint(i, maxRadius + 22)
-        return (
-          <text
-            key={axis.key}
-            x={pt.x} y={pt.y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize={13}
-            fontWeight={500}
-            fill="var(--color-on-surface)"
-          >
-            {axis.label}
-          </text>
-        )
-      })}
-
-      {/* 顶点数值标签 */}
-      {candidates.map((c, idx) => (
-        axes.map((axis, i) => {
-          const score = c.match_breakdown[axis.key as keyof typeof c.match_breakdown] ?? 0
-          const radius = (score / 100) * maxRadius
-          const pt = getAxisPoint(i, radius)
-          return (
-            <text
-              key={`${c.id}-${axis.key}`}
-              x={pt.x} y={pt.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize={10}
-              fontWeight={600}
-              fill={getCompareColor(idx)}
-            >
-              {score}
-            </text>
-          )
-        })
-      ))}
-    </svg>
-  )
-}
-
 export default function TalentSearch() {
   const { params } = EPNav.use()
 
@@ -264,13 +337,14 @@ export default function TalentSearch() {
   const autoCompareTriggered = useRef(false)  // 防止自动对比重复触发
   // 反选人面板（点对比按钮后弹出，勾选候选人再确认开始对比）
   const [comparePickerOpen, setComparePickerOpen] = useState(false)
-  const [comparePickerMode, setComparePickerMode] = useState<'radar' | 'deep' | null>(null)
+  // 对比工作台的多维视图
+  const [compareTab, setCompareTab] = useState<'overview' | 'skills' | 'background' | 'salary' | 'ai'>('overview')
 
   // ── AI 深度对比状态（DeerFlow 编排）──
   const [deepCompareData, setDeepCompareData] = useState<DeepCompareData | null>(null)
   const [deepCompareLoading, setDeepCompareLoading] = useState(false)
   const [deepCompareError, setDeepCompareError] = useState('')
-  const [showDeepPanel, setShowDeepPanel] = useState(false)  // 主界面 AI 分析结果浮层
+  const [aiExpanded, setAiExpanded] = useState<Set<number>>(new Set())
 
   // ── 沟通对话状态 ──
   const [chatOpen, setChatOpen] = useState(false)
@@ -377,6 +451,9 @@ export default function TalentSearch() {
     if (compareSelected.size < 2) return
     setCompareLoading(true)
     setShowCompare(true)
+    setCompareTab('overview')
+    setDeepCompareData(null)
+    setDeepCompareError('')
     try {
       const r = await fetch('/api/enterprise/candidates/compare', {
         method: 'POST',
@@ -413,6 +490,8 @@ export default function TalentSearch() {
       const d = await r.json()
       if (d.success) {
         setDeepCompareData(d.data)
+        const top = [...(d.data?.ranking || [])].sort((a: any, b: any) => a.rank - b.rank)[0]
+        setAiExpanded(new Set(top ? [top.candidate_id] : []))
       } else {
         setDeepCompareError(d.error?.message || 'AI 分析失败')
       }
@@ -438,30 +517,20 @@ export default function TalentSearch() {
   // 打开对比（反选人逻辑）：
   //   已选≥2人 → 直接对比（兼容岗位管理自动跳转场景）
   //   未选够   → 弹出选人面板，勾选候选人再确认
-  const openCompare = (type: 'radar' | 'deep') => {
+  // 打开对比工作台：已选≥2人直接进入，否则先选人
+  const openCompare = () => {
     if (compareSelected.size >= 2) {
-      if (type === 'deep') {
-        setShowDeepPanel(true)
-        runDeepCompare()
-      } else {
-        runCompare()
-      }
+      runCompare()
     } else {
-      setComparePickerMode(type)
       setComparePickerOpen(true)
     }
   }
 
-  // 选人面板确认：关闭面板并按所选类型发起对比
+  // 选人面板确认
   const confirmCompare = () => {
     if (compareSelected.size < 2) return
     setComparePickerOpen(false)
-    if (comparePickerMode === 'deep') {
-      setShowDeepPanel(true)
-      runDeepCompare()
-    } else {
-      runCompare()
-    }
+    runCompare()
   }
 
   // 搜索
@@ -504,23 +573,14 @@ export default function TalentSearch() {
               {matching ? '五维度匹配中' : '重新匹配'}
             </button>
             <button
-              onClick={() => openCompare('radar')}
-              disabled={compareLoading}
+              onClick={openCompare}
+              disabled={compareLoading || deepCompareLoading}
               data-compare-btn
-              className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
-              style={{ border: '1px solid var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}
-            >
-              {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
-              雷达对比
-            </button>
-            <button
-              onClick={() => openCompare('deep')}
-              disabled={deepCompareLoading}
               className="flex items-center gap-2 h-12 px-5 rounded-lg text-base font-medium disabled:opacity-50 transition-colors"
               style={{ background: 'var(--color-primary)', color: 'white' }}
             >
-              {deepCompareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="text-lg">🦌</span>}
-              AI 深度对比
+              {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
+              对比
             </button>
           </div>
         </div>
@@ -734,7 +794,7 @@ export default function TalentSearch() {
                             <div>
                               <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>匹配维度（五维）</p>
                               <div className="space-y-4">
-                                {DIMENSIONS.map(item => (
+                                {DIMENSION_BARS.map(item => (
                                   <div key={item.key} className="flex items-center gap-3">
                                     <span className="text-base w-12" style={{ color: 'var(--color-on-surface-variant)' }}>{item.label}</span>
                                     <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
@@ -822,11 +882,9 @@ export default function TalentSearch() {
               {/* 头 */}
               <div className="flex items-center justify-between px-8 py-5 border-b shrink-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
                 <div className="flex items-center gap-3">
-                  {comparePickerMode === 'deep'
-                    ? <span className="text-2xl">🦌</span>
-                    : <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />}
+                  <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
                   <h2 className="text-xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-                    {comparePickerMode === 'deep' ? 'AI 深度对比' : '雷达对比'} · 选择候选人
+                    对比 · 选择候选人
                   </h2>
                 </div>
                 <button onClick={() => setComparePickerOpen(false)} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
@@ -931,8 +989,8 @@ export default function TalentSearch() {
                     className="flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium disabled:opacity-50"
                     style={{ background: 'var(--color-primary)', color: 'white' }}
                   >
-                    {comparePickerMode === 'deep' ? <span className="text-lg">🦌</span> : <GitCompare className="h-5 w-5" />}
-                    开始{comparePickerMode === 'deep' ? ' AI 深度对比' : '雷达对比'}
+                    {compareLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GitCompare className="h-5 w-5" />}
+                    开始对比
                   </button>
                 </div>
               </div>
@@ -957,15 +1015,42 @@ export default function TalentSearch() {
               style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}
               onClick={e => e.stopPropagation()}
             >
-              {/* 弹窗头 */}
-              <div className="flex items-center justify-between px-8 py-6 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
-                <div className="flex items-center gap-3">
-                  <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
-                  <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>候选人对比</h2>
+              {/* 弹窗头 + 多维视图切换 */}
+              <div className="sticky top-0 z-10 border-b" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
+                <div className="flex items-center justify-between px-8 py-5">
+                  <div className="flex items-center gap-3">
+                    <GitCompare className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
+                    <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>候选人对比</h2>
+                    <span className="text-sm tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+                      {compareData?.candidates.length ?? 0} 人
+                    </span>
+                  </div>
+                  <button onClick={() => { setShowCompare(false); setCompareData(null); setDeepCompareData(null); setDeepCompareError('') }} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
+                    <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
+                  </button>
                 </div>
-                <button onClick={() => { setShowCompare(false); setCompareData(null); setDeepCompareData(null); setDeepCompareError('') }} className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
-                  <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
-                </button>
+                <div className="flex items-center gap-1 px-8 pb-3">
+                  {COMPARE_TABS.map(t => {
+                    const on = compareTab === t.key
+                    return (
+                      <button
+                        key={t.key}
+                        onClick={() => setCompareTab(t.key)}
+                        className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                        style={{
+                          background: on ? 'var(--color-surface-container)' : 'transparent',
+                          color: on ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+                          fontWeight: on ? 600 : 400,
+                        }}
+                      >
+                        {t.label}
+                        {t.key === 'ai' && deepCompareLoading && (
+                          <Loader2 className="inline-block ml-1.5 h-3.5 w-3.5 animate-spin" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {compareLoading ? (
@@ -974,273 +1059,226 @@ export default function TalentSearch() {
                   <span className="text-lg">加载对比数据</span>
                 </div>
               ) : compareData ? (
-                <div className="px-8 py-8 space-y-10">
-                  {/* ── 雷达图 ── */}
-                  <div className="flex flex-col items-center justify-center">
-                    <RadarChart candidates={compareData.candidates} />
-                    {/* 图例 */}
-                    <div className="flex flex-wrap gap-4 mt-4 justify-center">
-                      {compareData.candidates.map((c, idx) => (
-                        <div key={c.id} className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full" style={{ background: getCompareColor(idx) }} />
-                          <span className="text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
-                          <span className="text-base tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{c.match}分</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <div className="px-8 py-8">
+                  {compareTab === 'overview' && (
+                    <CompareStudio candidates={compareData.candidates} />
+                  )}
 
                   {/* ── 技能对比 ── */}
-                  <div className="grid grid-cols-2 gap-12">
-                    {/* 共同技能 */}
-                    <div>
-                      <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                        共同技能 ({compareData.skill_analysis.common.length})
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {compareData.skill_analysis.common.length > 0 ? (
-                          compareData.skill_analysis.common.map(s => (
-                            <span key={s} className="text-sm px-3 py-1.5 rounded-lg"
-                              style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>{s}</span>
-                          ))
-                        ) : (
-                          <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>无共同技能</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 各候选人独有技能 */}
-                    <div>
-                      <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>独有技能</h3>
-                      <div className="space-y-4">
-                        {compareData.candidates.map((c, idx) => {
-                          const unique = compareData.skill_analysis.unique[c.id] || []
-                          return (
-                            <div key={c.id}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCompareColor(idx) }} />
-                                <span className="text-base font-medium" style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
-                                <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>({unique.length})</span>
-                              </div>
-                              <div className="flex flex-wrap gap-2 ml-4.5">
-                                {unique.length > 0 ? unique.map(s => (
-                                  <span key={s} className="text-sm px-3 py-1.5 rounded-lg"
-                                    style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface)' }}>{s}</span>
-                                )) : (
-                                  <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>无独有技能</span>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── 基本信息对比 ── */}
-                  <div>
-                    <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>基本信息</h3>
-                    <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}>
-                            <th className="text-left px-5 py-3 text-sm font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>项目</th>
-                            {compareData.candidates.map((c, idx) => (
-                              <th key={c.id} className="text-left px-5 py-3 text-sm font-medium">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCompareColor(idx) }} />
-                                  <span style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
-                                </div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[
-                            { label: '意向岗位', key: 'title' as const },
-                            { label: '经验', key: 'exp' as const },
-                            { label: '学历', key: 'education' as const },
-                            { label: '意向城市', key: 'city' as const },
-                            { label: '期望薪资', key: 'salary' as const },
-                          ].map(row => (
-                            <tr key={row.key} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                              <td className="px-5 py-3 text-base" style={{ color: 'var(--color-on-surface-variant)' }}>{row.label}</td>
-                              {compareData.candidates.map(c => (
-                                <td key={c.id} className="px-5 py-3 text-base" style={{ color: 'var(--color-on-surface)' }}>
-                                  {c[row.key] || '—'}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── AI 深度对比结果浮层（主界面，DeerFlow 多 Agent 编排）── */}
-      <AnimatePresence>
-        {showDeepPanel && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-8"
-            style={{ background: 'var(--color-scrim, rgba(0,0,0,0.5))' }}
-            onClick={() => setShowDeepPanel(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="rounded-2xl border-2 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-              style={{ borderColor: 'var(--color-primary)', background: 'var(--color-surface)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              {/* 浮层头 */}
-              <div className="flex items-center justify-between px-8 py-6 border-b sticky top-0 z-10"
-                style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🦌</span>
-                  <div>
-                    <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-on-surface)' }}>AI 深度对比</h2>
-                    <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>DeerFlow 多 Agent 编排 · 技能迁移分析 + 综合决策</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!deepCompareLoading && !deepCompareData && !deepCompareError && (
-                    <button onClick={runDeepCompare}
-                      className="flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-medium transition-colors"
-                      style={{ background: 'var(--color-primary)', color: 'white' }}>
-                      启动分析
-                    </button>
+                  {compareTab === 'skills' && (
+                    <SkillMatrix candidates={compareData.candidates} />
                   )}
-                  <button onClick={() => setShowDeepPanel(false)}
-                    className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface-container-high)]">
-                    <X className="h-6 w-6" style={{ color: 'var(--color-on-surface-variant)' }} />
-                  </button>
-                </div>
-              </div>
 
-              {/* 浮层内容 */}
-              <div className="px-8 py-8">
-                {deepCompareLoading && (
-                  <div className="flex flex-col items-center gap-4 py-16">
-                    <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--color-primary)' }} />
-                    <span className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>AI Agent 分析中，预计 10-20 秒...</span>
-                  </div>
-                )}
+                  {/* ── 背景对比 ── */}
+                  {compareTab === 'background' && (
+                    <BackgroundCharts candidates={compareData.candidates} />
+                  )}
 
-                {deepCompareError && !deepCompareLoading && (
-                  <div className="rounded-lg px-5 py-4 text-base" style={{ background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
-                    {deepCompareError}
-                  </div>
-                )}
-
-                {!deepCompareData && !deepCompareLoading && !deepCompareError && (
-                  <div className="py-16 text-center">
-                    <p className="text-base" style={{ color: 'var(--color-on-surface-variant)' }}>
-                      点击「启动分析」，多 Agent 协同分析候选人技能迁移能力与综合匹配度
-                    </p>
-                  </div>
-                )}
-
-                {deepCompareData && !deepCompareLoading && (
-                  <div className="space-y-6">
-                    {/* 整体总结 */}
-                    <div className="rounded-lg p-5" style={{ background: 'var(--color-primary-fixed-dim)' }}>
-                      <p className="text-base leading-relaxed" style={{ color: 'var(--color-on-surface)' }}>
-                        {deepCompareData.overall_summary}
-                      </p>
-                    </div>
-
-                    {/* 排名推荐 */}
-                    <div className="space-y-4">
-                      {[...deepCompareData.ranking].sort((a, b) => a.rank - b.rank).map((item) => (
-                        <div key={item.candidate_id} className="rounded-lg border p-5" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="inline-flex items-center justify-center w-9 h-9 rounded-full text-lg font-bold"
-                              style={{
-                                background: item.rank === 1 ? 'var(--accent-green)' : 'var(--color-surface-container-high)',
-                                color: item.rank === 1 ? 'white' : 'var(--color-on-surface-variant)'
-                              }}>
-                              {item.rank}
-                            </span>
-                            <span className="text-lg font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-                              {item.candidate_name}
-                            </span>
-                            {item.rank === 1 && (
-                              <span className="text-sm px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
-                                最推荐
-                              </span>
-                            )}
+                  {/* ── 薪资期望 ── */}
+                  {compareTab === 'salary' && (() => {
+                    const maxHi = Math.max(1, ...compareData.candidates.map(c => parseSalaryRange(c.salary)?.hi ?? 0))
+                    return (
+                      <div className="space-y-8">
+                        <div className="rounded-xl border p-6" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                          <div className="flex items-baseline justify-between mb-4">
+                            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>期望薪资</h3>
+                            <span className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>按期望区间叠加对比</span>
                           </div>
-
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            {/* 优势 */}
-                            <div>
-                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-green)' }}>优势</p>
-                              <ul className="space-y-1.5">
-                                {item.strengths.map((s, i) => (
-                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
-                                    <span style={{ color: 'var(--accent-green)' }}>+</span> {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            {/* 劣势 */}
-                            <div>
-                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-orange)' }}>劣势</p>
-                              <ul className="space-y-1.5">
-                                {item.weaknesses.map((s, i) => (
-                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
-                                    <span style={{ color: 'var(--accent-orange)' }}>-</span> {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            {/* 风险 */}
-                            <div>
-                              <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-red-strong)' }}>风险</p>
-                              <ul className="space-y-1.5">
-                                {item.risks.map((s, i) => (
-                                  <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
-                                    <span style={{ color: 'var(--accent-red-strong)' }}>!</span> {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                          <div className="space-y-4">
+                            {compareData.candidates.map((c, idx) => {
+                              const r = parseSalaryRange(c.salary)
+                              const color = getCompareColor(idx)
+                              return (
+                                <div key={c.id}>
+                                  <div className="flex items-baseline justify-between text-xs mb-1.5">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                                      <span style={{ color: 'var(--color-on-surface)' }}>{c.name}</span>
+                                    </span>
+                                    <span className="tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>{c.salary || '未填写'}</span>
+                                  </div>
+                                  <div className="relative h-2 rounded-full" style={{ background: 'var(--color-surface-container)' }}>
+                                    {r && (
+                                      <div className="absolute inset-y-0 rounded-full"
+                                           style={{
+                                             left: `${(r.lo / maxHi) * 100}%`,
+                                             width: `${Math.max(2, ((r.hi - r.lo) / maxHi) * 100)}%`,
+                                             background: color,
+                                             opacity: 0.8,
+                                           }} />
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
                           </div>
-
-                          {/* 推荐理由 */}
-                          <div className="rounded p-3" style={{ background: 'var(--color-surface-container-low)' }}>
-                            <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-                              <span className="font-medium" style={{ color: 'var(--color-on-surface)' }}>推荐理由：</span>
-                              {item.recommendation}
-                            </p>
+                          <div className="flex justify-between text-[10px] mt-2 tabular-nums" style={{ color: 'var(--color-on-surface-variant)' }}>
+                            <span>0K</span>
+                            <span>{maxHi}K</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* 关键洞察 */}
-                    {deepCompareData.key_insights.length > 0 && (
-                      <div className="rounded-lg p-5" style={{ background: 'var(--color-surface-container-low)' }}>
-                        <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-primary)' }}>关键洞察</p>
-                        <ul className="space-y-2">
-                          {deepCompareData.key_insights.map((insight, i) => (
-                            <li key={i} className="text-base flex gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                              <span style={{ color: 'var(--color-primary)' }}>•</span> {insight}
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr style={{ background: 'var(--color-surface-container-low)' }}>
+                                {['候选人', '意向岗位', '期望城市', '经验', '期望薪资'].map(h => (
+                                  <th key={h} className="text-left font-normal px-4 py-2" style={{ color: 'var(--color-on-surface-variant)' }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {compareData.candidates.map(c => (
+                                <tr key={c.id} className="border-t" style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}>
+                                  <td className="px-4 py-2">{c.name}</td>
+                                  <td className="px-4 py-2">{c.title || '—'}</td>
+                                  <td className="px-4 py-2">{c.city || '—'}</td>
+                                  <td className="px-4 py-2">{c.exp || '—'}</td>
+                                  <td className="px-4 py-2 tabular-nums">{c.salary || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                    )
+                  })()}
+
+                  {/* ── AI 深度分析 ── */}
+                  {compareTab === 'ai' && (
+                    <div className="space-y-6">
+                      {!deepCompareData && !deepCompareLoading && !deepCompareError && (
+                        <div className="rounded-xl border p-8" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                          <h3 className="text-base font-semibold" style={{ color: 'var(--color-on-surface)' }}>AI 深度分析</h3>
+                          <p className="text-sm mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>
+                            DeerFlow 多 Agent 编排:技能迁移分析、优势 / 劣势 / 风险与推荐排序
+                          </p>
+                          <button onClick={runDeepCompare}
+                                  className="mt-4 px-4 py-2 rounded-lg text-sm font-medium"
+                                  style={{ background: 'var(--color-primary)', color: 'white' }}>
+                            启动分析
+                          </button>
+                        </div>
+                      )}
+                      {deepCompareLoading && (
+                        <div className="flex flex-col items-center gap-3 py-16">
+                          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                          <span className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>AI Agent 分析中,预计 10-20 秒...</span>
+                        </div>
+                      )}
+                      {deepCompareError && !deepCompareLoading && (
+                        <div className="space-y-3">
+                          <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'var(--accent-red-dim)', color: 'var(--accent-red-strong)' }}>
+                            {deepCompareError}
+                          </div>
+                          <button onClick={runDeepCompare} className="text-sm px-3 py-1.5 rounded-lg border"
+                                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}>
+                            重试
+                          </button>
+                        </div>
+                      )}
+                      {deepCompareData && !deepCompareLoading && (
+                        <div className="space-y-6">
+                          <div className="rounded-lg p-5" style={{ background: 'var(--color-primary-fixed-dim)' }}>
+                            <p className="text-base leading-relaxed" style={{ color: 'var(--color-on-surface)' }}>
+                              {deepCompareData.overall_summary}
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            {[...deepCompareData.ranking].sort((a, b) => a.rank - b.rank).map((item) => {
+                              const total = item.strengths.length + item.weaknesses.length + item.risks.length
+                              const open = aiExpanded.has(item.candidate_id)
+                              const toggle = () => {
+                                const next = new Set(aiExpanded)
+                                if (next.has(item.candidate_id)) next.delete(item.candidate_id)
+                                else next.add(item.candidate_id)
+                                setAiExpanded(next)
+                              }
+                              return (
+                                <div key={item.candidate_id} className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                                  <button onClick={toggle} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold shrink-0"
+                                          style={{
+                                            background: item.rank === 1 ? 'var(--accent-green)' : 'var(--color-surface-container-high)',
+                                            color: item.rank === 1 ? 'white' : 'var(--color-on-surface-variant)',
+                                          }}>
+                                      {item.rank}
+                                    </span>
+                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--color-on-surface)' }}>{item.candidate_name}</span>
+                                    <div className="flex-1 h-2 rounded-full overflow-hidden flex min-w-[80px]" style={{ background: 'var(--color-surface-container)' }}>
+                                      <span style={{ width: `${(item.strengths.length / Math.max(1, total)) * 100}%`, background: 'var(--accent-green)', opacity: 0.85 }} />
+                                      <span style={{ width: `${(item.weaknesses.length / Math.max(1, total)) * 100}%`, background: 'var(--accent-orange)', opacity: 0.85 }} />
+                                      <span style={{ width: `${(item.risks.length / Math.max(1, total)) * 100}%`, background: 'var(--accent-red)', opacity: 0.85 }} />
+                                    </div>
+                                    <span className="text-[11px] tabular-nums shrink-0" style={{ color: 'var(--color-on-surface-variant)' }}>
+                                      优势 {item.strengths.length} · 劣势 {item.weaknesses.length} · 风险 {item.risks.length}
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                                                 style={{ color: 'var(--color-on-surface-variant)' }} />
+                                  </button>
+                                  {open && (
+                                    <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                                      <div className="grid grid-cols-3 gap-4 pt-4">
+                                        <div>
+                                          <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-green)' }}>优势</p>
+                                          <ul className="space-y-1.5">
+                                            {item.strengths.map((s, i) => (
+                                              <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                                <span style={{ color: 'var(--accent-green)' }}>+</span> {s}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-orange)' }}>劣势</p>
+                                          <ul className="space-y-1.5">
+                                            {item.weaknesses.map((s, i) => (
+                                              <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                                <span style={{ color: 'var(--accent-orange)' }}>-</span> {s}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-medium mb-2" style={{ color: 'var(--accent-red-strong)' }}>风险</p>
+                                          <ul className="space-y-1.5">
+                                            {item.risks.map((s, i) => (
+                                              <li key={i} className="text-sm flex gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
+                                                <span style={{ color: 'var(--accent-red-strong)' }}>!</span> {s}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      </div>
+                                      <div className="rounded p-3" style={{ background: 'var(--color-surface-container-low)' }}>
+                                        <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                                          <span className="font-medium" style={{ color: 'var(--color-on-surface)' }}>推荐理由:</span>
+                                          {item.recommendation}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                          {deepCompareData.key_insights.length > 0 && (
+                            <div className="rounded-lg p-5" style={{ background: 'var(--color-surface-container-low)' }}>
+                              <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-primary)' }}>关键洞察</p>
+                              <ul className="space-y-2">
+                                {deepCompareData.key_insights.map((insight, i) => (
+                                  <li key={i} className="text-base flex gap-2" style={{ color: 'var(--color-on-surface)' }}>
+                                    <span style={{ color: 'var(--color-primary)' }}>•</span> {insight}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </motion.div>
           </motion.div>
         )}
