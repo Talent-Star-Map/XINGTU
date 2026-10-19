@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, func, T
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@localhost:3306/xingtu')
+DATABASE_URL = os.environ['DATABASE_URL']
 
 # connect_args charset=utf8mb4：双保险，确保读写连接走 UTF-8，避免中文双编码
 # 连接池参数只对 MySQL 有效——SQLite 用 SingletonThreadPool，收到 pool_size /
@@ -465,7 +465,7 @@ def get_neo4j_uri() -> str:
 def get_neo4j_auth() -> tuple:
     return (
         os.getenv('NEO4J_USER', 'neo4j'),
-        os.getenv('NEO4J_PASSWORD', 'REMOVED_SECRET'),
+        os.getenv('NEO4J_PASSWORD', ""),
     )
 
 def get_neo4j_database() -> str:

@@ -58,3 +58,12 @@ docs/
 tests/screenshots
 *.png
 !frontend/**/*.png
+
+.env
+.env.*
+**/.env
+**/.env.*
+backups/
+tmp/
+*.pem
+*.key

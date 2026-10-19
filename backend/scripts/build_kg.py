@@ -61,7 +61,7 @@ except Exception:  # 脚本独立跑时容错,不让 import 失败
 
 DB = {
     "host": "180.76.227.159", "port": 3308,
-    "user": "root", "password": "REMOVED_SECRET",
+    "user": "root", "password": os.environ["MYSQL_PASSWORD"],
     "database": "xingtu", "charset": "utf8mb4",
 }
 

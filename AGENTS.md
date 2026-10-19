@@ -89,7 +89,7 @@ There is also no coverage tooling — **don't quote code-coverage percentages an
 
 **Resume parsing depends on external APIs.** `backend/services/resume_parser.py` and `backend/services/quality_checker.py` likely call external LLM services. They won't work without network access or proper API keys.
 
-**Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`DEEPSEEK_API_KEY`、`SMTP_PASSWORD` 等运行配置，已提交供团队共享。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
+**Env file.** `backend/.env` 包含 `DATABASE_URL`、`JWT_SECRET`、`DEEPSEEK_API_KEY`、`SMTP_PASSWORD` 等运行配置，禁止提交；仅在运行环境配置。`database.py` 通过 `python-dotenv` 读取（`load_dotenv()` 在 `main.py` 顶部调用）。
 
 > ⚠️ 文档里残留的 `LONGCAT_*` 配置名已废弃，实际用的是 `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL=deepseek-chat` / `DEEPSEEK_BASE_URL=https://api.deepseek.com`。
 
@@ -153,7 +153,7 @@ XINGTU/
 │   │   ├── resume.sql         # 简历相关表
 │   │   ├── llm_configs.sql    # 模型配置表
 │   │   └── alter_match_records_5dim.sql  # match_records 表结构变更
-│   ├── .env                   # 运行配置（数据库+API Key），已提交供团队共享
+│   ├── .env                   # 运行配置（数据库+API Key），禁止提交；仅在运行环境配置
 │   ├── test_data/             # 准确率测试集（注意：不是 tests/test_data/）
 │   │   ├── scraped_jds.json      # 104 条 JD（JD 解析输入）
 │   │   ├── standard_answers.json # 104 条标准技能集（JD 解析真值）

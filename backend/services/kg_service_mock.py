@@ -37,7 +37,7 @@ DB = {
     "host": os.getenv("MYSQL_HOST", "180.76.227.159"),
     "port": int(os.getenv("MYSQL_PORT", "3308")),
     "user": os.getenv("MYSQL_USER", "root"),
-    "password": os.getenv("MYSQL_PASSWORD", "REMOVED_SECRET"),
+    "password": os.getenv("MYSQL_PASSWORD", ""),
     "database": os.getenv("MYSQL_DB", "xingtu"),
     "charset": "utf8mb4",
 }

@@ -17,3 +17,12 @@ tests/
 htmlcov
 .coverage
 *.log
+
+.env
+.env.*
+**/.env
+**/.env.*
+backups/
+tmp/
+*.pem
+*.key

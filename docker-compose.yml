@@ -4,16 +4,16 @@ services:
     container_name: xingtu-mysql
     environment:
       # 生产环境强密码（本地 Navicat 连接用）
-      MYSQL_ROOT_PASSWORD: REMOVED_SECRET
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in local .env}
       MYSQL_DATABASE: xingtu
-    # 端口映射：宿主机 3308 → 容器 3306，让本地 Navicat 可以连接云服务器 MySQL
+    # 端口映射：宿主机 3308 → 容器 3306，仅允许本机或 SSH 隧道访问 MySQL
     # （3307 被占用，改用 3308）
     ports:
-      - "3308:3306"
+      - "127.0.0.1:3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pXingtu123"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h localhost -uroot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -14,7 +14,7 @@ import pymysql
 load_dotenv()
 
 # 从 DATABASE_URL 解析连接配置
-_db_url = os.getenv('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@localhost:3307/xingtu')
+_db_url = os.environ['DATABASE_URL']
 _parsed = urlparse(_db_url)
 _db_user = _parsed.username or 'root'
 _db_pass = _parsed.password or ''

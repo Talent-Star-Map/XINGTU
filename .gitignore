@@ -50,3 +50,16 @@ CLAUDE.md
 backend/.vite/
 # 临时构建验证目录
 .build-verify/
+
+# Sensitive local configuration and private backups
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+backups/
+tmp/
+*.pem
+*.key
+*.p12
+*.pfx

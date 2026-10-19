@@ -101,7 +101,7 @@ def main():
     # ── 1. 抽取 MySQL jobs ──
     print('[1/4] 抽取 MySQL jobs ...')
     conn = pymysql.connect(
-        host='180.76.227.159', port=3308, user='root', password='REMOVED_SECRET',
+        host='180.76.227.159', port=3308, user='root', password=os.environ["MYSQL_PASSWORD"],
         database='xingtu', charset='utf8mb4', connect_timeout=10,
     )
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
