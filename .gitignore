@@ -22,3 +22,16 @@ dist
 # Local cloud API inspection
 cloud-openapi.local.json
 cloud-jobs.local.json
+
+# Sensitive local configuration and private backups
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+backups/
+tmp/
+*.pem
+*.key
+*.p12
+*.pfx
