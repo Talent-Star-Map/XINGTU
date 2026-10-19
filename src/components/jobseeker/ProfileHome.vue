@@ -306,7 +306,7 @@ const pct = computed(() => {
 
 const avatarUrl = computed(() => {
   if (!profile.value?.avatar) return ''
-  return profile.value.avatar.startsWith('http') ? profile.value.avatar : `http://127.0.0.1:8083${profile.value.avatar}`
+  return profile.value.avatar.startsWith('http') ? profile.value.avatar : `${API_BASE_URL}${profile.value.avatar}`
 })
 
 function openEditModal() {

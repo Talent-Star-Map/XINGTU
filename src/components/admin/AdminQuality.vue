@@ -246,7 +246,7 @@
 import { ref, computed, onMounted } from 'vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 
-const API_BASE_URL = 'http://192.168.156.230:8081'
+import { API_BASE_URL } from '../../utils/request'
 
 const report = ref(null)
 const loading = ref(true)

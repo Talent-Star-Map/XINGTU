@@ -14,7 +14,7 @@
             <view class="logo-area" :style="{ borderColor: (companyData.verified || 0) >= 1 ? 'var(--color-primary)' : 'var(--color-outline-variant)' }">
               <image
                 v-if="companyData.company_logo"
-                :src="companyData.company_logo.startsWith('http') ? companyData.company_logo : 'http://localhost:8083' + companyData.company_logo"
+                :src="companyData.company_logo.startsWith('http') ? companyData.company_logo : API_BASE_URL + companyData.company_logo"
                 class="logo-image"
                 mode="aspectFill"
               />
@@ -88,7 +88,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import AppIcon from '../common/AppIcon.vue'
-import { request } from '../../utils/request'
+import { request, API_BASE_URL } from '../../utils/request'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

@@ -19,3 +19,6 @@ dist
 *.njsproj
 *.sln
 *.sw?
+# Local cloud API inspection
+cloud-openapi.local.json
+cloud-jobs.local.json

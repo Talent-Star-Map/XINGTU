@@ -1,4 +1,9 @@
-export const API_BASE_URL = 'http://192.168.156.230:8081'
+// H5 uses the local Vite proxy; mini-programs require an absolute API URL.
+let defaultBaseUrl = 'http://180.76.227.159:8081'
+// #ifdef H5
+defaultBaseUrl = ''
+// #endif
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? defaultBaseUrl).replace(/\/$/, '')
 
 export function withToken(url) {
   const token = uni.getStorageSync('xingtu_token') || ''
