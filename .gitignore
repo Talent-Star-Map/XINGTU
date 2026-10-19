@@ -35,3 +35,6 @@ tmp/
 *.key
 *.p12
 *.pfx
+
+# Local project documentation
+/docs/
