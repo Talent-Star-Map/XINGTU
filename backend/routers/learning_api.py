@@ -22,12 +22,18 @@ router = APIRouter(prefix='/api/learning', tags=['learning'])
 
 
 def _get_uid(token: str) -> tuple[int, str]:
-    """验证 token，返回 (user_id, role)"""
+    """验证 token，返回 (user_id, role)
+
+    学习数据只属于求职者：企业/管理员 token 即便 id 撞上了也不该读到这些记录。
+    """
     try:
         payload = verify_token(token)
     except ValueError as e:
         raise HTTPException(401, str(e))
-    return payload['user_id'], payload.get('role', 'jobseeker')
+    role = payload.get('role', 'jobseeker')
+    if role != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
+    return payload['user_id'], role
 
 
 # ─── 技能掌握 ────────────────────────────────────

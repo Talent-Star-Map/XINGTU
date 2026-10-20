@@ -81,6 +81,8 @@ def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
 
     user_id = payload['user_id']
     role = payload.get('role', 'jobseeker')
+    if role != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
 
     # 2. 加载岗位（实时查库，不用启动期的静态快照）
     job = load_job_by_id(req.job_id)
@@ -254,6 +256,8 @@ def api_match_recommend(
 
     user_id = payload['user_id']
     role = payload.get('role', 'jobseeker')
+    if role != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
 
     # 1. 优先使用请求中传入的技能列表（用户显式选择，最准确）
     profile = None
@@ -464,6 +468,8 @@ def api_clear_cache(token: str = Query(...)):
 
     # 清理当前用户的 profile 技能/bio（按 role 选表）
     role = payload.get('role', 'jobseeker')
+    if role != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
     Model = get_user_model_by_role(role)
     session = get_session()
     user = session.query(Model).filter(Model.id == user_id).first()

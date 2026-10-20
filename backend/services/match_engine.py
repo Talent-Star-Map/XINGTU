@@ -899,7 +899,8 @@ def match_one(job: Job, seeker: Jobseeker, idf_weights: Optional[Dict[str, float
 
 # ─── 批量计算：写入 match_records 表 ──────────────────────────────────
 
-def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True) -> dict:
+def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True,
+                    enterprise_id: Optional[int] = None) -> dict:
     """
     批量执行匹配（三阶段流水线），将分数 upsert 到 match_records 表。
 
@@ -912,6 +913,7 @@ def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True) 
     参数:
         job_id: 指定则只算该岗位；None 算所有 active 岗位
         apply_pool_norm: 是否执行阶段②（默认开启）
+        enterprise_id: 只算该企业的岗位（企业端手动触发时必传，避免跨租户重算）
 
     返回: {total_jobs, total_seekers, total_matches, updated, skipped,
            cleaned, pools_normalized, pool_stats, sample, dimensions, algorithm}
@@ -922,6 +924,8 @@ def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True) 
         job_q = session.query(Job).filter(Job.status == 'active')
         if job_id:
             job_q = job_q.filter(Job.id == job_id)
+        if enterprise_id is not None:
+            job_q = job_q.filter(Job.enterprise_id == enterprise_id)
         jobs = job_q.all()
 
         # 预计算 IDF 权重（TF-IDF 算法核心步骤：稀有技能价值更高）
@@ -934,6 +938,9 @@ def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True) 
         del_q = session.query(MatchRecord).filter(MatchRecord.status == 'pending')
         if job_id:
             del_q = del_q.filter(MatchRecord.job_id == job_id)
+        elif enterprise_id is not None:
+            # 只清本企业岗位下的 pending，别动别家的记录
+            del_q = del_q.filter(MatchRecord.job_id.in_([j.id for j in jobs] or [-1]))
         deleted_count = del_q.delete(synchronize_session=False)
 
         # ── 阶段① 全量计算：按岗位分池 ──

@@ -38,7 +38,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title='星图 API', version='1.0.0', lifespan=lifespan)
 
 os.makedirs(os.path.join(os.path.dirname(__file__), 'uploads', 'avatars'), exist_ok=True)
-app.mount('/uploads', StaticFiles(directory=os.path.join(os.path.dirname(__file__), 'uploads')), name='uploads')
+# 只公开头像；简历附件是私有数据，走 /api/auth/resume-file 校验归属后下载
+# （整目录挂载会让知道文件名的任何人绕过登录下载他人简历）
+app.mount(
+    '/uploads/avatars',
+    StaticFiles(directory=os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')),
+    name='avatars',
+)
 
 app.add_middleware(
     CORSMiddleware,

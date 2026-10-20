@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, ExternalLink, Loader2, CheckCircle2, Building, X, PartyPopper } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import { withToken } from '../../lib/authFetch'
 
 interface ApplyJob {
   id: number
@@ -38,7 +39,7 @@ export default function ApplyJobCard({ job }: { job: ApplyJob }) {
     let cancelled = false
     const seekerId = getSeekerId()
     if (!seekerId) { if (!cancelled) setChecking(false); return }
-    fetch(`/api/apply/status?job_id=${job.id}&jobseeker_id=${seekerId}`)
+    fetch(withToken(`/api/apply/status?job_id=${job.id}`))
       .then(r => r.json())
       .then(d => { if (!cancelled && d.success) setApplied(!!d.data.applied) })
       .catch(() => {})
@@ -53,7 +54,7 @@ export default function ApplyJobCard({ job }: { job: ApplyJob }) {
     setSubmitting(true)
     try {
       // 先判渠道：未入驻 → 弹窗跳原网站；已入驻 → 直接站内投递
-      const cr = await fetch(`/api/apply/channel/${job.id}`)
+      const cr = await fetch(withToken(`/api/apply/channel/${job.id}`))
       const cd = await cr.json()
       if (!cd.success) { setTip(cd.error?.message || '投递渠道查询失败'); return }
       const channel: ChannelData = cd.data
@@ -63,10 +64,10 @@ export default function ApplyJobCard({ job }: { job: ApplyJob }) {
         return
       }
 
-      const ar = await fetch(`/api/apply/${job.id}`, {
+      const ar = await fetch(withToken(`/api/apply/${job.id}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobseeker_id: seekerId }),
+        body: JSON.stringify({}),
       })
       const ad = await ar.json()
       if (ad.success) {

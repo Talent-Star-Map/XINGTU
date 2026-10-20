@@ -40,8 +40,10 @@ from time_util import fmt as _fmt_time
 router = APIRouter(prefix='/api/resume-center', tags=['resume-center'])
 
 
-def _get_user_id(token: str) -> int:
-    """校验求职者 token，返回 user_id"""
+def _get_user_id(token: str | None) -> int:
+    """校验求职者 token，返回 user_id；缺 token 与 token 失效都返回 401"""
+    if not token:
+        raise HTTPException(401, '未登录或缺少 token')
     try:
         payload = verify_token(token)
     except ValueError as e:
@@ -94,7 +96,7 @@ class GenerateReq(BaseModel):
 
 
 @router.post('/generate')
-def resume_generate(req: GenerateReq, token: str = Query(...)):
+def resume_generate(req: GenerateReq, token: str | None = Query(None, description='登录 token')):
     """AI 生成完整简历并保存"""
     user_id = _get_user_id(token)
     result = generate_resume({
@@ -143,7 +145,7 @@ class OptimizeReq(BaseModel):
 
 
 @router.post('/optimize')
-def resume_optimize(req: OptimizeReq, token: str = Query(...)):
+def resume_optimize(req: OptimizeReq, token: str | None = Query(None, description='登录 token')):
     """AI 优化某个区块"""
     _get_user_id(token)  # 仅校验登录
     result = optimize_section(req.section_type, req.content, req.instruction, req.language)
@@ -157,7 +159,7 @@ def resume_optimize(req: OptimizeReq, token: str = Query(...)):
 # 简历 CRUD
 # ════════════════════════════════════════════════════════════════════
 @router.get('/list')
-def resume_list(token: str = Query(...)):
+def resume_list(token: str | None = Query(None, description='登录 token')):
     """我的简历列表"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -202,7 +204,7 @@ _DEFAULT_RESUME_SECTIONS: list[tuple[str, str]] = [
 
 
 @router.post('')
-def resume_create(req: CreateReq, token: str = Query(...)):
+def resume_create(req: CreateReq, token: str | None = Query(None, description='登录 token')):
     """新建空简历 — 同时插入 5 个默认区块(个人信息/简介/教育/技能/项目)"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -237,7 +239,7 @@ _IMPORT_MAX_BYTES = 8 * 1024 * 1024
 @router.post('/import')
 async def resume_import(
     file: UploadFile = File(..., description='旧简历文件：pdf/docx/doc/txt'),
-    token: str = Query(...),
+    token: str | None = Query(None, description='登录 token'),
     template_key: str = Query('classic'),
 ):
     """上传旧简历，解析后直接生成一份可编辑简历
@@ -337,7 +339,7 @@ async def resume_import(
 # 复制简历
 # ════════════════════════════════════════════════════════════════════
 @router.post('/{resume_id}/duplicate')
-def resume_duplicate(resume_id: int, token: str = Query(...)):
+def resume_duplicate(resume_id: int, token: str | None = Query(None, description='登录 token')):
     """复制一份简历（含全部区块），标题加「副本」后缀"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -435,7 +437,7 @@ def _skill_popularity_map() -> dict[str, float]:
 
 
 @router.post('/{resume_id}/analyze')
-def resume_analyze(resume_id: int, req: ResumeAnalyzeReq, token: str = Query(...)):
+def resume_analyze(resume_id: int, req: ResumeAnalyzeReq, token: str | None = Query(None, description='登录 token')):
     """用这份简历去比对一个岗位，返回五维评分 + 命中/缺失技能 + 改进建议
 
     评分直接调 `compute_match_score`，与求职端诊断、企业端批量匹配同一套权重，
@@ -510,7 +512,7 @@ def resume_analyze(resume_id: int, req: ResumeAnalyzeReq, token: str = Query(...
 
 
 @router.get('/{resume_id}')
-def resume_detail(resume_id: int, token: str = Query(...)):
+def resume_detail(resume_id: int, token: str | None = Query(None, description='登录 token')):
     """简历详情"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -532,7 +534,7 @@ class SaveSectionsReq(BaseModel):
 
 
 @router.put('/{resume_id}')
-def resume_save(resume_id: int, req: SaveSectionsReq, token: str = Query(...)):
+def resume_save(resume_id: int, req: SaveSectionsReq, token: str | None = Query(None, description='登录 token')):
     """保存简历（更新区块 + 可选模板/标题）"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -565,7 +567,7 @@ def resume_save(resume_id: int, req: SaveSectionsReq, token: str = Query(...)):
 
 
 @router.delete('/{resume_id}')
-def resume_delete(resume_id: int, token: str = Query(...)):
+def resume_delete(resume_id: int, token: str | None = Query(None, description='登录 token')):
     """删除简历"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -615,7 +617,7 @@ class ShareReq(BaseModel):
 
 
 @router.post('/share/{resume_id}')
-def resume_share(resume_id: int, token: str = Query(...), req: ShareReq | None = None):
+def resume_share(resume_id: int, token: str | None = Query(None, description='登录 token'), req: ShareReq | None = None):
     """生成或复用分享 token
 
     同一份简历已有有效链接时直接返回原链接，避免用户每点一次分享就多出一条
@@ -675,7 +677,7 @@ def resume_share(resume_id: int, token: str = Query(...), req: ShareReq | None =
 
 
 @router.get('/share-info/{resume_id}')
-def resume_share_info(resume_id: int, token: str = Query(...)):
+def resume_share_info(resume_id: int, token: str | None = Query(None, description='登录 token')):
     """查询某份简历的分享状态（链接、访问次数、有效期）"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -709,7 +711,7 @@ def resume_share_info(resume_id: int, token: str = Query(...)):
 
 
 @router.delete('/share/{resume_id}')
-def resume_share_revoke(resume_id: int, token: str = Query(...)):
+def resume_share_revoke(resume_id: int, token: str | None = Query(None, description='登录 token')):
     """撤销分享（删除该简历的全部分享链接）"""
     user_id = _get_user_id(token)
     session = get_session()
@@ -781,7 +783,7 @@ async def resume_export(
     resume_id: int,
     format: Literal['pdf', 'html', 'docx', 'txt', 'json'] = Query(...),
     fit_one_page: bool = Query(False, description='PDF 强制一页装下'),
-    token: str = Query(...),
+    token: str | None = Query(None, description='登录 token'),
 ):
     """导出简历为 5 种格式之一
 

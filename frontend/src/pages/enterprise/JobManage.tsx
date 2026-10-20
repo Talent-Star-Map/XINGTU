@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Plus, Edit3, Eye, Loader2, X, Trash2, Power, GitCompare, Users } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EPNav } from '../../lib/NavContext'
+import { withToken } from '../../lib/authFetch'
 
 // 岗位类型 — 字段来自后端 /api/enterprise/jobs
 interface JobItem {
@@ -76,7 +77,7 @@ export default function JobManage() {
       params.set('page', '1')
       params.set('size', '50')
 
-      const r = await fetch(`/api/enterprise/jobs?${params.toString()}`)
+      const r = await fetch(withToken(`/api/enterprise/jobs?${params.toString()}`))
       const d = await r.json()
       if (d.success) setJobs(d.data.jobs)
       else setError(d.error?.message || '加载失败')
@@ -122,7 +123,7 @@ export default function JobManage() {
   // ── 打开"编辑"弹窗 — 先拉详情 ──
   const openEdit = async (job: JobItem) => {
     try {
-      const r = await fetch(`/api/enterprise/jobs/${job.id}`)
+      const r = await fetch(withToken(`/api/enterprise/jobs/${job.id}`))
       const d = await r.json()
       if (d.success) {
         const j = d.data as JobDetail
@@ -146,7 +147,7 @@ export default function JobManage() {
   // ── 打开"查看"弹窗 — 只读 ──
   const openView = async (job: JobItem) => {
     try {
-      const r = await fetch(`/api/enterprise/jobs/${job.id}`)
+      const r = await fetch(withToken(`/api/enterprise/jobs/${job.id}`))
       const d = await r.json()
       if (d.success) setViewing(d.data as JobDetail)
       else showToast(d.error?.message || '加载详情失败')
@@ -177,7 +178,7 @@ export default function JobManage() {
         status: form.status,
       }
 
-      const url = editingId ? `/api/enterprise/jobs/${editingId}` : '/api/enterprise/jobs'
+      const url = withToken(editingId ? `/api/enterprise/jobs/${editingId}` : '/api/enterprise/jobs')
       const method = editingId ? 'PUT' : 'POST'
       const r = await fetch(url, {
         method,
@@ -203,7 +204,7 @@ export default function JobManage() {
   const toggleStatus = async (job: JobItem) => {
     const next = job.status === 'active' ? 'closed' : 'active'
     try {
-      const r = await fetch(`/api/enterprise/jobs/${job.id}/status`, {
+      const r = await fetch(withToken(`/api/enterprise/jobs/${job.id}/status`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: next }),
@@ -224,7 +225,7 @@ export default function JobManage() {
   const confirmDeleteJob = async () => {
     if (!confirmDelete) return
     try {
-      const r = await fetch(`/api/enterprise/jobs/${confirmDelete.id}`, { method: 'DELETE' })
+      const r = await fetch(withToken(`/api/enterprise/jobs/${confirmDelete.id}`), { method: 'DELETE' })
       const d = await r.json()
       if (d.success) {
         showToast(d.message || '已删除')

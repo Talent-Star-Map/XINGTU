@@ -13,15 +13,16 @@
 @owner: 阳总&洋总（人岗匹配+企业端人才星界面）；实际由张东阳开发
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 from sqlalchemy import func, text
 import bisect
 import json
 
+from auth_guard import require_enterprise
 from database import get_session, Job, Jobseeker, MatchRecord, Message
-from database import verify_token, get_neo4j_driver
+from database import get_neo4j_driver
 from sqlalchemy import func as _func
 from services.deerflow_compare import run_deep_compare
 # 库里存的是 UTC，返回前统一转北京时间（time_util.fmt）
@@ -45,6 +46,25 @@ def _err(code: str, message: str, details=None):
 def _like_escape(s: str) -> str:
     """转义 LIKE 通配符，防止 % _ 注入"""
     return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
+def _own_job(session, job_id: int, eid: int) -> Job:
+    """取本企业岗位：别人的岗位一律按不存在处理，避免枚举"""
+    job = session.query(Job).filter(Job.id == job_id, Job.enterprise_id == eid).first()
+    if not job:
+        raise HTTPException(404, f'岗位不存在: id={job_id}')
+    return job
+
+
+def _own_record(session, match_record_id: int, eid: int) -> MatchRecord:
+    """取本企业岗位下的会话记录"""
+    mr = (session.query(MatchRecord)
+          .join(Job, MatchRecord.job_id == Job.id)
+          .filter(MatchRecord.id == match_record_id, Job.enterprise_id == eid)
+          .first())
+    if not mr:
+        raise HTTPException(404, '会话不存在或无权访问')
+    return mr
 
 
 def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
@@ -85,6 +105,7 @@ def list_candidates(
     keyword: str = Query('', description='按姓名/技能关键字过滤'),
     page: int = Query(1, ge=1, description='页码，从 1 开始'),
     size: int = Query(10, ge=1, le=100, description='每页条数'),
+    ent: dict = Depends(require_enterprise),
 ):
     """
     人才星 — 候选人列表
@@ -98,11 +119,12 @@ def list_candidates(
           }
         }
     """
+    eid = ent['user_id']
     session = get_session()
     try:
         # ── 1. 岗位下拉：当前企业所有岗位 + 每个岗位的候选人数（批量查，避免 N+1）──
         from sqlalchemy import func as _func
-        jobs_query = session.query(Job).filter(Job.status == 'active')
+        jobs_query = session.query(Job).filter(Job.status == 'active', Job.enterprise_id == eid)
         job_ids = [j.id for j in jobs_query.all()]
         cnt_map = {}
         if job_ids:
@@ -116,10 +138,12 @@ def list_candidates(
         # ── 2. 候选人查询：match_records JOIN jobseekers ──
         q = (session.query(MatchRecord, Jobseeker, Job)
              .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
-             .join(Job, MatchRecord.job_id == Job.id, isouter=True))
+             .join(Job, MatchRecord.job_id == Job.id, isouter=True)
+             .filter(Job.enterprise_id == eid))
 
-        # 按 job_id 过滤
+        # 按 job_id 过滤（只能看自己岗位的候选人）
         if job_id:
+            _own_job(session, job_id, eid)
             q = q.filter(MatchRecord.job_id == job_id)
 
         # 关键字过滤：匹配姓名或技能
@@ -158,6 +182,8 @@ def list_candidates(
             },
             'message': 'ok',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         # 统一错误格式，避免泄露堆栈
         return _err('INTERNAL_ERROR', f'查询候选人失败: {e}')
@@ -166,7 +192,7 @@ def list_candidates(
 
 
 @router.post('/run-match')
-def trigger_match():
+def trigger_match(ent: dict = Depends(require_enterprise)):
     """
     手动触发匹配引擎 — 遍历所有 active 岗位 × 所有求职者，计算五维度分数并写入 match_records。
     用作 demo：前端点"重新匹配"按钮即调用此接口，跑完后刷新候选人列表即可看到真实分数。
@@ -183,7 +209,8 @@ def trigger_match():
         }
     """
     try:
-        result = run_match_batch()
+        # 只跑本企业的岗位，避免一个企业触发全平台重算
+        result = run_match_batch(enterprise_id=ent['user_id'])
         return {
             'success': True,
             'data': result,
@@ -194,7 +221,7 @@ def trigger_match():
 
 
 @router.get('/match-weights')
-def get_match_weights():
+def get_match_weights(ent: dict = Depends(require_enterprise)):
     """
     查看当前匹配权重 — 返回默认权重与当前生效权重（反馈校准后两者可能不同）。
     """
@@ -209,7 +236,7 @@ def get_match_weights():
 
 
 @router.post('/calibrate')
-def calibrate_match_weights():
+def calibrate_match_weights(ent: dict = Depends(require_enterprise)):
     """
     反馈闭环校准 — 从 HR 的 accept/reject 历史数据学习五维权重（维度区分度法）。
 
@@ -233,7 +260,7 @@ class CompareReq(BaseModel):
 
 
 @router.post('/candidates/compare')
-def compare_candidates(req: CompareReq):
+def compare_candidates(req: CompareReq, ent: dict = Depends(require_enterprise)):
     """
     候选人对比 — 支持同时对比 2-10 个候选人（前端可配置上限）
 
@@ -256,7 +283,7 @@ def compare_candidates(req: CompareReq):
         rows = (session.query(MatchRecord, Jobseeker, Job)
                 .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
                 .join(Job, MatchRecord.job_id == Job.id, isouter=True)
-                .filter(MatchRecord.id.in_(req.ids))
+                .filter(MatchRecord.id.in_(req.ids), Job.enterprise_id == ent['user_id'])
                 .all())
 
         if len(rows) < 2:
@@ -310,7 +337,7 @@ def compare_candidates(req: CompareReq):
 
 
 @router.post('/candidates/deep-compare')
-def deep_compare_candidates(req: CompareReq):
+def deep_compare_candidates(req: CompareReq, ent: dict = Depends(require_enterprise)):
     """
     候选人 AI 深度对比 — 基于 DeerFlow 编排的多 Agent 协同分析
 
@@ -336,7 +363,7 @@ def deep_compare_candidates(req: CompareReq):
         rows = (session.query(MatchRecord, Jobseeker, Job)
                 .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
                 .join(Job, MatchRecord.job_id == Job.id, isouter=True)
-                .filter(MatchRecord.id.in_(req.ids))
+                .filter(MatchRecord.id.in_(req.ids), Job.enterprise_id == ent['user_id'])
                 .all())
 
         if len(rows) < 2:
@@ -367,7 +394,7 @@ def deep_compare_candidates(req: CompareReq):
 
 
 @router.get('/dashboard')
-def dashboard():
+def dashboard(ent: dict = Depends(require_enterprise)):
     """
     企业仪表盘汇总数据 — 全部来自 jobs / match_records 真实表数据
     返回结构:
@@ -389,24 +416,30 @@ def dashboard():
           }
         }
     """
+    eid = ent['user_id']
     session = get_session()
     try:
+        # 所有统计都限定在本企业岗位内，避免把别家企业的候选人数算进来
+        own_job_ids = [j.id for j in session.query(Job.id).filter(Job.enterprise_id == eid).all()]
+        own_job_ids = own_job_ids or [-1]
         # ── 指标卡数据 ──
-        active_jobs = session.query(Job).filter(Job.status == 'active').count()
+        active_jobs = session.query(Job).filter(Job.status == 'active', Job.enterprise_id == eid).count()
         # 匹配候选人总数（去重 jobseeker_id）
         total_candidates = (session.query(MatchRecord.jobseeker_id)
+                            .filter(MatchRecord.job_id.in_(own_job_ids))
                             .distinct().count())
         # 高匹配度候选人数（match_score >= 85）
         high_match = (session.query(MatchRecord)
-                      .filter(MatchRecord.match_score >= 85).count())
+                      .filter(MatchRecord.match_score >= 85, MatchRecord.job_id.in_(own_job_ids)).count())
         # 待处理沟通：独立候选人数（去重 jobseeker_id）
         # 注：同一求职者匹配多个岗位会产生多条 pending 记录，但对 HR 而言"待联系的人"才是有意义的指标
         pending_count = (session.query(MatchRecord.jobseeker_id)
-                         .filter(MatchRecord.status == 'pending')
+                         .filter(MatchRecord.status == 'pending', MatchRecord.job_id.in_(own_job_ids))
                          .distinct().count())
 
         # ── 近期岗位（按创建时间倒序，前 5 条，批量查候选人数）──
         recent_jobs_rows = (session.query(Job)
+                            .filter(Job.enterprise_id == eid)
                             .order_by(Job.created_at.desc())
                             .limit(5).all())
         rj_ids = [j.id for j in recent_jobs_rows]
@@ -424,9 +457,12 @@ def dashboard():
 
         # ── 匹配度分布（high 已在上面算过 high_match，复用）──
         mid = session.query(MatchRecord).filter(
-            MatchRecord.match_score >= 60, MatchRecord.match_score < 85
+            MatchRecord.match_score >= 60, MatchRecord.match_score < 85,
+            MatchRecord.job_id.in_(own_job_ids),
         ).count()
-        low = session.query(MatchRecord).filter(MatchRecord.match_score < 60).count()
+        low = session.query(MatchRecord).filter(
+            MatchRecord.match_score < 60, MatchRecord.job_id.in_(own_job_ids),
+        ).count()
 
         return {
             'success': True,
@@ -453,6 +489,7 @@ def list_enterprise_jobs(
     status: str = Query('', description='按状态过滤: active/closed/draft'),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
+    ent: dict = Depends(require_enterprise),
 ):
     """
     企业岗位列表（带候选人数） — 供 JobManage 页面使用
@@ -467,7 +504,7 @@ def list_enterprise_jobs(
     """
     session = get_session()
     try:
-        q = session.query(Job)
+        q = session.query(Job).filter(Job.enterprise_id == ent['user_id'])
         if status:
             q = q.filter(Job.status == status)
 
@@ -503,8 +540,6 @@ def list_enterprise_jobs(
 
 # ─── 岗位 CRUD：支撑岗位管理页面的发布/编辑/查看/状态切换 ────────────────
 
-# 默认企业 ID（demo 阶段未接 JWT 用户上下文，统一归属 id=1 的企业）
-DEFAULT_ENTERPRISE_ID = 1
 
 
 class JobCreateReq(BaseModel):
@@ -549,7 +584,7 @@ def _job_to_dict(j: Job, candidates: Optional[int] = None) -> dict:
 
 
 @router.post('/jobs')
-def create_job(req: JobCreateReq):
+def create_job(req: JobCreateReq, ent: dict = Depends(require_enterprise)):
     """
     创建岗位 — 供"发布新岗位"按钮调用
     成功返回新岗位详情（含 candidates=0）
@@ -561,7 +596,7 @@ def create_job(req: JobCreateReq):
     session = get_session()
     try:
         job = Job(
-            enterprise_id=DEFAULT_ENTERPRISE_ID,
+            enterprise_id=ent['user_id'],
             title=req.title,
             description=req.description,
             location=req.location,
@@ -589,22 +624,22 @@ def create_job(req: JobCreateReq):
 
 
 @router.get('/jobs/{job_id}')
-def get_job(job_id: int):
+def get_job(job_id: int, ent: dict = Depends(require_enterprise)):
     """
     岗位详情 — 供"查看"按钮调用
     返回完整字段 + 候选人数
     """
     session = get_session()
     try:
-        job = session.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+        job = _own_job(session, job_id, ent['user_id'])
         cnt = session.query(MatchRecord).filter(MatchRecord.job_id == job_id).count()
         return {
             'success': True,
             'data': _job_to_dict(job, candidates=cnt),
             'message': 'ok',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         return _err('INTERNAL_ERROR', f'查询岗位详情失败: {e}')
     finally:
@@ -612,7 +647,7 @@ def get_job(job_id: int):
 
 
 @router.put('/jobs/{job_id}')
-def update_job(job_id: int, req: JobCreateReq):
+def update_job(job_id: int, req: JobCreateReq, ent: dict = Depends(require_enterprise)):
     """
     更新岗位 — 供"编辑"按钮调用
     所有字段全量更新
@@ -622,9 +657,7 @@ def update_job(job_id: int, req: JobCreateReq):
 
     session = get_session()
     try:
-        job = session.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+        job = _own_job(session, job_id, ent['user_id'])
 
         job.title = req.title
         job.description = req.description
@@ -645,6 +678,8 @@ def update_job(job_id: int, req: JobCreateReq):
             'data': _job_to_dict(job, candidates=cnt),
             'message': f'岗位「{job.title}」已更新',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         return _err('UPDATE_JOB_ERROR', f'更新岗位失败: {e}')
@@ -653,7 +688,7 @@ def update_job(job_id: int, req: JobCreateReq):
 
 
 @router.patch('/jobs/{job_id}/status')
-def update_job_status(job_id: int, req: JobStatusReq):
+def update_job_status(job_id: int, req: JobStatusReq, ent: dict = Depends(require_enterprise)):
     """
     修改岗位状态 — 供"关闭岗位/重新开放"按钮调用
     仅修改 status 字段
@@ -663,9 +698,7 @@ def update_job_status(job_id: int, req: JobStatusReq):
 
     session = get_session()
     try:
-        job = session.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+        job = _own_job(session, job_id, ent['user_id'])
 
         job.status = req.status
         session.commit()
@@ -676,6 +709,8 @@ def update_job_status(job_id: int, req: JobStatusReq):
             'data': _job_to_dict(job, candidates=cnt),
             'message': f'岗位状态已更新为「{_status_label(req.status)}」',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         return _err('UPDATE_STATUS_ERROR', f'更新状态失败: {e}')
@@ -684,16 +719,14 @@ def update_job_status(job_id: int, req: JobStatusReq):
 
 
 @router.delete('/jobs/{job_id}')
-def delete_job(job_id: int):
+def delete_job(job_id: int, ent: dict = Depends(require_enterprise)):
     """
     删除岗位 — 同时清理关联的匹配记录
     供"删除"按钮调用
     """
     session = get_session()
     try:
-        job = session.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
+        job = _own_job(session, job_id, ent['user_id'])
 
         title = job.title
         # 先删除关联的匹配记录（外键约束）
@@ -705,6 +738,8 @@ def delete_job(job_id: int):
             'data': {'id': job_id},
             'message': f'岗位「{title}」已删除',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         return _err('DELETE_JOB_ERROR', f'删除岗位失败: {e}')
@@ -726,7 +761,8 @@ class SendMessageReq(BaseModel):
 
 
 @router.get('/messages/{match_record_id}')
-def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Query(50, ge=1, le=200)):
+def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Query(50, ge=1, le=200),
+                 ent: dict = Depends(require_enterprise)):
     """
     获取沟通消息列表 — 按时间正序（旧→新），支持分页
 
@@ -743,10 +779,8 @@ def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Q
     """
     session = get_session()
     try:
-        # 验证 match_record 存在
-        mr = session.query(MatchRecord).filter(MatchRecord.id == match_record_id).first()
-        if not mr:
-            return _err('MATCH_NOT_FOUND', f'匹配记录不存在: id={match_record_id}')
+        # 会话必须属于本企业岗位
+        _own_record(session, match_record_id, ent['user_id'])
 
         total = session.query(Message).filter(Message.match_record_id == match_record_id).count()
         msgs = (session.query(Message)
@@ -773,6 +807,8 @@ def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Q
             },
             'message': 'ok',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         return _err('GET_MESSAGES_ERROR', f'获取消息失败: {e}')
     finally:
@@ -780,7 +816,7 @@ def get_messages(match_record_id: int, page: int = Query(1, ge=1), size: int = Q
 
 
 @router.post('/messages')
-def send_message(req: SendMessageReq):
+def send_message(req: SendMessageReq, ent: dict = Depends(require_enterprise)):
     """
     发送沟通消息 — 企业端发起沟通或回复
 
@@ -788,15 +824,12 @@ def send_message(req: SendMessageReq):
     """
     session = get_session()
     try:
-        # 验证 match_record 存在
-        mr = session.query(MatchRecord).filter(MatchRecord.id == req.match_record_id).first()
-        if not mr:
-            return _err('MATCH_NOT_FOUND', f'匹配记录不存在: id={req.match_record_id}')
+        mr = _own_record(session, req.match_record_id, ent['user_id'])
 
         msg = Message(
             match_record_id=req.match_record_id,
             sender_type='enterprise',   # 企业端发送
-            sender_id=mr.job_id,        # 记录发布岗位的企业
+            sender_id=ent['user_id'],   # 发送者是企业（此前误记成了岗位 id）
             content=req.content,
             is_read=0,
         )
@@ -820,6 +853,8 @@ def send_message(req: SendMessageReq):
             },
             'message': '消息已发送',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         return _err('SEND_MESSAGE_ERROR', f'发送消息失败: {e}')
@@ -828,13 +863,14 @@ def send_message(req: SendMessageReq):
 
 
 @router.post('/messages/read')
-def mark_messages_read(match_record_id: int):
+def mark_messages_read(match_record_id: int, ent: dict = Depends(require_enterprise)):
     """
     将指定对话中所有来自求职者的消息标记为已读。
     在用户打开聊天对话框时调用。
     """
     session = get_session()
     try:
+        _own_record(session, match_record_id, ent['user_id'])
         session.query(Message).filter(
             Message.match_record_id == match_record_id,
             Message.sender_type == 'jobseeker',
@@ -842,6 +878,8 @@ def mark_messages_read(match_record_id: int):
         ).update({'is_read': 1}, synchronize_session=False)
         session.commit()
         return {'success': True, 'data': {'match_record_id': match_record_id}, 'message': '已读'}
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         return _err('MARK_READ_ERROR', f'标记已读失败: {e}')
@@ -850,7 +888,8 @@ def mark_messages_read(match_record_id: int):
 
 
 @router.get('/conversations')
-def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100)):
+def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
+                      ent: dict = Depends(require_enterprise)):
     """
     获取沟通对话列表 — 按最后消息时间倒序，类似微信聊天列表
 
@@ -910,7 +949,8 @@ def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le
             .join(Jobseeker, MatchRecord.jobseeker_id == Jobseeker.id)
             .join(Job, MatchRecord.job_id == Job.id, isouter=True)
             .join(last_msg_subq, MatchRecord.id == last_msg_subq.c.match_record_id, isouter=True)
-            .filter(MatchRecord.status == 'communicating')  # 只展示已有沟通消息的对话
+            .filter(MatchRecord.status == 'communicating',
+                    Job.enterprise_id == ent['user_id'])  # 只看本企业岗位的对话
             .order_by(sa_func.coalesce(last_msg_subq.c.last_time, MatchRecord.updated_at).desc())
             .offset((page - 1) * size)
             .limit(size)
@@ -920,14 +960,18 @@ def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le
         # 总对话数
         total = (
             session.query(MatchRecord)
-            .filter(MatchRecord.status == 'communicating')
+            .join(Job, MatchRecord.job_id == Job.id)
+            .filter(MatchRecord.status == 'communicating', Job.enterprise_id == ent['user_id'])
             .count()
         )
 
         # 总未读（企业视角：sender_type='jobseeker' 且 is_read=0）
         unread_total = (
             session.query(sa_func.count(Message.id))
-            .filter(Message.sender_type == 'jobseeker', Message.is_read == 0)
+            .join(MatchRecord, Message.match_record_id == MatchRecord.id)
+            .join(Job, MatchRecord.job_id == Job.id)
+            .filter(Message.sender_type == 'jobseeker', Message.is_read == 0,
+                    Job.enterprise_id == ent['user_id'])
             .scalar()
         ) or 0
 
@@ -993,16 +1037,13 @@ def _split_skills(raw):
 
 
 @router.get('/market-graph')
-def market_graph(token: str = Query('', description='企业端 JWT')):
+def market_graph(ent: dict = Depends(require_enterprise)):
     """市场洞察二维图谱 — 三层节点，从本公司在招岗位（HR 需求）出发：
     OwnJob(enterprise_jobs active) → Skill(skills_required) → 市场属性
     （市场需求数 / 人才池供给 / 市场均价 / 涨跌 / Neo4j 热度）。
     主体为 SQL + 内存聚合；Neo4j hot_score 仅作增强，连不上自动降级。
     """
-    payload = verify_token(token) if token else None
-    if not payload or payload.get('role') != 'enterprise':
-        return _err('UNAUTHORIZED', '需要企业端登录')
-    eid = payload.get('user_id')
+    eid = ent['user_id']
 
     session = get_session()
     try:

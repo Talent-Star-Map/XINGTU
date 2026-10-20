@@ -9,11 +9,12 @@
 @owner: 张boy（人岗匹配模块）
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 from urllib.parse import quote
 
+from auth_guard import require_jobseeker
 from database import get_session, CrawledJob, Job, Jobseeker, Enterprise, MatchRecord, Message
 
 router = APIRouter(prefix='/api/apply', tags=['apply'])
@@ -76,7 +77,7 @@ def _channel_payload(job: CrawledJob, ent: Optional[Enterprise]) -> dict:
 
 
 @router.get('/channel/{job_id}')
-def get_apply_channel(job_id: int):
+def get_apply_channel(job_id: int, me: dict = Depends(require_jobseeker)):
     """投递渠道判定 — 企业入驻星图走站内投递，否则跳转原招聘网站"""
     session = get_session()
     try:
@@ -92,7 +93,7 @@ def get_apply_channel(job_id: int):
 
 
 class ApplyReq(BaseModel):
-    jobseeker_id: int = Field(..., description='求职者 ID（xingtu_user.id）')
+    # 身份只认 token：此前这里收 jobseeker_id，等于允许替别人投递
     message: str = Field('', max_length=2000, description='附言，默认为标准投递语')
 
 
@@ -125,8 +126,9 @@ def _mirror_to_enterprise_job(session, job: CrawledJob, enterprise_id: int) -> J
 
 
 @router.post('/{job_id}')
-def apply_job(job_id: int, req: ApplyReq):
+def apply_job(job_id: int, req: ApplyReq, me: dict = Depends(require_jobseeker)):
     """站内投递 — 仅入驻企业可用；成功后企业端「消息」列表立即可见"""
+    seeker_id = me['user_id']
     session = get_session()
     try:
         job = session.query(CrawledJob).filter(CrawledJob.id == job_id, CrawledJob.data_type == 1).first()
@@ -139,24 +141,24 @@ def apply_job(job_id: int, req: ApplyReq):
             return _err('NOT_ONBOARDED', '该企业未入驻星图，请前往原招聘网站投递',
                         {'source': job.source or '', 'source_url': job.source_url or '', 'jump_url': _jump_url(job)})
 
-        seeker = session.query(Jobseeker).filter(Jobseeker.id == req.jobseeker_id).first()
+        seeker = session.query(Jobseeker).filter(Jobseeker.id == seeker_id).first()
         if not seeker:
-            return _err('SEEKER_NOT_FOUND', f'求职者不存在: id={req.jobseeker_id}')
+            return _err('SEEKER_NOT_FOUND', '求职者账号不存在')
 
         ent_job = _mirror_to_enterprise_job(session, job, ent.id)
 
         # 同一人对同一岗位重复投递 → 复用已有 match_record，追加消息
         mr = (session.query(MatchRecord)
-              .filter(MatchRecord.job_id == ent_job.id, MatchRecord.jobseeker_id == req.jobseeker_id)
+              .filter(MatchRecord.job_id == ent_job.id, MatchRecord.jobseeker_id == seeker_id)
               .first())
         if not mr:
-            mr = MatchRecord(job_id=ent_job.id, jobseeker_id=req.jobseeker_id, status='communicating')
+            mr = MatchRecord(job_id=ent_job.id, jobseeker_id=seeker_id, status='communicating')
             session.add(mr)
             session.flush()
 
         content = req.message.strip() or f'您好，我对贵司「{ent_job.title}」岗位很感兴趣，已投递简历，期待与您沟通。'
         msg = Message(match_record_id=mr.id, sender_type='jobseeker',
-                      sender_id=req.jobseeker_id, content=content, is_read=0)
+                      sender_id=seeker_id, content=content, is_read=0)
         session.add(msg)
         if mr.status == 'pending':
             mr.status = 'communicating'
@@ -179,8 +181,9 @@ def apply_job(job_id: int, req: ApplyReq):
 
 
 @router.get('/status')
-def apply_status(job_id: int = Query(...), jobseeker_id: int = Query(...)):
-    """查询某岗位是否已投递过（详情页按钮态用）"""
+def apply_status(job_id: int = Query(...), me: dict = Depends(require_jobseeker)):
+    """查询某岗位是否已投递过（详情页按钮态用，只查本人）"""
+    jobseeker_id = me['user_id']
     session = get_session()
     try:
         job = session.query(CrawledJob).filter(CrawledJob.id == job_id).first()

@@ -4,6 +4,7 @@
 """
 import os
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
 import bcrypt, random, re, smtplib, uuid
@@ -12,6 +13,19 @@ from email.mime.text import MIMEText
 router = APIRouter(prefix='/api/auth', tags=['auth'])
 
 SMTP_HOST = 'smtp.qq.com'; SMTP_PORT = 465; SMTP_USER = '3757913901@qq.com'; SMTP_PASS = os.getenv('SMTP_PASSWORD', '')
+
+def _require_jobseeker(token: str | None) -> dict:
+    """简历相关接口只允许求职者访问（企业/管理员 token 不共用同一 id 空间）"""
+    if not token:
+        raise HTTPException(401, '未登录或缺少 token')
+    try:
+        payload = verify_token(token)
+    except ValueError as e:
+        raise HTTPException(401, str(e))
+    if payload.get('role') != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
+    return payload
+
 
 class RegisterReq(BaseModel):
     account: str; password: str; code: str; role: str = 'jobseeker'; username: str = ''
@@ -150,8 +164,7 @@ MAX_FILE_SIZE = {
 
 @router.post('/resume-parse')
 async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
-    try: payload = verify_token(token)
-    except ValueError as e: raise HTTPException(401, str(e))
+    payload = _require_jobseeker(token)
     ext = file.filename.split('.')[-1].lower() if '.' in (file.filename or '') else ''
     if ext not in ('pdf', 'docx', 'doc', 'txt'): raise HTTPException(400, '仅支持 pdf/docx/doc/txt')
 
@@ -178,8 +191,7 @@ async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
 
 @router.get('/resume-history')
 def resume_history(token: str = Query(...)):
-    try: payload = verify_token(token)
-    except ValueError as e: raise HTTPException(401, str(e))
+    payload = _require_jobseeker(token)
     uid = payload['user_id']
     import glob as _glob
     import json as _json
@@ -209,8 +221,7 @@ def resume_history(token: str = Query(...)):
 
 @router.post('/resume-reparse')
 def resume_reparse(filename: str = Query(...), token: str = Query(...)):
-    try: payload = verify_token(token)
-    except ValueError as e: raise HTTPException(401, str(e))
+    payload = _require_jobseeker(token)
     uid = payload['user_id']
     safe = os.path.basename(filename)
     if not safe.startswith(f'{uid}_'): raise HTTPException(403, '无权访问')
@@ -226,8 +237,7 @@ def resume_reparse(filename: str = Query(...), token: str = Query(...)):
 
 @router.delete('/resume-delete')
 def resume_delete(filename: str = Query(...), token: str = Query(...)):
-    try: payload = verify_token(token)
-    except ValueError as e: raise HTTPException(401, str(e))
+    payload = _require_jobseeker(token)
     uid = payload['user_id']
     safe = os.path.basename(filename)
     if not safe.startswith(f'{uid}_'): raise HTTPException(403, '无权删除')
@@ -238,3 +248,21 @@ def resume_delete(filename: str = Query(...), token: str = Query(...)):
             os.remove(p)
             deleted.append(os.path.basename(p))
     return {'success': True, 'message': f'已删除 {len(deleted)} 个文件', 'data': deleted}
+
+
+@router.get('/resume-file')
+def resume_file(filename: str = Query(...), token: str | None = Query(None)):
+    """下载自己上传的简历附件
+
+    以前 /uploads 整目录是 StaticFiles 公开挂载的，知道文件名就能绕过登录下载别人简历。
+    现在只暴露 avatars，简历文件必须走这里校验归属。
+    """
+    payload = _require_jobseeker(token)
+    uid = payload['user_id']
+    safe = os.path.basename(filename or '')
+    if not safe or not safe.startswith(f'{uid}_'):
+        raise HTTPException(403, '无权访问该文件')
+    path = os.path.join(UPLOAD_DIR, 'resumes', safe)
+    if not os.path.exists(path):
+        raise HTTPException(404, '文件不存在')
+    return FileResponse(path, filename=safe)

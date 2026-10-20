@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Send, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { withToken } from '../lib/authFetch'
 
 interface Message {
   id: number
@@ -35,21 +36,12 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
   const scrollRef = useRef<HTMLDivElement>(null)
   const apiBase = role === 'jobseeker' ? '/api/jobseeker' : '/api/enterprise'
 
-  // 求职者端接口需要带自己的 id 做会话归属校验
-  const seekerId = (() => {
-    if (role !== 'jobseeker') return null
-    try {
-      const u = JSON.parse(localStorage.getItem('xingtu_user') || 'null')
-      return u?.id ?? null
-    } catch { return null }
-  })()
-
   // 加载消息历史
   const loadMessages = async () => {
     setLoading(true)
     try {
-      const qs = role === 'jobseeker' ? `?size=100&jobseeker_id=${seekerId}` : '?size=100'
-      const r = await fetch(`${apiBase}/messages/${matchRecordId}${qs}`)
+      // 身份由 token 决定，不再把 jobseeker_id 放进 URL
+      const r = await fetch(withToken(`${apiBase}/messages/${matchRecordId}?size=100`))
       const d = await r.json()
       if (d.success && d.data) {
         setMessages(d.data.messages)
@@ -67,10 +59,7 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
       loadMessages()
       setInput('')
       // 标记已读 — 完成后广播事件，导航栏/列表的红点立即刷新（否则要等轮询）
-      const readQs = role === 'jobseeker'
-        ? `?match_record_id=${matchRecordId}&jobseeker_id=${seekerId}`
-        : `?match_record_id=${matchRecordId}`
-      fetch(`${apiBase}/messages/read${readQs}`, { method: 'POST' })
+      fetch(withToken(`${apiBase}/messages/read?match_record_id=${matchRecordId}`), { method: 'POST' })
         .then(() => window.dispatchEvent(new Event('xingtu:msg-read')))
         .catch(() => {})
     }
@@ -92,10 +81,8 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
     setInput('')
     try {
       // 求职端与企业端统一 POST /messages（路径带 {id} 会抢走 /messages/read 的匹配）
-      const url = `${apiBase}/messages`
-      const body = role === 'jobseeker'
-        ? { match_record_id: matchRecordId, jobseeker_id: seekerId, content: text }
-        : { match_record_id: matchRecordId, content: text }
+      const url = withToken(`${apiBase}/messages`)
+      const body = { match_record_id: matchRecordId, content: text }
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

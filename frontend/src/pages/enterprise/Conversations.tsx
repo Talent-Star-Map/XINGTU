@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, MessageSquare, ChevronRight } from 'lucide-react'
 import ChatDialog from '../../components/ChatDialog'
+import { withToken } from '../../lib/authFetch'
 
 // 对话类型
 interface Conversation {
@@ -40,7 +41,7 @@ export default function Conversations() {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch('/api/enterprise/conversations?size=100')
+      const r = await fetch(withToken('/api/enterprise/conversations?size=100'))
       const d = await r.json()
       if (d.success && d.data) {
         setConversations(d.data.conversations)

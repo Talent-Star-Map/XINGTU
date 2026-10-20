@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Loader2, Briefcase, Users, TrendingUp, MessageSquare, BarChart3, Rocket, Search, FileText } from 'lucide-react'
 import { EPNav } from '../../lib/NavContext'
+import { withToken } from '../../lib/authFetch'
 
 interface DashboardData {
   metrics: {
@@ -43,7 +44,7 @@ export default function Dashboard() {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch('/api/enterprise/dashboard')
+      const r = await fetch(withToken('/api/enterprise/dashboard'))
       const d = await r.json()
       if (d.success) setData(d.data)
       else setError(d.error?.message || '加载失败')
