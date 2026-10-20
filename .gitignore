@@ -66,3 +66,6 @@ tmp/
 
 # Local project documentation
 /docs/
+
+# Local instructions for coding assistants
+/AGENTS.md
