@@ -95,6 +95,10 @@ npm run dev
 | `learning_progress` | 学习进度（按用户+岗位+技能） | SQL 直接操作 |
 | `skill_resources` | 技能学习资源（管理员后台维护，33 技能 88 条） | `database.py::SkillResource` |
 | `llm_configs` | 模型配置表（管理员端「模型配置」页面维护，LLM 路由层读取） | `database.py::LlmConfig` |
+| `resumes` | 简历主表（求职者端简历中心） | `database.py::Resume` |
+| `resume_sections` | 简历区块内容（content 存 JSON） | `database.py::ResumeSection` |
+| `resume_shares` | 简历分享链接（token/有效期/访问次数） | `database.py::ResumeShare` |
+| `resume_templates` | 简历模板（50 套，管理员上下架） | `database.py::ResumeTemplate` |
 
 > ⚠️ **注意 `jobs` 和 `enterprise_jobs` 是两张不同的表**：
 > - `jobs` = 爬虫采集的真实市场岗位（求职者端浏览）
@@ -142,7 +146,7 @@ python tests/test_our_modules.py   # 纯函数单测     20 PASS
 python tests/test_quality.py       # 质检模块单测   14 PASS
 ```
 
-测试集在 `backend/test_data/`（104 条 JD + 100 条简历 + 100 组匹配对），口径细节见 `docs/作品设计实现方案书.md` §8。
+测试集在 `backend/test_data/`（104 条 JD + 100 条简历 + 100 组匹配对），口径细节见 `docs/JOBMATCH-LOGIC.md` 与各脚本头部注释。
 
 ---
 
