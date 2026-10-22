@@ -2,10 +2,13 @@ import { useEffect, useState, useRef } from 'react'
 import {
   User, Loader2, Edit3, Mail, Phone, MapPin, GraduationCap, Briefcase, Target,
   Save, CheckCircle, AlertCircle, X, Camera, Upload, Plus, Trash2, ExternalLink,
-  Link2, Star, Building, FileText, Activity,
+  Link2, Star, Building, FileText, Activity, Code2, Globe,
 } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import ProfileSidebar from '../../components/ProfileSidebar'
+import {
+  WorkSection, EducationSection, ProjectsSection, SkillsSection,
+} from '../../components/profile/ProfileResumeSections'
 
 // ── helpers ──
 function df(val: string | null | undefined, fb = '未填写'): string { return val?.trim() || fb }
@@ -28,11 +31,35 @@ export default function ProfileHome() {
   const [errors, setErrors] = useState<string[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [avatarUploading, setAvatarUploading] = useState(false)
+  // 简历内容（工作/教育/项目/技能）：与简历中心读同一份数据，字段天然对齐
+  const [resume, setResume] = useState<{ id: any; title: string; sections: any[] } | null>(null)
+  const [resumeLoading, setResumeLoading] = useState(true)
+  const [resumeError, setResumeError] = useState('')
   const [avatarError, setAvatarError] = useState(false)
   const avatarRef = useRef<HTMLInputElement>(null)
   const resumeRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { fetchProfile() }, [])
+  useEffect(() => { fetchProfile(); fetchResume() }, [])
+
+  /** 取最近一份简历的详情：个人主页的经历类信息全部来自这里 */
+  const fetchResume = async () => {
+    const token = localStorage.getItem('xingtu_token')
+    if (!token) { setResumeLoading(false); return }
+    try {
+      const lr = await fetch(`/api/resume-center/list?token=${token}`).then(r => r.json())
+      const list: any[] = lr.success ? (lr.data || []) : []
+      if (!list.length) { setResume(null); return }
+      const latest = [...list].sort((a, b) =>
+        (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || ''))[0]
+      const dr = await fetch(`/api/resume-center/${latest.id}?token=${token}`).then(r => r.json())
+      if (dr.success) setResume(dr.data)
+      else setResumeError(dr.error?.message || '读取简历失败')
+    } catch {
+      setResumeError('读取简历失败')
+    } finally {
+      setResumeLoading(false)
+    }
+  }
 
   const fetchProfile = () => {
     const token = localStorage.getItem('xingtu_token')
@@ -118,7 +145,21 @@ export default function ProfileHome() {
   const name = p.real_name?.trim() || p.username || '未登录用户'
   const filledCount = ['real_name','phone','education','school','city','target_city','target_position','experience','bio'].filter(k => hasVal(p[k])).length
   const pct = Math.round((filledCount / 9) * 100)
-  const skillsArr: string[] = p.skills ? p.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []
+  const skillsArr: string[] = p.skills ? p.skills.split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : []
+  const secContent = (t: string) =>
+    (resume?.sections || []).find((x: any) => (x.section_type || x.type) === t)?.content || {}
+  const workItems = secContent('work_experience').items || []
+  const eduItems = secContent('education').items || []
+  const skillCats = secContent('skills').categories || []
+  const resumePersonal = secContent('personal_info') || {}
+  // 项目优先用简历里的（有起止/技术栈/亮点）；没有简历时退回账号里存的项目
+  const projItems = (secContent('projects').items || []).length
+    ? secContent('projects').items
+    : projects.map(x => ({
+        name: x.name, url: x.url, description: x.desc,
+        highlights: x.role ? [`职责：${x.role}`] : [],
+      }))
+  const gotoResume = () => setPage('resume-center')
   const userStr = localStorage.getItem('xingtu_user')
   const userData = userStr ? JSON.parse(userStr) : null
   const contact = p.email?.trim() || p.phone?.trim() || '暂无联系方式'
@@ -164,6 +205,25 @@ export default function ProfileHome() {
                       {p.email && <span className="flex items-center gap-1.5"><Mail className="h-4 w-4" />{p.email}</span>}
                       {p.phone && <span className="flex items-center gap-1.5"><Phone className="h-4 w-4" />{p.phone}</span>}
                       {p.city && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" />{p.city}</span>}
+                      {resumePersonal.github && (
+                        <a href={resumePersonal.github.startsWith('http') ? resumePersonal.github : `https://github.com/${resumePersonal.github}`}
+                          target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:underline"
+                          style={{ color: 'var(--color-primary)' }}>
+                          <Code2 className="h-4 w-4" />GitHub
+                        </a>
+                      )}
+                      {resumePersonal.website && (
+                        <a href={resumePersonal.website} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 hover:underline" style={{ color: 'var(--color-primary)' }}>
+                          <Globe className="h-4 w-4" />个人网站
+                        </a>
+                      )}
+                      {resumePersonal.linkedin && (
+                        <a href={resumePersonal.linkedin} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 hover:underline" style={{ color: 'var(--color-primary)' }}>
+                          <Link2 className="h-4 w-4" />LinkedIn
+                        </a>
+                      )}
                     </div>
                     <p className="text-sm mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
                       {p.target_position || p.education ? [p.target_position, p.education].filter(Boolean).join(' · ') : '未设置岗位和学历'}
@@ -216,25 +276,48 @@ export default function ProfileHome() {
             </div>
           </section>
 
+          {/* 简历内容读的是「最近一份」，读失败或还没简历时下面各区块给空态 */}
+          {resumeLoading && (
+            <div className="rounded-2xl border px-6 py-4 flex items-center gap-2 text-sm"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', color: 'var(--color-on-surface-variant)' }}>
+              <Loader2 className="h-4 w-4 animate-spin" /> 正在读取简历内容…
+            </div>
+          )}
+          {!resumeLoading && resumeError && (
+            <div className="rounded-2xl border px-6 py-4 flex items-center justify-between gap-3 text-sm flex-wrap"
+              style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}>
+              <span>简历内容读取失败：{resumeError}</span>
+              <button onClick={fetchResume} className="text-xs font-semibold underline">重试</button>
+            </div>
+          )}
+
+          {/* ── 工作经历：来自最近一份简历，字段与简历中心完全一致 ── */}
+          <WorkSection items={workItems} onEdit={gotoResume} />
+
           {/* ── 教育背景 ── */}
-          <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black" style={{ color: 'var(--color-on-surface)' }}>教育背景</h3>
-                <button onClick={openModal} className="p-1.5 rounded-lg transition-colors" title="编辑"
-                  style={{ color: 'var(--color-on-surface-variant)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--color-primary)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
+          {eduItems.length ? (
+            <EducationSection items={eduItems} onEdit={gotoResume} />
+          ) : (
+            <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-black" style={{ color: 'var(--color-on-surface)' }}>教育背景</h3>
+                  <button onClick={openModal} className="p-1.5 rounded-lg transition-colors" title="编辑"
+                    style={{ color: 'var(--color-on-surface-variant)' }}>
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField icon={GraduationCap} label="学历" value={p.education} />
-              <FormField icon={Building} label="毕业院校" value={p.school} />
-              <FormField icon={User} label="年龄" value={p.age ? `${p.age}岁` : ''} />
-            </div>
-          </section>
+              <div className="grid grid-cols-3 gap-4">
+                <FormField icon={GraduationCap} label="学历" value={p.education} />
+                <FormField icon={Building} label="毕业院校" value={p.school} />
+                <FormField icon={User} label="年龄" value={p.age ? `${p.age}岁` : ''} />
+              </div>
+              <p className="text-xs mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>
+                简历里还没有教育经历，去简历中心补上后会显示专业、起止时间与在校经历
+              </p>
+            </section>
+          )}
 
           {/* ── 个人简介 ── */}
           <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
@@ -258,71 +341,11 @@ export default function ProfileHome() {
             )}
           </section>
 
-          {/* ── 技能标签 ── */}
-          <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-black" style={{ color: 'var(--color-on-surface)' }}>技能标签</h3>
-              <button onClick={openModal} className="p-1.5 rounded-lg transition-colors" title="编辑"
-                style={{ color: 'var(--color-on-surface-variant)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--color-primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
-                <Edit3 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {skillsArr.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {skillsArr.map(s => (
-                  <span key={s} className="px-3 py-1.5 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>{s}</span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm italic" style={{ color: 'var(--color-on-surface-variant)' }}>点击 <button onClick={openModal} className="underline cursor-pointer" style={{ color: 'var(--color-primary)' }}>编辑资料</button> 添加技能标签，或上传简历自动填充</p>
-            )}
-          </section>
+          {/* ── 技能特长：按简历里的分类展示 ── */}
+          <SkillsSection categories={skillCats} flat={skillsArr} onEdit={gotoResume} />
 
-          {/* ── 项目贡献（GitHub 风格） ── */}
-          <section className="rounded-2xl border p-8" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                <Link2 className="h-5 w-5" /> 项目贡献
-              </h3>
-              <button onClick={openModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ color: 'var(--color-primary)', background: 'var(--color-primary-fixed)' }}>
-                <Plus className="h-3.5 w-3.5" /> 添加项目
-              </button>
-            </div>
-
-            {projects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {projects.map((proj, i) => (
-                  <div key={i} className="rounded-xl border p-5 transition-colors" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                          {proj.url ? (
-                            <a href={proj.url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 hover:underline"
-                              style={{ color: 'var(--color-primary)' }}>
-                              {proj.name || '未命名项目'} <ExternalLink className="h-3 w-3" />
-                            </a>
-                          ) : (
-                            proj.name || '未命名项目'
-                          )}
-                        </h4>
-                        {proj.role && <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>职责：{proj.role}</p>}
-                        {proj.desc && <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--color-on-surface-variant)' }}>{proj.desc}</p>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm italic" style={{ color: 'var(--color-on-surface-variant)' }}>
-                还没有添加项目，点击 <button onClick={openModal} className="underline cursor-pointer" style={{ color: 'var(--color-primary)' }}>编辑资料</button> 添加你的项目经历和 GitHub 仓库链接
-              </p>
-            )}
-          </section>
+          {/* ── 项目经历：来自最近一份简历 ── */}
+          <ProjectsSection items={projItems} onEdit={gotoResume} />
         </div>
       </div>
 
