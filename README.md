@@ -143,7 +143,7 @@ python tests/test_jd_parser.py      # JD 技能解析   F1 0.9553（104 条 JD�
 python tests/test_resume.py         # 简历技能提取   F1 0.9633（100 条简历）
 python tests/test_resume_fields.py  # 简历字段提取   61 项（姓名/手机/邮箱/学校/经历分条）
 python tests/test_resume_gen.py     # AI 生成不编造  57 项（事实取自资料 + 润色校验）
-python tests/test_resume_import.py  # 导入映射防脏   17 项（自我评价不会变成工作经历）
+python tests/test_resume_import.py  # 导入映射防脏   21 项（自我评价不会变成工作经历）
 python tests/test_resume_formats.py # 简历格式覆盖   5 项（图片/扫描 PDF/.doc；缺 OCR 依赖时 SKIP）
 python tests/test_job_agent.py      # 人岗匹配       Top-5 1.0000 / MRR 0.9525（全量约 7 分钟，--quick 更快）
 python tests/test_our_modules.py    # 纯函数单测     20 PASS

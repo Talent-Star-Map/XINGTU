@@ -46,6 +46,11 @@ def test_work_like():
     check('带时间的经历判为是', _looks_like_work(WORK_TEXT), True)
     check('只有公司名判为是', _looks_like_work('在某某集团做后端开发'), True)
     check('只有任职动词判为是', _looks_like_work('担任后端工程师'), True)
+    # 单个日期不算工作线索：自我评价里写毕业时间很常见
+    check('提毕业年月不算工作', _looks_like_work('2027年6月毕业，在校期间做过三个课程项目'), False)
+    check('只写年份不算工作', _looks_like_work('2023年参加过实习'), False)
+    check('纯年份区间算工作', _looks_like_work('2019-2022 在某某公司'), True)
+    check('年月区间算工作', _looks_like_work('2022年7月 - 至今 在某某公司'), True)
 
 
 def test_bio_not_becomes_work():

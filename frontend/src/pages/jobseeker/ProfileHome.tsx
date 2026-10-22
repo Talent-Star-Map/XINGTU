@@ -46,7 +46,8 @@ export default function ProfileHome() {
     const token = localStorage.getItem('xingtu_token')
     if (!token) { setResumeLoading(false); return }
     try {
-      const lr = await fetch(`/api/resume-center/list?token=${token}`).then(r => r.json())
+      // brief=1：只要 id 与时间，不拉 12 份简历的全部区块
+      const lr = await fetch(`/api/resume-center/list?brief=1&token=${token}`).then(r => r.json())
       const list: any[] = lr.success ? (lr.data || []) : []
       if (!list.length) { setResume(null); return }
       const latest = [...list].sort((a, b) =>

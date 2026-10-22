@@ -196,13 +196,29 @@ def resume_optimize(req: OptimizeReq, token: str = Depends(request_token)):
 # 简历 CRUD
 # ════════════════════════════════════════════════════════════════════
 @router.get('/list')
-def resume_list(token: str = Depends(request_token)):
-    """我的简历列表"""
+def resume_list(brief: int = Query(0, description='1=只返回 id/标题/时间，不带区块明细'),
+                token: str = Depends(request_token)):
+    """我的简历列表
+
+    brief=1 给「只想拿最新一份 id / 显示份数」的调用方（如个人主页）用：
+    不带 sections，也跳过逐份查区块的 N+1 查询，12 份简历从几百 KB 降到几 KB。
+    """
     user_id = _get_user_id(token)
     session = get_session()
     try:
         rows = session.query(Resume).filter(Resume.user_id == user_id).order_by(Resume.id.desc()).all()
-        return {'success': True, 'data': [_resume_to_dict(session, r) for r in rows], 'message': 'ok'}
+        if brief:
+            data = [{
+                'id': r.id,
+                'title': r.title,
+                'template_key': r.template_key,
+                'language': r.language,
+                'created_at': _fmt_time(r.created_at),
+                'updated_at': _fmt_time(r.updated_at or r.created_at),
+            } for r in rows]
+        else:
+            data = [_resume_to_dict(session, r) for r in rows]
+        return {'success': True, 'data': data, 'message': 'ok'}
     except Exception as e:
         return _err('QUERY_ERROR', f'查询简历失败: {e}')
     finally:
