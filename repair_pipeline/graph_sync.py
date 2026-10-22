@@ -50,6 +50,8 @@ def sync_graph(migrate=False):
                 s.run('UNWIND $rows AS row WITH row WHERE row.role IS NOT NULL MATCH (j:Job {id:row.props.id}) MERGE (c:Cluster {id:"catalog:"+row.role}) SET c.canonical_name=row.role,c.family=row.family,c.managed_by="repair_pipeline_v1" MERGE (j)-[r:BELONGS_TO]->(c) SET r.managed_by="repair_pipeline_v1"',rows=batch).consume()
             s.run('MATCH (c:Cluster {managed_by:"repair_pipeline_v1"}) OPTIONAL MATCH (c)<-[:BELONGS_TO]-(j:Job) WITH c,count(DISTINCT j) AS n SET c.member_count=n').consume()
             counts['graph_jobs']=s.run('MATCH (j:Job) RETURN count(j) AS n').single()['n']
+        from graph.explorer_projection import sync_explorer
+        counts['explorer']=sync_explorer(driver)
         return counts
     finally:
         driver.close()
