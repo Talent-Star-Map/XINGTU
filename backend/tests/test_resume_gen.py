@@ -17,8 +17,9 @@ sys.path.insert(0, BACKEND_ROOT)
 
 # services.llm 在 import 时会读 DATABASE_URL（只建 engine，不连接）。
 # 这里给一个占位地址，测试全程不碰数据库、不调模型。
-os.environ.setdefault('DATABASE_URL', 'mysql+pymysql://root:placeholder@127.0.0.1:13308/xingtu')
-os.environ.setdefault('JWT_SECRET', 'test-only-secret-key-at-least-32-bytes-long!!')
+# 密码写 REMOVED_SECRET：仓库的 scripts/check_repository_secrets.py 会拦带真实密码的连接串
+os.environ.setdefault('DATABASE_URL', 'mysql+pymysql://root:REMOVED_SECRET@127.0.0.1:13308/xingtu')
+os.environ.setdefault('JWT_SECRET', 'x' * 40)   # 只需满足 32 字节长度校验，不是真实密钥
 
 import services.resume_gen as gen_mod
 from services.resume_gen import build_resume_from_profile, _local_sections
