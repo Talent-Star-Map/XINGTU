@@ -140,7 +140,7 @@ python -c "import bcrypt; print(bcrypt.hashpw('新密码'.encode(), bcrypt.gensa
 ```bash
 cd backend
 python tests/test_jd_parser.py     # JD 技能解析   F1 0.9553（104 条 JD）
-python tests/test_resume.py        # 简历技能提取   F1 0.9533（100 条简历）
+python tests/test_resume.py        # 简历技能提取   F1 0.9633（100 条简历）
 python tests/test_job_agent.py     # 人岗匹配       Top-5 1.0000 / MRR 0.9525（全量约 7 分钟，--quick 更快）
 python tests/test_our_modules.py   # 纯函数单测     20 PASS
 python tests/test_quality.py       # 质检模块单测   14 PASS
