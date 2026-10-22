@@ -7,9 +7,25 @@
  *  3. **动态** — 自动旋转、节点呼吸光、星空背景、曲线边、hover tooltip、点击飞过去
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { LockKeyhole } from 'lucide-react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
+export interface RecruitmentSample {
+  posting_id: string
+  title: string
+  company?: string
+  city?: string
+  source: string
+  source_url: string
+  salary_text?: string
+  experience?: string
+  education?: string
+  reference_time?: string
+  time_basis: string
+  quote?: string
+}
 export interface GraphNode {
   id: string
   type: string   // 'Job' | 'Skill' | 'Industry' | 'Company' | 'Cluster'
@@ -25,6 +41,9 @@ export interface GraphNode {
   tech_stack?: string
   avg_salary?: number
   sample_members?: string[]
+  recruitment_count?: number
+  recruitment_samples?: RecruitmentSample[]
+  recruitment?: RecruitmentSample & { description?: string; skills?: { id: string; name: string; status: string; quote?: string }[] }
 }
 export interface GraphLink {
   source: string
@@ -41,6 +60,8 @@ interface Props {
   selectedId?: string
   onSelect?: (id: string | undefined) => void
   onJobDetail?: (jobId: number) => void
+  lockPopoverOnClick?: boolean
+  renderNodePopover?: (node: GraphNode) => ReactNode
 }
 
 // ── 星图配色 ──
@@ -53,16 +74,32 @@ interface Props {
 // Cluster  = 橙红超巨星(参宿七,体量最大 — 表示一组聚合岗位)
 const STYLE: Record<string, { color: number; emissive: number; size: number; shape: 'box' | 'sphere' | 'octa' }> = {
   Job:      { color: 0xfde68a, emissive: 0xfcd34d, size: 4.5, shape: 'box' },     // 淡金恒星
-  Skill:    { color: 0xbfdbfe, emissive: 0x93c5fd, size: 3.0, shape: 'sphere' },  // 淡蓝主序星
+  Skill:    { color: 0x38bdf8, emissive: 0x0284c7, size: 3.0, shape: 'sphere' },
   Industry: { color: 0x99f6e4, emissive: 0x5eead4, size: 4.0, shape: 'octa' },    // 淡青星云
   Company:  { color: 0xfbcfe8, emissive: 0xf9a8d4, size: 3.8, shape: 'box' },     // 淡粉巨星
-  Cluster:  { color: 0xfdba74, emissive: 0xfb923c, size: 6.0, shape: 'octa' },    // 橙红超巨星 — 岗位聚合
+  Cluster:  { color: 0xff9f1c, emissive: 0xc96b05, size: 6.0, shape: 'octa' },
+  Category: { color: 0xc4b5fd, emissive: 0xa78bfa, size: 3.5, shape: 'octa' },
+  Nature: { color: 0x2dd4bf, emissive: 0x0d9488, size: 7, shape: 'sphere' },
+  Recruitment: { color: 0xf472b6, emissive: 0xdb2777, size: 4.5, shape: 'box' },
   default:  { color: 0xe0e7ff, emissive: 0xc7d2fe, size: 3.0, shape: 'sphere' },
 }
 
 // 点击/邻居后的高亮色 — 经典配色:金色选中,绿色邻居
 const HIGHLIGHT_COLOR = 0xfbbf24  // 金黄高亮
 const NEIGHBOR_COLOR  = 0x34d399  // 薄荷绿邻居
+
+// Share the actual canvas palette with the page legend.
+export const JOB_GRAPH_LEGEND = [
+  { type: 'Nature', label: '工作性质', hint: '按实际工作内容划分，如工程开发、算法与研究' },
+  { type: 'Cluster', label: '岗位方向', hint: '领域下的具体工作方向，如大模型应用开发' },
+  { type: 'Skill', label: '技能点', hint: '具体技术，如 Python、MySQL' },
+  { type: 'Recruitment', label: '企业招聘', hint: '一家企业的某一条具体招聘，同一企业可有多个职位' },
+].map(item => ({ ...item, color: `#${STYLE[item.type].color.toString(16).padStart(6, '0')}` }))
+
+export const JOB_GRAPH_HIGHLIGHTS = [
+  { label: '选中', color: `#${HIGHLIGHT_COLOR.toString(16)}` },
+  { label: '关联', color: `#${NEIGHBOR_COLOR.toString(16)}` },
+]
 
 function styleFor(type: string) {
   return STYLE[type] || STYLE.default
@@ -113,9 +150,24 @@ function makeLabelSprite(text: string, color: number, isJob: boolean) {
   return sprite
 }
 
-export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail }: Props) {
+export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail, renderNodePopover, lockPopoverOnClick = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const hoverWindowRef = useRef<HTMLDivElement>(null)
+  const hoverCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoverPosRef = useRef({ x: 12, y: 12 })
+  const cancelHoverClose = () => {
+    if (hoverCloseRef.current) clearTimeout(hoverCloseRef.current)
+    hoverCloseRef.current = null
+  }
+  const closeHoverSoon = () => {
+    if (lockedNodeRef.current) return
+    cancelHoverClose()
+    hoverCloseRef.current = setTimeout(() => setHoveredNode(null), 260)
+  }
+  useEffect(() => {
+    setHoveredNode(null); setLockedNode(null); lockedNodeRef.current = null
+    return cancelHoverClose
+  }, [data])
   // hover 浮窗 — React state 只管"鼠标在哪个节点上",位置走 ref 直接 DOM 更新(避免每帧重渲染)
   const [hoveredNode, setHoveredNode] = useState<{
     id: string; type: string; name: string
@@ -449,6 +501,7 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
       const sprite = g.children[2] as THREE.Sprite
       const style = styleFor(g.userData.type)
       const emissiveObj = new THREE.Color(style.emissive)
+      ringMat.color.set(style.color)
 
       if (!isFocusMode) {
         // 全图模式:全部可见,自然色
@@ -466,16 +519,18 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
         if (inFocus) {
           if (id.toLowerCase() === selectedId!.toLowerCase()) {
             // 选中:金色高亮 + 放大
-            mat.emissive = new THREE.Color(HIGHLIGHT_COLOR)
-            mat.emissiveIntensity = 0.85
+            mat.emissive.copy(emissiveObj)
+            mat.emissiveIntensity = 0.55
+            ringMat.color.set(HIGHLIGHT_COLOR)
             g.scale.setScalar(1.4)
             mat.opacity = 1
             ringMat.opacity = 0.65
             sprite.material.opacity = 1
           } else if (neighbors.has(id)) {
             // 邻居:薄荷绿 + 稍放大
-            mat.emissive = new THREE.Color(NEIGHBOR_COLOR)
-            mat.emissiveIntensity = 0.6
+            mat.emissive.copy(emissiveObj)
+            mat.emissiveIntensity = 0.4
+            ringMat.color.set(NEIGHBOR_COLOR)
             g.scale.setScalar(1.15)
             mat.opacity = 0.95
             ringMat.opacity = 0.4
@@ -597,6 +652,19 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
         hoverId = parent?.userData?.id
         hoverData = parent?.userData
       }
+      if (renderNodePopover && !lockedNodeRef.current) {
+        if (hoverId) {
+          cancelHoverClose()
+          const width = Math.min(360, rect.width - 24)
+          const height = Math.min(340, rect.height - 24)
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+          hoverPosRef.current = {
+            x: Math.max(12, Math.min(x + 14, rect.width - width - 12)),
+            y: Math.max(12, Math.min(y + 14, rect.height - height - 12)),
+          }
+        } else closeHoverSoon()
+      }
       if (hoverId !== ref.currentHoverId) {
         ref.currentHoverId = hoverId
         renderer.domElement.style.cursor = hoverId ? 'pointer' : 'grab'
@@ -610,7 +678,7 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
             salary: hoverData.salary,
             source: hoverData.source,
           })
-        } else {
+        } else if (!renderNodePopover) {
           setHoveredNode(null)
         }
       }
@@ -619,6 +687,14 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
         if (Math.abs(e.clientX - mouseDown.x) > 4 || Math.abs(e.clientY - mouseDown.y) > 4) {
           isDrag = true
         }
+        return
+      }
+      if (renderNodePopover) {
+        if (hoverId && hoverWindowRef.current) {
+          hoverWindowRef.current.style.left = `${hoverPosRef.current.x}px`
+          hoverWindowRef.current.style.top = `${hoverPosRef.current.y}px`
+        }
+        if (Math.abs(e.clientX - mouseDown.x) > 4 || Math.abs(e.clientY - mouseDown.y) > 4) isDrag = true
         return
       }
       // 位置 — 直接 DOM 更新,不走 React state(避免每帧重渲染)
@@ -661,6 +737,38 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
         if (m1?.isMesh) meshes.push(m1)
       })
       const hits = ref.raycaster.intersectObjects(meshes)
+      if (renderNodePopover && lockPopoverOnClick && hits.length) {
+        const info = hits[0].object.parent?.userData
+        if (info?.id) {
+          cancelHoverClose()
+          if (info.type === 'Recruitment') {
+            const node = { id: info.id, type: info.type, name: info.name }
+            lockedNodeRef.current = node
+            setLockedNode(node)
+            setHoveredNode(node)
+            const width = Math.min(360, rect.width - 24)
+            hoverPosRef.current = {
+              x: Math.max(12, Math.min(e.clientX - rect.left + 14, rect.width - width - 12)),
+              y: Math.max(12, Math.min(e.clientY - rect.top + 14, rect.height - Math.min(340, rect.height - 24) - 12)),
+            }
+          } else {
+            lockedNodeRef.current = null; setLockedNode(null); setHoveredNode(null)
+          }
+          onSelect?.(info.id)
+        }
+        return
+      }
+      if (renderNodePopover && lockPopoverOnClick && !hits.length) return
+      // Touch users can tap a node to open the same evidence popover.
+      if (renderNodePopover && e.pointerType === 'touch' && hits.length) {
+        const info = hits[0].object.parent?.userData
+        if (info?.id) {
+          cancelHoverClose()
+          hoverPosRef.current = { x: 12, y: 40 }
+          setHoveredNode({ id: info.id, type: info.type, name: info.name })
+        }
+        return
+      }
       if (hits.length > 0) {
         const parent = hits[0].object.parent
         const id = parent?.userData?.id
@@ -708,12 +816,16 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
       }
     }
 
-    const onPointerLeave = () => {
+    const onPointerLeave = (event: PointerEvent) => {
       const ref = sceneRef.current
       if (ref) ref.currentHoverId = undefined
       renderer.domElement.style.cursor = 'grab'
       // 锁定中:不清弹窗
       if (lockedNodeRef.current) return
+      if (renderNodePopover) {
+        if (event.pointerType !== 'touch') closeHoverSoon()
+        return
+      }
       setHoveredNode(null)
       if (hoverWindowRef.current) hoverWindowRef.current.style.display = 'none'
     }
@@ -731,17 +843,35 @@ export default function JobGraphCanvas({ data, selectedId, onSelect, onJobDetail
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
     }
     // 关键:依赖里加 data,数据变化场景重建时,handler 必须重新绑定到新 renderer.domElement
-  }, [onSelect, data])
+  }, [onSelect, data, renderNodePopover, lockPopoverOnClick])
 
   return (
     <div ref={containerRef}
          className="w-full h-full relative"
-         style={{ background: 'radial-gradient(circle at 30% 30%, #0f1733 0%, #06080f 60%, #02030a 100%)', minHeight: 400 }}>
+         style={{ background: 'radial-gradient(circle at 30% 30%, #0f1733 0%, #06080f 60%, #02030a 100%)', minHeight: renderNodePopover ? 320 : 400 }}>
 
       {/* hover 悬浮窗 — 锁定时显示 lockedNode,未锁定时跟随鼠标显示 hoveredNode */}
       {(() => {
         const displayNode = lockedNode || hoveredNode
         if (!displayNode) return null
+        if (renderNodePopover) {
+          const node = data.nodes.find(item => item.id === displayNode.id)
+          if (!node) return null
+          return <div ref={hoverWindowRef} role="dialog" aria-label={`${node.name || node.label}的招聘信息`}
+            onPointerEnter={cancelHoverClose} onPointerLeave={closeHoverSoon}
+            onKeyDown={event => { if (event.key === 'Escape') { lockedNodeRef.current = null; setLockedNode(null); setHoveredNode(null) } }}
+            className="absolute z-50 flex flex-col overflow-hidden rounded-2xl border border-slate-600/60 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur-xl"
+            style={{ left: hoverPosRef.current.x, top: hoverPosRef.current.y, width: 360, maxWidth: 'calc(100% - 24px)', maxHeight: 'min(340px, calc(100% - 24px))' }}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+              <strong className="min-w-0 text-sm leading-6">{node.recruitment?.title || node.name || node.label}</strong>
+              <div className="flex items-center gap-2">
+                {lockedNode && <button aria-label="解除固定" title="点击金锁解除固定" className="rounded-lg border border-amber-400/50 bg-amber-400/15 p-1.5 text-amber-300" onClick={() => { lockedNodeRef.current = null; setLockedNode(null); setHoveredNode(null); cancelHoverClose() }}><LockKeyhole className="h-4 w-4" /></button>}
+                <button aria-label="关闭招聘浮窗" className="px-1 text-lg text-slate-400 hover:text-white" onClick={() => { cancelHoverClose(); lockedNodeRef.current = null; setLockedNode(null); setHoveredNode(null) }}>×</button>
+              </div>
+            </div>
+            <div className="overflow-y-auto overscroll-contain p-4 text-xs">{renderNodePopover(node)}</div>
+          </div>
+        }
         const isLocked = !!lockedNode
         return (
           <div

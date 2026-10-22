@@ -1,0 +1,3026 @@
+{
+  "version": "2026-10-23-v1",
+  "scope": "Graph alignment registry draft. Categories are curated; imported synonyms still require review. No extraction benchmark changed.",
+  "categories": [
+    {
+      "id": "language",
+      "name": "编程语言",
+      "parent": null
+    },
+    {
+      "id": "frontend",
+      "name": "前端技术",
+      "parent": null
+    },
+    {
+      "id": "backend",
+      "name": "后端与服务",
+      "parent": null
+    },
+    {
+      "id": "database",
+      "name": "数据库与存储",
+      "parent": null
+    },
+    {
+      "id": "relational",
+      "name": "关系型数据库",
+      "parent": "database"
+    },
+    {
+      "id": "data",
+      "name": "数据工程与分析",
+      "parent": null
+    },
+    {
+      "id": "ai",
+      "name": "人工智能与大模型",
+      "parent": null
+    },
+    {
+      "id": "cloud",
+      "name": "云计算与运维",
+      "parent": null
+    },
+    {
+      "id": "testing",
+      "name": "测试与质量",
+      "parent": null
+    },
+    {
+      "id": "security",
+      "name": "网络与安全",
+      "parent": null
+    },
+    {
+      "id": "tools",
+      "name": "开发工具",
+      "parent": null
+    },
+    {
+      "id": "other",
+      "name": "待归类技能",
+      "parent": null
+    }
+  ],
+  "roles": [
+    [
+      "质量与产品",
+      "互联网产品与交互",
+      "产品经理|产品设计|交互设计|(?<![a-z])ui(?![a-z])|(?<![a-z])ux(?![a-z])|用户体验|体验设计"
+    ],
+    [
+      "质量与产品",
+      "软件测试与质量",
+      "软件测试|测试工程|自动化测试|性能测试|测试开发|(?<![a-z])qa(?![a-z])"
+    ],
+    [
+      "云计算与安全",
+      "运维与SRE",
+      "运维|devops|(?<![a-z])sre(?![a-z])|(?<![a-z])dba(?![a-z])|数据库运维"
+    ],
+    [
+      "云计算与安全",
+      "网络与信息安全",
+      "网络安全|信息安全|安全工程|渗透测试|漏洞|密码工程|安全研究|数据安全|隐私计算"
+    ],
+    [
+      "云计算与安全",
+      "网络通信与边缘计算",
+      "网络工程师|网络研发|通信软件|5g|6g|边缘计算|sdn|网络协议"
+    ],
+    [
+      "云计算与安全",
+      "云原生与平台工程",
+      "云原生|云计算|kubernetes|k8s|容器平台|平台工程"
+    ],
+    [
+      "智能硬件与物联网",
+      "芯片设计与验证",
+      "芯片|集成电路|fpga|asic|数字电路|芯片验证"
+    ],
+    [
+      "智能硬件与物联网",
+      "机器人与自动驾驶",
+      "机器人|自动驾驶|智能驾驶|具身智能|运动控制"
+    ],
+    [
+      "智能硬件与物联网",
+      "嵌入式与IoT",
+      "嵌入式|单片机|物联网|(?<![a-z])iot(?![a-z])|驱动开发|硬件开发|rtos"
+    ],
+    [
+      "软件研发",
+      "游戏与XR开发",
+      "游戏开发|游戏引擎|unity|unreal|虚幻引擎|增强现实|虚拟现实|(?<![a-z])(xr|vr|ar)(?![a-z])"
+    ],
+    [
+      "软件研发",
+      "移动与鸿蒙开发",
+      "android|(?<![a-z])ios(?![a-z])|flutter|鸿蒙|移动端|移动开发|小程序"
+    ],
+    [
+      "软件研发",
+      "桌面与客户端开发",
+      "桌面开发|客户端开发|electron|qt开发"
+    ],
+    [
+      "软件研发",
+      "全栈开发",
+      "全栈|full.?stack"
+    ],
+    [
+      "软件研发",
+      "Web前端开发",
+      "前端|frontend|vue|react|javascript|html5|web开发"
+    ],
+    [
+      "人工智能与大模型",
+      "大模型训练与算法",
+      "预训练|大模型.{0,4}(训练|算法|研究)|foundation.?model|llm.{0,3}(train|research)"
+    ],
+    [
+      "人工智能与大模型",
+      "模型推理与AI平台",
+      "推理优化|推理平台|模型部署|模型量化|模型压缩|mlops|ai.{0,3}(infra|平台|编译器)|训练平台|分布式训练|gpu.{0,3}(kernel|调度)"
+    ],
+    [
+      "人工智能与大模型",
+      "智能体与RAG应用",
+      "智能体|(?<![a-z])agent(?![a-z])|(?<![a-z])rag(?![a-z])|检索增强|prompt|提示词|大模型.{0,3}应用|llm.{0,3}应用"
+    ],
+    [
+      "人工智能与大模型",
+      "多模态与视觉语音",
+      "多模态|计算机视觉|图像算法|视觉算法|语音算法|语音识别|自然语言处理|(?<![a-z])nlp(?![a-z])|(?<![a-z])cv(?![a-z])|数字人"
+    ],
+    [
+      "人工智能与大模型",
+      "推荐搜索与广告算法",
+      "推荐算法|搜索算法|广告算法|召回算法|排序算法|推荐系统"
+    ],
+    [
+      "人工智能与大模型",
+      "AI数据与标注",
+      "人工智能数据|ai数据|数据标注|模型评测|大模型评测"
+    ],
+    [
+      "人工智能与大模型",
+      "机器学习与算法",
+      "机器学习|深度学习|强化学习|aigc|算法工程师|人工智能|(?<![a-z])ai(?![a-z])|大模型|(?<![a-z])llm(?![a-z])"
+    ],
+    [
+      "数据技术",
+      "数据库与向量检索",
+      "数据库内核|数据库研发|数据库工程|向量数据库|向量检索|搜索引擎"
+    ],
+    [
+      "数据技术",
+      "大数据与数仓",
+      "大数据|数据仓库|数仓|hadoop|spark|flink|实时计算"
+    ],
+    [
+      "数据技术",
+      "数据工程与治理",
+      "数据工程|数据治理|(?<![a-z])etl(?![a-z])|数据集成|数据开发"
+    ],
+    [
+      "数据技术",
+      "数据分析与BI",
+      "数据分析|商业智能|(?<![a-z])bi(?![a-z])|数据科学"
+    ],
+    [
+      "数据技术",
+      "区块链与分布式账本",
+      "区块链|智能合约|solidity|web3"
+    ],
+    [
+      "软件研发",
+      "Java与JVM开发",
+      "(?<![a-z])java(?![a-z])|jvm|spring"
+    ],
+    [
+      "软件研发",
+      "Python开发与爬虫",
+      "python|django|flask|fastapi|爬虫"
+    ],
+    [
+      "软件研发",
+      "Go开发",
+      "golang|(?<![a-z])go\\s*(开发|后端|工程师)"
+    ],
+    [
+      "软件研发",
+      "Rust与系统软件",
+      "rust|系统软件|操作系统|底层开发"
+    ],
+    [
+      "软件研发",
+      "C与C++系统开发",
+      "c\\+\\+|(?<![a-z])c语言|(?<![a-z])c开发"
+    ],
+    [
+      "软件研发",
+      ".NET与C#开发",
+      "c#|\\.net|asp\\.net"
+    ],
+    [
+      "软件研发",
+      "PHP与Web服务",
+      "php|laravel|thinkphp"
+    ],
+    [
+      "软件研发",
+      "后端与服务端开发",
+      "后端|服务端|backend|微服务|接口开发"
+    ],
+    [
+      "软件研发",
+      "通用软件研发",
+      "软件开发|软件工程|程序开发|application software|software engineer|研发工程师"
+    ]
+  ],
+  "concepts": [
+    {
+      "id": "skill:38a0963a6364b09ad867",
+      "name": "Java",
+      "aliases": [
+        "java",
+        "java11",
+        "java17",
+        "java21",
+        "java8",
+        "jdk",
+        "jdk17",
+        "jdk8"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:11a4a60b518bf24989d4",
+      "name": "Python",
+      "aliases": [
+        "py2",
+        "py3",
+        "python",
+        "python2",
+        "python3"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:eda71746c01c3f465ffd",
+      "name": "JavaScript",
+      "aliases": [
+        "es2015",
+        "es2020",
+        "es6",
+        "javascript",
+        "js"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:969545dde1584d882275",
+      "name": "TypeScript",
+      "aliases": [
+        "ts",
+        "typescript"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:1f33680df76a239bb349",
+      "name": "C/C++",
+      "aliases": [
+        "c/c++"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4cd0e21a9a0795a14ec9",
+      "name": "Go",
+      "aliases": [
+        "go",
+        "golang",
+        "go语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:521fe5c9ece1aa1f8b66",
+      "name": "Rust",
+      "aliases": [
+        "rust",
+        "rust语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:12a5d18ee896e59954bd",
+      "name": "PHP",
+      "aliases": [
+        "php",
+        "php7",
+        "php8"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a33603bf79f74b056172",
+      "name": "Swift",
+      "aliases": [
+        "swift",
+        "swift5",
+        "swift语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:19a67c2a53695668e491",
+      "name": "Kotlin",
+      "aliases": [
+        "kotlin",
+        "kotlin语言",
+        "kt"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a1c176cc5c0cbe6de947",
+      "name": "Scala",
+      "aliases": [
+        "scala",
+        "scala语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:45bce5d55e517604ac5d",
+      "name": "r语言",
+      "aliases": [
+        "r",
+        "r lang",
+        "r语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4ec7c53222c8a758c722",
+      "name": "SQL",
+      "aliases": [
+        "sql",
+        "sql语言",
+        "structured query language"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:564382267519ae7fa9d8",
+      "name": "Vue",
+      "aliases": [
+        "vue",
+        "vue.js",
+        "vue2",
+        "vue3",
+        "vue3.x",
+        "vuejs"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:275976081ce1abf67779",
+      "name": "React",
+      "aliases": [
+        "react",
+        "react.js",
+        "react18",
+        "reactjs"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a39f899adb17e2b43435",
+      "name": "Angular",
+      "aliases": [
+        "angular",
+        "angular2+",
+        "ng"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e5e239560bc125a20ff2",
+      "name": "HTML",
+      "aliases": [
+        "html",
+        "html5",
+        "html/css"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:36e64f19f57a05c8cd5b",
+      "name": "CSS",
+      "aliases": [
+        "css",
+        "css3"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:127c8cf59f228bb01a21",
+      "name": "jquery",
+      "aliases": [
+        "jq",
+        "jquery"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:c190acbb15784cad2ee0",
+      "name": "Svelte",
+      "aliases": [
+        "svelte",
+        "sveltejs"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:9c3c0544259a604e43fb",
+      "name": "Spring Boot",
+      "aliases": [
+        "java spring",
+        "spring boot",
+        "spring framework",
+        "spring 框架",
+        "spring-boot",
+        "springboot"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:02146a9b26cb958cf07e",
+      "name": "Spring Cloud",
+      "aliases": [
+        "spring cloud",
+        "spring-cloud",
+        "springcloud"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7d8a0838ce8e19b26e45",
+      "name": "Django",
+      "aliases": [
+        "django",
+        "django框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:b87aa5270772708aeaed",
+      "name": "Flask",
+      "aliases": [
+        "flask",
+        "flask框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:6aee0e678a168eeae8df",
+      "name": "FastAPI",
+      "aliases": [
+        "fast api",
+        "fastapi",
+        "fastapi框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:008231aaf99956982ffb",
+      "name": "Express",
+      "aliases": [
+        "express",
+        "express.js",
+        "expressjs",
+        "express框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:c34cfa6a258d4e6871f7",
+      "name": "laravel",
+      "aliases": [
+        "laravel",
+        "laravel框架",
+        "php框架"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:985adc4dc7d1150fb300",
+      "name": "Gin",
+      "aliases": [
+        "gin",
+        "gin框架",
+        "go框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:324373d862ead39fe68d",
+      "name": "node.js",
+      "aliases": [
+        "node",
+        "node.js",
+        "node.js框架",
+        "nodejs"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:622a494d3ea8c7ba2fed",
+      "name": "Spring",
+      "aliases": [
+        "spring",
+        "spring mvc",
+        "springmvc",
+        "spring框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:430005175c4c7810996d",
+      "name": "MySQL",
+      "aliases": [
+        "mysql",
+        "mysql数据库"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a478b4566be5cb007a5d",
+      "name": "PostgreSQL",
+      "aliases": [
+        "pg",
+        "pg数据库",
+        "postgres",
+        "postgresql"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:1cc9a79bdaf097930627",
+      "name": "MongoDB",
+      "aliases": [
+        "mongo",
+        "mongodb",
+        "mongo数据库"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:d4605bbebf949183cce2",
+      "name": "NoSQL",
+      "aliases": [
+        "no sql",
+        "nosql",
+        "非关系型数据库"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:34fb46c847bb9df96e52",
+      "name": "Redis",
+      "aliases": [
+        "redis",
+        "redis 缓存",
+        "redis数据库",
+        "分布式缓存",
+        "缓存层"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:ae1b8c8635429669ca19",
+      "name": "Elasticsearch",
+      "aliases": [
+        "elastic",
+        "elastic search",
+        "elasticsearch",
+        "es",
+        "搜索引擎"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:0cd8666848bf286d951c",
+      "name": "sqlite",
+      "aliases": [
+        "sqlite",
+        "sqlite数据库"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:9202af6ce925b26ae6b2",
+      "name": "Oracle",
+      "aliases": [
+        "oracle",
+        "oracle数据库"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:79c41baebfebd6a5fd52",
+      "name": "SQL Server",
+      "aliases": [
+        "microsoft sql server",
+        "mssql",
+        "sql server"
+      ],
+      "category": "relational",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:ac137b1cd2ece6ecffd5",
+      "name": "HBase",
+      "aliases": [
+        "hbase",
+        "hbase大数据"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:13fd9e770be366985fd7",
+      "name": "Neo4j",
+      "aliases": [
+        "neo4j",
+        "neo4j图数据库",
+        "图数据库"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:f1c6127b16ff422bfa09",
+      "name": "cassandra",
+      "aliases": [
+        "cassandra",
+        "cassandra数据库"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e11cf22916d69f8a99aa",
+      "name": "Hadoop",
+      "aliases": [
+        "hadoop",
+        "hadoop生态",
+        "hdfs",
+        "mapreduce"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:92f473809e5979a7da2b",
+      "name": "Spark",
+      "aliases": [
+        "pyspark",
+        "spark",
+        "spark sql",
+        "spark streaming"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7f025323639628aa5e5d",
+      "name": "Flink",
+      "aliases": [
+        "apache flink",
+        "flink",
+        "flink流处理"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:cbbf241eebedba6fd5e6",
+      "name": "Kafka",
+      "aliases": [
+        "apache kafka",
+        "kafka",
+        "kafka消息队列",
+        "mq",
+        "消息队列"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7640da40298286a6e462",
+      "name": "hive",
+      "aliases": [
+        "hive",
+        "hive sql",
+        "hive数据仓库"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:9a105749cfcbac2e07d7",
+      "name": "storm",
+      "aliases": [
+        "apache storm",
+        "storm"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4a87a604e7cb1fe816a4",
+      "name": "大数据",
+      "aliases": [
+        "big data",
+        "大数据",
+        "大数据技术"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e0ab0981aba5c06da591",
+      "name": "机器学习",
+      "aliases": [
+        "machine learning",
+        "ml",
+        "机器学习",
+        "统计学习"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:9bea2bda7ac5f70aee1a",
+      "name": "深度学习",
+      "aliases": [
+        "deep learning",
+        "dl",
+        "深度学习",
+        "神经网络"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:d25a85f1126580698835",
+      "name": "计算机视觉",
+      "aliases": [
+        "computer vision",
+        "cv",
+        "图像处理",
+        "视觉",
+        "计算机视觉"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:46fb078d98c2df164f32",
+      "name": "NLP",
+      "aliases": [
+        "nlp",
+        "nlu",
+        "文本处理",
+        "文本挖掘",
+        "自然语言处理"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e8795e623be803af131a",
+      "name": "PyTorch",
+      "aliases": [
+        "py torch",
+        "pytorch",
+        "torch"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:cebea885ef40f295a311",
+      "name": "TensorFlow",
+      "aliases": [
+        "tensor flow",
+        "tensorflow",
+        "tf"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:f6cc6ef8774556490a0c",
+      "name": "Keras",
+      "aliases": [
+        "keras",
+        "keras框架"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:197b0ff11cd452f01099",
+      "name": "Scikit-learn",
+      "aliases": [
+        "scikit learn",
+        "scikit-learn",
+        "sklearn"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:ae4863bdae026314d599",
+      "name": "Pandas",
+      "aliases": [
+        "pandas",
+        "pandas数据分析"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:73dd0baf8e5438da8816",
+      "name": "NumPy",
+      "aliases": [
+        "np",
+        "numpy",
+        "numpy数组"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:42735da6b097c42f5db3",
+      "name": "数据科学",
+      "aliases": [
+        "data science",
+        "ds",
+        "数据科学"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:5d8ec6f62009eef7358d",
+      "name": "数据分析",
+      "aliases": [
+        "data analysis",
+        "数据分析",
+        "数据分析工具"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:32c9dfd45151bbc36ed3",
+      "name": "数据挖掘",
+      "aliases": [
+        "data mining",
+        "数据挖掘"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7177bc630f28734f50be",
+      "name": "推荐系统",
+      "aliases": [
+        "recommendation system",
+        "推荐算法",
+        "推荐系统"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:fb0901bfaa3f5a6203e7",
+      "name": "自动驾驶",
+      "aliases": [
+        "autonomous driving",
+        "无人车",
+        "自动驾驶"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:25d7abe5864ab04a8c9f",
+      "name": "大模型",
+      "aliases": [
+        "gpt",
+        "large language model",
+        "llm",
+        "基础模型",
+        "大模型",
+        "大语言模型",
+        "通用人工智能"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a3e690053061793bb12a",
+      "name": "RAG",
+      "aliases": [
+        "rag",
+        "retrieval augmented generation",
+        "检索增强",
+        "检索增强生成",
+        "知识检索"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:d4f0bc5a29de06b510f9",
+      "name": "agent",
+      "aliases": [
+        "agent",
+        "ai agent",
+        "ai 智能体",
+        "llm agent",
+        "智能体"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:f3f2184b56f946c62758",
+      "name": "LangChain",
+      "aliases": [
+        "lang chain",
+        "lang-chain",
+        "langchain",
+        "langchain框架"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e9acff1bccde0d17e96b",
+      "name": "prompt engineering",
+      "aliases": [
+        "prompt engineering",
+        "prompt设计",
+        "提示工程",
+        "提示词",
+        "提示词工程"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:47ea400dcb2c48746503",
+      "name": "向量数据库",
+      "aliases": [
+        "chroma",
+        "milvus",
+        "pinecone",
+        "vector database",
+        "vectordb",
+        "weaviate",
+        "向量数据库"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:361b904b27614818f00b",
+      "name": "transformer",
+      "aliases": [
+        "attention",
+        "transformer",
+        "transformer模型",
+        "注意力机制"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:820ce1ae77f107795580",
+      "name": "aigc",
+      "aliases": [
+        "aigc",
+        "ai生成内容",
+        "generative ai",
+        "生成式ai"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:d548c5b83fa61d8e3bd8",
+      "name": "Docker",
+      "aliases": [
+        "container",
+        "docker",
+        "docker容器",
+        "容器",
+        "容器化"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:94abcb2d2773df65cda0",
+      "name": "Kubernetes",
+      "aliases": [
+        "k8",
+        "k8s",
+        "kube",
+        "kubernetes",
+        "容器编排"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4cd3878f564ca086a264",
+      "name": "CI/CD",
+      "aliases": [
+        "ci/cd",
+        "cicd",
+        "持续交付",
+        "持续部署",
+        "持续集成"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:aae62b5f0497c4a445ce",
+      "name": "devops",
+      "aliases": [
+        "devops",
+        "开发运维",
+        "运维开发"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:424e9661130eeeb05edc",
+      "name": "Jenkins",
+      "aliases": [
+        "jenkins",
+        "jenkins CI"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:94dc3ea57721d541aae0",
+      "name": "Terraform",
+      "aliases": [
+        "iac",
+        "terraform",
+        "基础设施即代码"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:0cb87f727f31e5f5a59c",
+      "name": "Ansible",
+      "aliases": [
+        "ansible",
+        "ansible自动化"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:caf90169eefa5f807d57",
+      "name": "Linux",
+      "aliases": [
+        "centos",
+        "debian",
+        "linux",
+        "linux系统",
+        "linux运维",
+        "redhat",
+        "ubuntu"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:5be1ecc7935f1dd85635",
+      "name": "Nginx",
+      "aliases": [
+        "engine x",
+        "nginx",
+        "nginx服务器",
+        "反向代理"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:9a881b9b9f2384947529",
+      "name": "Git",
+      "aliases": [
+        "git",
+        "git管理",
+        "版本控制",
+        "版本管理"
+      ],
+      "category": "tools",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:2b2045546c3bdfa340ee",
+      "name": "Maven",
+      "aliases": [
+        "apache maven",
+        "maven",
+        "mvn"
+      ],
+      "category": "tools",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:0e687aaa28b03552c11d",
+      "name": "Gradle",
+      "aliases": [
+        "gradle",
+        "gradle构建"
+      ],
+      "category": "tools",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:e16fc821f34228d11d6c",
+      "name": "阿里云",
+      "aliases": [
+        "alicloud",
+        "aliyun",
+        "阿里云",
+        "阿里云平台"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:a7baed72c308ce887da9",
+      "name": "腾讯云",
+      "aliases": [
+        "tencent cloud",
+        "tencentcloud",
+        "腾讯云"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7d1507284a5757cac6b6",
+      "name": "AWS",
+      "aliases": [
+        "amazon web services",
+        "aws",
+        "亚马逊云"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:79f43c3b9c23fbdf293b",
+      "name": "Azure",
+      "aliases": [
+        "azure",
+        "microsoft azure",
+        "微软云"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:3347d0bdd97e6df866ab",
+      "name": "GCP",
+      "aliases": [
+        "gcp",
+        "google cloud",
+        "谷歌云"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:be0cc94f44c106d25294",
+      "name": "云计算",
+      "aliases": [
+        "cloud computing",
+        "云平台",
+        "云计算"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7b173343f539cdc46419",
+      "name": "RabbitMQ",
+      "aliases": [
+        "rabbit mq",
+        "rabbitmq",
+        "消息中间件"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:995b35baf99499154a75",
+      "name": "RocketMQ",
+      "aliases": [
+        "apache rocketmq",
+        "rocket mq",
+        "rocketmq"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:c3af43271ca5c989397c",
+      "name": "dubbo",
+      "aliases": [
+        "apache dubbo",
+        "dubbo",
+        "dubbo3",
+        "dubbo框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:5996c7ef6c29c4774ace",
+      "name": "MyBatis",
+      "aliases": [
+        "mybatis",
+        "mybatis 框架",
+        "mybatis-flex",
+        "mybatis-plus",
+        "mybatis框架"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:ec34a1012c4c7f7adffd",
+      "name": "hibernate",
+      "aliases": [
+        "hibernate",
+        "hibernate框架",
+        "orm"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:13bb8f38d69fff9a6284",
+      "name": "微服务",
+      "aliases": [
+        "microservice",
+        "microservices",
+        "soa",
+        "微服务",
+        "服务化"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4cd8ac228e3ef2ac059e",
+      "name": "分布式",
+      "aliases": [
+        "distributed system",
+        "分布式",
+        "分布式架构",
+        "分布式系统"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:2c2cd22a76795a244696",
+      "name": "高并发",
+      "aliases": [
+        "high concurrency",
+        "并发编程",
+        "高可用",
+        "高并发",
+        "高性能"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:8ebbdb219835ce437ada",
+      "name": "架构设计",
+      "aliases": [
+        "方案设计",
+        "架构",
+        "架构设计",
+        "系统架构",
+        "软件架构"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:2b00a88f9c1ad65af37c",
+      "name": "RESTful",
+      "aliases": [
+        "rest",
+        "rest api",
+        "rest apis",
+        "restful",
+        "restful api"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:aed31c11881f20f36912",
+      "name": "GraphQL",
+      "aliases": [
+        "graph ql",
+        "graphql"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:7ce54cbababdd64826b8",
+      "name": "websocket",
+      "aliases": [
+        "web socket",
+        "websocket",
+        "ws"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:b389db1475dc52e4ab27",
+      "name": "grpc",
+      "aliases": [
+        "g rpc",
+        "google rpc",
+        "grpc"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:f60ed56a9c8275894022",
+      "name": "Android",
+      "aliases": [
+        "android",
+        "android开发",
+        "安卓"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:48ee046028069a9c6ded",
+      "name": "iOS",
+      "aliases": [
+        "apple开发",
+        "ios",
+        "ios开发"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:be13961a0ab037c4fd82",
+      "name": "Flutter",
+      "aliases": [
+        "dart",
+        "flutter",
+        "flutter框架"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:29f0134a8762f116f580",
+      "name": "React Native",
+      "aliases": [
+        "react native",
+        "react-native",
+        "rn"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:68fba79b8508f2ab421d",
+      "name": "小程序",
+      "aliases": [
+        "miniprogram",
+        "小程序",
+        "小程序开发",
+        "微信小程序"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:c5dba27d5d6414f13d40",
+      "name": "Uni-App",
+      "aliases": [
+        "uni app",
+        "uni-app",
+        "uniapp"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:d4443b35a832768cd621",
+      "name": "网络安全",
+      "aliases": [
+        "cybersecurity",
+        "信息安全",
+        "网络安全",
+        "网络攻防"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:0106317c833d3b0953ae",
+      "name": "渗透测试",
+      "aliases": [
+        "penetration testing",
+        "pentest",
+        "安全测试",
+        "渗透测试"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:4cb60fe27b8fb0017b78",
+      "name": "漏洞挖掘",
+      "aliases": [
+        "vulnerability",
+        "漏洞分析",
+        "漏洞挖掘"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:6e3110b33188c7a3056c",
+      "name": "区块链",
+      "aliases": [
+        "blockchain",
+        "ethereum",
+        "web3",
+        "以太坊",
+        "区块链"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:85a15fb2227ae30f0b41",
+      "name": "物联网",
+      "aliases": [
+        "internet of things",
+        "iot",
+        "嵌入式",
+        "物联网"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:0fb985a281e36eb64250",
+      "name": "ar/vr",
+      "aliases": [
+        "ar",
+        "ar/vr",
+        "mr",
+        "vr",
+        "xr",
+        "增强现实",
+        "混合现实",
+        "虚拟现实"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:ce635c4eabff5e4f56db",
+      "name": "shell",
+      "aliases": [
+        "bash",
+        "shell",
+        "shell编程",
+        "shell脚本"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:bc18f7068971a44e2648",
+      "name": "markdown",
+      "aliases": [
+        "markdown",
+        "markdown语法",
+        "md"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:1477a5b1b41d30ff6a36",
+      "name": "办公软件",
+      "aliases": [
+        "excel",
+        "office",
+        "ppt",
+        "word",
+        "办公软件"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "legacy_import_pending_review"
+    },
+    {
+      "id": "skill:2e7d2c03a9507ae265ec",
+      "name": "C",
+      "aliases": [
+        "c语言"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:cedb1bac7efcd7db47e9",
+      "name": "C++",
+      "aliases": [
+        "cpp",
+        "c plus plus"
+      ],
+      "category": "language",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:30d76660f57118fd848a",
+      "name": "Sass",
+      "aliases": [],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:61178d3c02650f4e0624",
+      "name": "SCSS",
+      "aliases": [],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:4fdd3b6201a22c7814d6",
+      "name": "Less",
+      "aliases": [],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:13254511d133ad561304",
+      "name": "Tailwind CSS",
+      "aliases": [
+        "tailwind",
+        "tailwindcss"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:f0854775273320171e34",
+      "name": "AngularJS",
+      "aliases": [],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "explicit_concept"
+    },
+    {
+      "id": "skill:8b550f96154aa648f755",
+      "name": "a/b testing",
+      "aliases": [
+        "a/b testing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:052ff38befb367b06353",
+      "name": "agile",
+      "aliases": [
+        "agile"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:445b87114b4d0fbfb92c",
+      "name": "agile scrum",
+      "aliases": [
+        "agile scrum"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:16df48936f837b402448",
+      "name": "airflow",
+      "aliases": [
+        "airflow"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:5f4d03f7e24f6264accc",
+      "name": "api testing",
+      "aliases": [
+        "api testing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:25dd14681eb572f5d1df",
+      "name": "app store",
+      "aliases": [
+        "app store"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ce10f35bc694c02ca708",
+      "name": "auto scaling",
+      "aliases": [
+        "auto scaling"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:daaa2ced838dc8f39bd6",
+      "name": "backup recovery",
+      "aliases": [
+        "backup recovery"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:dc05ecc11ac7b127aa75",
+      "name": "bdd",
+      "aliases": [
+        "bdd"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:82161f6e0ed508f8ffb1",
+      "name": "burp suite",
+      "aliases": [
+        "burp suite"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:951a4d36e0a9018b7b89",
+      "name": "C#",
+      "aliases": [
+        "c#"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:7e099f39b84ea79559b3",
+      "name": "ClickHouse",
+      "aliases": [
+        "clickhouse"
+      ],
+      "category": "database",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:7abada36bb6eeeb30831",
+      "name": "code review",
+      "aliases": [
+        "code review"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:131156b77cb9092c99c7",
+      "name": "competitive analysis",
+      "aliases": [
+        "competitive analysis"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:a9770d1ee18f0ebc7bce",
+      "name": "core data",
+      "aliases": [
+        "core data"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:d0e4a734a4d5c56a347c",
+      "name": "cost optimization",
+      "aliases": [
+        "cost optimization"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e06554818e902b4ba339",
+      "name": "cryptography",
+      "aliases": [
+        "cryptography"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e636c973d999a634277d",
+      "name": "cuda",
+      "aliases": [
+        "cuda"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:55f83af98ca9393690d4",
+      "name": "cypress",
+      "aliases": [
+        "cypress"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:4c4a9ce124ecb0957b4b",
+      "name": "data pipeline",
+      "aliases": [
+        "data pipeline"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:0ce35f7d00d80024a318",
+      "name": "data visualization",
+      "aliases": [
+        "data visualization"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:37ae591ebce627d683f0",
+      "name": "distributed",
+      "aliases": [
+        "distributed"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:aaa8672ccf74c45c5262",
+      "name": "distributed training",
+      "aliases": [
+        "distributed training"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:cf99b895f350b7758588",
+      "name": "dynamodb",
+      "aliases": [
+        "dynamodb"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:88b1deea6a18cfd0d1df",
+      "name": "electron",
+      "aliases": [
+        "electron"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:57a6d339e5166ac6ec43",
+      "name": "feature engineering",
+      "aliases": [
+        "feature engineering"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:6d8b5774208f897c4e37",
+      "name": "feature store",
+      "aliases": [
+        "feature store"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:618b8c8de24c7b03f7a1",
+      "name": "firebase",
+      "aliases": [
+        "firebase"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:a3863c5d7ce546d24186",
+      "name": "firewall",
+      "aliases": [
+        "firewall"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:cace491b69555e8d0f77",
+      "name": "grafana",
+      "aliases": [
+        "grafana"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ab14d3faa25e917efe6e",
+      "name": "helm",
+      "aliases": [
+        "helm"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:df6d8e17792d4b9d2281",
+      "name": "high availability",
+      "aliases": [
+        "high availability"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:d457e3a99392a03f4705",
+      "name": "iam",
+      "aliases": [
+        "iam"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:930d3bfb9a07e7f554e8",
+      "name": "ids/ips",
+      "aliases": [
+        "ids/ips"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:6be2480652aba5295683",
+      "name": "incident response",
+      "aliases": [
+        "incident response"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:82d979a24d74d74fe91d",
+      "name": "istio",
+      "aliases": [
+        "istio"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:35e99f929e01941f6b1a",
+      "name": "jest",
+      "aliases": [
+        "jest"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1e32847769dc4a158800",
+      "name": "jira",
+      "aliases": [
+        "jira"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:efae715a21c5988165c6",
+      "name": "jmeter",
+      "aliases": [
+        "jmeter"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:018bb207e5cea3036e36",
+      "name": "junit",
+      "aliases": [
+        "junit"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:729d78e34a7c829161d2",
+      "name": "jvm",
+      "aliases": [
+        "jvm"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ca76558e79f494da419f",
+      "name": "kpi definition",
+      "aliases": [
+        "kpi definition"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:fb6e3b94cf5e2473d3ee",
+      "name": "load balancing",
+      "aliases": [
+        "load balancing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:d339f720de1fd92a672d",
+      "name": "lora",
+      "aliases": [
+        "lora"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:de75f24335d8115eeca6",
+      "name": "mlops",
+      "aliases": [
+        "mlops"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:dfd708db19e918c93428",
+      "name": "mobile ui design",
+      "aliases": [
+        "mobile ui design"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:580af6b6fd443c31b573",
+      "name": "model serving",
+      "aliases": [
+        "model serving"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:569bf0af7a7562f31bbe",
+      "name": "nacos",
+      "aliases": [
+        "nacos"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:3589ea89dd790d2450b1",
+      "name": "netty",
+      "aliases": [
+        "netty"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:fefdcdb71779b7685626",
+      "name": "networking",
+      "aliases": [
+        "networking"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:c6c1c9a9c8543f1e4cd9",
+      "name": "next",
+      "aliases": [
+        "next.js"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:5286b91aa11e48184da2",
+      "name": "nmap",
+      "aliases": [
+        "nmap"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:6e306c515177ca5a1968",
+      "name": "oauth",
+      "aliases": [
+        "oauth"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:87e93f89f2be0db364e8",
+      "name": "onnx",
+      "aliases": [
+        "onnx"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ea2ebcbc108269c77d7c",
+      "name": "OpenCV",
+      "aliases": [
+        "opencv"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1ec32ca39b427db9f1eb",
+      "name": "OWASP",
+      "aliases": [
+        "owasp"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:c59bd75f678b0d77f7b6",
+      "name": "performance optimization",
+      "aliases": [
+        "performance optimization"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:45dcaef4a410e99b88f9",
+      "name": "performance testing",
+      "aliases": [
+        "performance testing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:78dc5a66d257e4a6a329",
+      "name": "performance tuning",
+      "aliases": [
+        "performance tuning"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:045ddeb7f631b7714886",
+      "name": "postman",
+      "aliases": [
+        "postman"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:69c0d2416d173ba6e1c8",
+      "name": "Presto",
+      "aliases": [
+        "presto"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1809f7cd0c75acf34f56",
+      "name": "prometheus",
+      "aliases": [
+        "prometheus"
+      ],
+      "category": "cloud",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:29e77a40bcec83adb2d7",
+      "name": "push notifications",
+      "aliases": [
+        "push notifications"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:9aae78751eb7d681cc4f",
+      "name": "query optimization",
+      "aliases": [
+        "query optimization"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:080baa17c90b5e97f32d",
+      "name": "redux",
+      "aliases": [
+        "redux"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:fa6273691a7c61e49419",
+      "name": "regression testing",
+      "aliases": [
+        "regression testing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:fbe01a3d8ed259080b91",
+      "name": "replication",
+      "aliases": [
+        "replication"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:12dc014bee1847fe3e2d",
+      "name": "responsive design",
+      "aliases": [
+        "responsive design"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:6c42dd8107ae87e06c49",
+      "name": "risk assessment",
+      "aliases": [
+        "risk assessment"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:7cf8addccc947e34b365",
+      "name": "roadmap planning",
+      "aliases": [
+        "roadmap planning"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:b9138194ffe9e7c8bb6d",
+      "name": "Ruby",
+      "aliases": [
+        "ruby"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:099af052b75b92b50e0d",
+      "name": "scrum",
+      "aliases": [
+        "scrum"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:5d2d3ceb7abe55234427",
+      "name": "security",
+      "aliases": [
+        "security"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:0b262a0603e67922d411",
+      "name": "security groups",
+      "aliases": [
+        "security groups"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e684a3e94efd46f9c5fa",
+      "name": "selenium",
+      "aliases": [
+        "selenium"
+      ],
+      "category": "testing",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:2b7847b7b705781d7cf2",
+      "name": "sentinel",
+      "aliases": [
+        "sentinel"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e97b1c01299966c52cbd",
+      "name": "serverless",
+      "aliases": [
+        "serverless"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:d464945be3c9da8e835b",
+      "name": "shell scripting",
+      "aliases": [
+        "shell scripting"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:5eabe06ffe1942a31cfb",
+      "name": "siem",
+      "aliases": [
+        "siem"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:6398d5e0ca36d897c74f",
+      "name": "spring security",
+      "aliases": [
+        "spring security"
+      ],
+      "category": "backend",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:0e7e59863b4d5fe66685",
+      "name": "stakeholder management",
+      "aliases": [
+        "stakeholder management"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:635182de7ae255170889",
+      "name": "statistical analysis",
+      "aliases": [
+        "statistical analysis"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:3b178995a125dd3e04e4",
+      "name": "system design",
+      "aliases": [
+        "system design"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:17c706b273e4f19eeaed",
+      "name": "tdd",
+      "aliases": [
+        "tdd"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:3f29a488111ac7e9a8f0",
+      "name": "test automation",
+      "aliases": [
+        "test automation"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:b612467da0474aef0a68",
+      "name": "Trino",
+      "aliases": [
+        "trino"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:c99558bfe6446fb72107",
+      "name": "unit testing",
+      "aliases": [
+        "unit testing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e580cd5dac0157c3aa09",
+      "name": "user research",
+      "aliases": [
+        "user research"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:b16efac145e9242cfb05",
+      "name": "Vite",
+      "aliases": [
+        "vite"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ebf20cefc9169e0b7147",
+      "name": "vpn",
+      "aliases": [
+        "vpn"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:2575ee3a445c57834e5b",
+      "name": "Webpack",
+      "aliases": [
+        "webpack"
+      ],
+      "category": "frontend",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ba7955598f2007bc8cee",
+      "name": "whisper",
+      "aliases": [
+        "whisper"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:187737d59250a9372acd",
+      "name": "wireframing",
+      "aliases": [
+        "wireframing"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:28662759fcf7454b4388",
+      "name": "wireshark",
+      "aliases": [
+        "wireshark"
+      ],
+      "category": "security",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:83cfb489d5d6c4afccb5",
+      "name": "scikitlearn",
+      "aliases": [],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1452deafc6d96546b7ab",
+      "name": "推荐",
+      "aliases": [],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:7da86ad74c2285425055",
+      "name": "向量",
+      "aliases": [],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:ec8207a3dde607f7867f",
+      "name": "vllm",
+      "aliases": [
+        "vLLM"
+      ],
+      "category": "ai",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:050a3f4c5bc39feeb103",
+      "name": "deepspeed",
+      "aliases": [
+        "DeepSpeed"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:a0d31c7525ce5dd238a9",
+      "name": "megatron",
+      "aliases": [
+        "Megatron"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:b7933ed6180d9e2895a9",
+      "name": "triton",
+      "aliases": [
+        "Triton"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:e92b61933192be76cddb",
+      "name": "tensorrt",
+      "aliases": [
+        "TensorRT"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:122e80280ffc3a656a4c",
+      "name": "rlhf",
+      "aliases": [
+        "RLHF"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:b22fb993abcb4bfe551b",
+      "name": "dpo",
+      "aliases": [
+        "DPO"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:34aef458a17fddb8f7ca",
+      "name": "sft",
+      "aliases": [
+        "SFT"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:10182ab855ff772753c0",
+      "name": "mcp",
+      "aliases": [
+        "MCP"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:527ba7f732aa4673d451",
+      "name": "qlora",
+      "aliases": [
+        "QLoRA"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:df7d2f0899a603435661",
+      "name": "数据治理",
+      "aliases": [
+        "数据治理"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1f43d19d8f19de58b3cf",
+      "name": "数据仓库",
+      "aliases": [
+        "数据仓库"
+      ],
+      "category": "data",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:60dd357bbdf2d54d344e",
+      "name": "知识图谱",
+      "aliases": [
+        "知识图谱"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:63ec07c37e2abecedbe6",
+      "name": "模型量化",
+      "aliases": [
+        "模型量化"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:081bf83da92df5db1939",
+      "name": "预训练",
+      "aliases": [
+        "预训练"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:bf06a361b0a5c6b0d1c1",
+      "name": "微调",
+      "aliases": [
+        "微调"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:5d7b7e77768bfdfc7a6e",
+      "name": "多模态",
+      "aliases": [
+        "多模态"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:43a0ee28e69eafa960ff",
+      "name": "图神经网络",
+      "aliases": [
+        "图神经网络"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:bba764133ac1575945f9",
+      "name": "强化学习",
+      "aliases": [
+        "强化学习"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:584cc9e8ba4e40a731b2",
+      "name": "具身智能",
+      "aliases": [
+        "具身智能"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:dd1d44ee19491a52600d",
+      "name": "harmonyos",
+      "aliases": [
+        "HarmonyOS"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:1040113abe1b14737f63",
+      "name": "ros",
+      "aliases": [
+        "ROS"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:eddc86a57611c3384889",
+      "name": "rtos",
+      "aliases": [
+        "RTOS"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:61b4331c6f20658cf663",
+      "name": "fpga",
+      "aliases": [
+        "FPGA"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:85acc813ca3f42681de5",
+      "name": "ue",
+      "aliases": [
+        "UE5"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:28c9483d0805aa42d0bf",
+      "name": "unreal",
+      "aliases": [
+        "Unreal"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    },
+    {
+      "id": "skill:a5790b06f63b7c1646f0",
+      "name": "unity",
+      "aliases": [
+        "Unity"
+      ],
+      "category": "other",
+      "parent_ids": [],
+      "review_status": "collector_import_pending_review"
+    }
+  ]
+}

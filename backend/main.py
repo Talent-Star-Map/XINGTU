@@ -29,6 +29,8 @@ from routers.apply_api import router as apply_router
 from routers.jobseeker_msg_api import router as jobseeker_msg_router
 from routers.trend import router as trend_router
 from routers.data_board import router as data_board_router
+from routers.job_graph_explorer import router as job_graph_explorer_router
+from routers.classification_review import router as classification_review_router
 import os
 
 @asynccontextmanager
@@ -80,6 +82,8 @@ app.include_router(jobseeker_msg_router)
 # ── 趋势洞察(Neo4j + AI 新岗位/能力 diff) ──
 app.include_router(trend_router)
 app.include_router(data_board_router)
+app.include_router(job_graph_explorer_router)
+app.include_router(classification_review_router)
 
 @app.get('/api/health')
 def health():
