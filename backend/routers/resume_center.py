@@ -33,7 +33,8 @@ from database import (
     get_session, verify_token, get_session,
     Resume, ResumeSection, ResumeShare, ResumeTemplate, CrawledJob,
 )
-from services.resume_gen import generate_resume, optimize_section
+from services.resume_gen import build_resume_from_profile, optimize_section
+from services.resume_profile import collect_profile, profile_preview
 from services.resume_import import build_sections, build_title
 from services import print_token
 from time_util import fmt as _fmt_time
@@ -87,32 +88,60 @@ def _resume_to_dict(session, r: Resume) -> dict:
 # AI 生成 / 优化
 # ════════════════════════════════════════════════════════════════════
 class GenerateReq(BaseModel):
-    job_title: str = Field(..., description='岗位名称')
+    job_title: str = Field(..., description='目标岗位')
     years_of_experience: int = Field(0, description='经验年限')
-    skills: list[str] = Field([], description='已有技能')
+    skills: list[str] = Field([], description='补充技能（会与账号资料里的技能合并）')
     industry: str = Field('', description='行业')
-    experience: str = Field('', description='工作经历描述')
+    experience: str = Field('', description='已废弃：内容一律取自账号资料与已有简历')
     language: str = Field('zh', description='语言 zh/en')
     template_key: str = Field('classic', description='模板 key')
+    # 是否让模型润色措辞：用户自主选择，关闭则直接使用资料原文
+    polish: bool = Field(True, description='AI 润色（只改措辞，不改事实）')
+
+
+@router.get('/generate-context')
+def generate_context(token: str = Depends(request_token)):
+    """生成前预览：会用到哪些资料、还缺什么
+
+    弹窗用它告诉用户「这份简历是从你的资料来的」，而不是一句 AI 凭空写。
+    """
+    user_id = _get_user_id(token)
+    session = get_session()
+    try:
+        profile = collect_profile(session, user_id)
+        return {'success': True, 'data': profile_preview(profile)}
+    finally:
+        session.close()
 
 
 @router.post('/generate')
 def resume_generate(req: GenerateReq, token: str = Depends(request_token)):
-    """AI 生成完整简历并保存"""
+    """根据账号资料 + 已有简历生成简历并保存
+
+    事实层由服务端从库里取，模型只在 polish=True 时改写措辞；
+    模型不可用/输出不合规时会自动回退到未润色版本，不会因为润色失败而报错。
+    """
     user_id = _get_user_id(token)
-    result = generate_resume({
+    session = get_session()
+    try:
+        profile = collect_profile(session, user_id)
+    finally:
+        session.close()
+
+    result = build_resume_from_profile(profile, {
         'job_title': req.job_title,
         'years_of_experience': req.years_of_experience,
         'skills': req.skills,
         'industry': req.industry,
-        'experience': req.experience,
         'language': req.language,
-    })
+    }, polish=req.polish)
     if not result['success']:
         return _err('GENERATE_ERROR', result['error'])
 
-    resume_data = result['data']['resume']
-    title = f"{req.job_title or '简历'} - {'AI生成简历' if req.language != 'en' else 'AI Generated'}"
+    payload = result['data']
+    resume_data = payload['resume']
+    label = ('AI润色' if payload['polished'] else '资料生成') if req.language != 'en' else 'Resume'
+    title = f"{req.job_title or '简历'} - {label}"
 
     session = get_session()
     try:
@@ -129,8 +158,15 @@ def resume_generate(req: GenerateReq, token: str = Depends(request_token)):
                     content=resume_data[stype], sort_order=i,
                 ))
         session.commit()
-        return {'success': True, 'data': _resume_to_dict(session, r),
-                'message': 'AI 简历生成成功', 'source': result['data']['source']}
+        return {
+            'success': True,
+            'data': _resume_to_dict(session, r),
+            'message': '已根据你的资料生成简历' if payload['polished'] else '已根据你的资料生成简历（未润色）',
+            'source': payload['source'],
+            'polished': payload['polished'],
+            'profile_meta': payload['profile_meta'],
+            'warnings': payload['warnings'],
+        }
     except Exception as e:
         session.rollback()
         return _err('SAVE_ERROR', f'保存简历失败: {e}')
@@ -233,8 +269,8 @@ def resume_create(req: CreateReq, token: str = Depends(request_token)):
 # ════════════════════════════════════════════════════════════════════
 _IMPORT_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'resumes')
 os.makedirs(_IMPORT_DIR, exist_ok=True)
-_IMPORT_EXTS = {'pdf', 'docx', 'doc', 'txt'}
-_IMPORT_MAX_BYTES = 8 * 1024 * 1024
+_IMPORT_EXTS = {'pdf', 'docx', 'doc', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff'}
+_IMPORT_MAX_BYTES = 12 * 1024 * 1024
 
 
 @router.post('/import')
@@ -254,13 +290,13 @@ async def resume_import(
     filename = file.filename or ''
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
     if ext not in _IMPORT_EXTS:
-        raise HTTPException(400, '仅支持 pdf/docx/doc/txt 格式')
+        raise HTTPException(400, '仅支持 pdf / docx / doc / txt / 图片(png jpg webp bmp tif)')
 
     content = await file.read()
     if not content:
         raise HTTPException(400, '文件内容为空')
     if len(content) > _IMPORT_MAX_BYTES:
-        raise HTTPException(400, '文件不能超过 8MB')
+        raise HTTPException(400, '文件不能超过 12MB')
 
     stored = f'{user_id}_import_{uuid4().hex[:8]}.{ext}'
     path = os.path.join(_IMPORT_DIR, stored)
@@ -321,6 +357,7 @@ async def resume_import(
         payload = _resume_to_dict(session, r)
         payload['import_meta'] = {
             'method': data.get('method', ''),
+            'extract_via': data.get('extract_via', ''),
             'filename': filename,
             'confidence_avg': quality.get('confidence_avg', 0),
             'verified_count': quality.get('verified_count', 0),

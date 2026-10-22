@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ResumeEditor from '../../components/resume/editor/ResumeEditor'
 import ImportResumeDialog from '../../components/resume/ImportResumeDialog'
 import ShareResumeDialog from '../../components/resume/ShareResumeDialog'
+import GenerateResumeDialog from '../../components/resume/GenerateResumeDialog'
 import { templateName as tplName } from '../../lib/resumeTemplateNames'
 import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
@@ -156,8 +157,6 @@ export default function ResumeCenter() {
   // 新建/AI 生成弹窗
   const [createOpen, setCreateOpen] = useState(false)
   const [genOpen, setGenOpen] = useState(false)
-  const [genForm, setGenForm] = useState({ job_title: '', years_of_experience: 3, skills: '', industry: '', template_key: 'classic' })
-  const [generating, setGenerating] = useState(false)
 
   // 分享（弹窗内部自己读写分享状态）
   const [shareTarget, setShareTarget] = useState<ResumeItem | null>(null)
@@ -320,26 +319,6 @@ export default function ResumeCenter() {
       } catch { /* 静默失败,用户后续编辑自动保存会再写 */ }
       await loadAll()
     } catch { showToast('网络错误') }
-  }
-
-  // ── AI 生成简历 ──
-  const submitGenerate = async () => {
-    if (!genForm.job_title.trim()) { showToast('请填写岗位名称'); return }
-    setGenerating(true)
-    try {
-      const r = await fetch(withToken('/api/resume-center/generate'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_title: genForm.job_title, years_of_experience: genForm.years_of_experience,
-          skills: genForm.skills.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
-          industry: genForm.industry, language: 'zh', template_key: genForm.template_key,
-        }),
-      })
-      const d = await r.json()
-      if (d.success) { showToast(d.message || 'AI 简历生成成功'); setGenOpen(false); setEditing(d.data); await loadAll() }
-      else showToast(d.error?.message || '生成失败')
-    } catch { showToast('网络错误') }
-    finally { setGenerating(false) }
   }
 
   // ── 删除 ──
@@ -554,71 +533,21 @@ export default function ResumeCenter() {
         )}
       </AnimatePresence>
 
-      {/* ── AI 生成弹窗 ── */}
+      {/* ── AI 生成弹窗（资料驱动 + 可选润色） ── */}
       <AnimatePresence>
         {genOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}
-            onClick={() => setGenOpen(false)}>
-            <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 10 }}
-              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--color-surface-container-lowest)' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                  <Sparkles className="h-4 w-4" style={{ color: 'var(--accent-blue)' }} /> AI 生成简历
-                </h3>
-                <button onClick={() => setGenOpen(false)} style={{ color: 'var(--color-on-surface-variant)' }}><X className="h-4 w-4" /></button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-on-surface-variant)' }}>目标岗位 *</label>
-                  <input value={genForm.job_title} onChange={e => setGenForm({ ...genForm, job_title: e.target.value })}
-                    placeholder="如 AI应用开发工程师" className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
-                    style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-on-surface-variant)' }}>经验年限</label>
-                    <select value={genForm.years_of_experience} onChange={e => setGenForm({ ...genForm, years_of_experience: Number(e.target.value) })}
-                      className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
-                      style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}>
-                      {[0,1,2,3,5,8].map(y => <option key={y} value={y}>{y === 0 ? '应届生' : `${y} 年`}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-on-surface-variant)' }}>行业</label>
-                    <input value={genForm.industry} onChange={e => setGenForm({ ...genForm, industry: e.target.value })}
-                      placeholder="如 人工智能" className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
-                      style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-on-surface-variant)' }}>已有技能（逗号分隔）</label>
-                  <input value={genForm.skills} onChange={e => setGenForm({ ...genForm, skills: e.target.value })}
-                    placeholder="如 Python, RAG, LangChain" className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
-                    style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-on-surface-variant)' }}>模板</label>
-                  <select value={genForm.template_key} onChange={e => setGenForm({ ...genForm, template_key: e.target.value })}
-                    className="w-full h-9 px-3 rounded-lg text-sm border outline-none"
-                    style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }}>
-                    {templates.map(t => <option key={t.id} value={t.template_key}>{templateName(t.template_key)}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setGenOpen(false)} className="h-9 px-4 rounded-lg text-sm border"
-                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>取消</button>
-                <button onClick={submitGenerate} disabled={generating}
-                  className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 disabled:opacity-60"
-                  style={{ background: 'var(--accent-blue)', color: '#fff' }}>
-                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                  {generating ? '生成中…' : '生成简历'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+          <GenerateResumeDialog
+            templates={templates}
+            templateName={templateName}
+            onClose={() => setGenOpen(false)}
+            onToast={showToast}
+            onGenerated={(r, warnings) => {
+              setGenOpen(false)
+              setEditing(r)
+              loadAll()
+              showToast(warnings[0] || '已根据你的资料生成简历')
+            }}
+          />
         )}
       </AnimatePresence>
 

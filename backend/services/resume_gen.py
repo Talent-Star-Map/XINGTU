@@ -2,13 +2,17 @@
 AI 简历生成/优化服务 — 调用 LLM 路由层（services/llm.py）
 
 职责：
-    1. generate_resume(params) — 根据岗位信息生成完整 6 区块简历 JSON
+    1. build_resume_from_profile(profile, params, polish) — 基于用户已有资料构建 6 区块简历
     2. optimize_section(section) — 优化某个区块的措辞
 
-设计要点：
+设计要点（2026-10-22 改造）：
+    - **不再凭空生成**：事实层（姓名/手机/邮箱/学校/学历/公司/职位/时间/项目）全部来自
+      用户已填资料与已有简历，本地构建，模型碰不到这些字段
+    - **润色由用户选择**：polish=False 直接用本地版本；polish=True 才交给模型改写措辞，
+      并且结果要过 `resume_polish.guard_sections` 校验（数字、公司名、学校名都必须在已知范围内）
+    - Mock 模式或 AI 总开关关闭时不调模型，避免把示例简历「张小明」当成生成结果
     - 复用 services/llm.py 的统一入口 complete(tier, system, messages, json_mode)
-    - 开发期 Mock 模式返回预设假数据，不消耗外部 API
-    - max_tokens 给足 16384（对齐 JadeAI issue#87：8K 会截断 JSON 导致解析失败）
+    - max_tokens 给足（8K 会截断 JSON，见 JadeAI issue#87）
     - 输出结构严格对齐前端 types/resume.ts 的区块结构
 
 @owner: XINGTU 团队（AI 简历中心）
@@ -19,6 +23,8 @@ import re
 from typing import Optional
 
 from services.llm import complete, LLMTier
+from services.resume_import import _group_skills
+from services.resume_polish import polish_sections, numbers_in, orgs_in
 
 # ─── 6 大区块定义 ────────────────────────────────────────────────────────────
 SECTION_TITLES = {
@@ -30,42 +36,15 @@ SECTION_TITLES = {
     'projects': '项目经历',
 }
 
-# 生成结果的结构化 schema（提示词里写死，要求 LLM 严格返回）
-GENERATE_SCHEMA_DESC = """返回一个 JSON 对象，必须包含以下 6 个顶层键，结构严格如下：
-{
-  "personal_info": { "fullName": "", "jobTitle": "", "email": "", "phone": "", "location": "", "website": "", "github": "", "linkedin": "" },
-  "summary": { "text": "一段 2-3 句话的个人简介" },
-  "work_experience": { "items": [ { "id": "1", "company": "", "position": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 null", "current": false, "description": "", "technologies": [], "highlights": [] } ] },
-  "education": { "items": [ { "id": "1", "institution": "", "degree": "", "field": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "gpa": "", "highlights": [] } ] },
-  "skills": { "categories": [ { "id": "1", "name": "分类名", "skills": ["技能1", "技能2"] } ] },
-  "projects": { "items": [ { "id": "1", "name": "", "url": "", "startDate": "", "endDate": "", "description": "", "technologies": [], "highlights": [] } ] }
-}
-注意：
-- 直接输出 JSON，不要 markdown 代码块，不要任何说明文字
-- 工作经历条目数随经验年限：1-2(初级) / 2-3(中级) / 3-4(高级)
-- 每个工作/项目条目 3-5 条 highlight，用具体可量化的成果（如"性能提升40%"）
-- 技能按类别组织（如"编程语言"/"AI框架"/"工具"）
-"""
-
-
-def _generate_system_prompt(language: str) -> str:
-    lang = 'English' if language == 'en' else 'Simplified Chinese'
-    return f"""你是一位专业的简历撰写专家。请用{lang}生成一份完整、真实、专业的简历。
-
-生成规范：
-- 内容要具体可量化（如"性能提升 40%""带领 8 人团队"）
-- 公司名/学校名/项目名要合理可信
-- 使用强动词开头（如"主导""构建""优化"）
-- 日期格式 YYYY-MM
-- 个人信息生成合理的姓名、邮箱、电话、城市，不要用明显假数据
-- CRITICAL: 你是 JSON API，整个响应必须是一个合法的 JSON 对象，以 {{ 开头以 }} 结尾，不要 markdown 语法，不要代码块"""
-
 
 def _optimize_system_prompt() -> str:
     return """你是一位简历优化专家。根据用户的要求，优化给定简历区块的内容。
-要求：
-- 保持事实不变，只改进表达：更专业、更简洁、更有说服力
-- 使用强动词、量化成果
+
+绝对规则：
+- 只能改措辞，不得新增事实：不虚构公司、学校、项目、时间、业绩数字
+- 原文出现的数字必须原样保留，不能改大也不能新增
+- 人名、联系方式、公司名、学校名、日期一律不动
+- 使用强动词、量化已有成果（没有数字就不要硬造数字）
 - CRITICAL: 直接返回优化后的区块 JSON（结构和输入一致），不要 markdown 代码块，不要说明文字"""
 
 
@@ -92,54 +71,163 @@ def _try_parse_json(text: str) -> Optional[dict]:
     return None
 
 
-def generate_resume(params: dict) -> dict:
-    """根据岗位信息生成完整简历 JSON
+def _template_summary(profile: dict, params: dict, job_title: str, skills: list[str]) -> str:
+    """用已知事实拼一句简介（不调模型）
 
-    params:
-        job_title: str           岗位名称
-        years_of_experience: int 经验年限
-        skills: list[str]        已有技能（可选）
-        industry: str            行业（可选）
-        experience: str          工作经历描述（可选，会被解析进 work_experience）
-        language: str            语言 zh/en
-    返回:
-        {success, data: {resume: <6区块dict>, source: 'mock'|'llm'}, error}
+    只陈述资料里存在的内容：年限、目标岗位、技能、学校学历。没有的就不写。
     """
-    job_title = params.get('job_title', '')
-    years = params.get('years_of_experience', 0)
-    skills = params.get('skills', [])
-    industry = params.get('industry', '')
-    experience = params.get('experience', '')
-    language = params.get('language', 'zh')
+    basic = profile.get('basic') or {}
+    years = params.get('years_of_experience')
+    if years in (None, ''):
+        years = basic.get('years')
+    bits: list[str] = []
+    if years:
+        bits.append(f'{years} 年{job_title}经验' if job_title else f'{years} 年工作经验')
+    elif job_title:
+        # 应届生（0 年）或年限未知：写求职意向，不虚报经验
+        prefix = '应届生，求职意向：' if years == 0 else '求职意向：'
+        bits.append(f'{prefix}{job_title}')
+    if skills:
+        bits.append('熟悉 ' + '、'.join(skills[:6]))
+    # 学校优先取教育经历里的（比个人资料里的 school 干净），学历同理
+    edu0 = (profile.get('education') or [{}])[0] if profile.get('education') else {}
+    school = edu0.get('institution') or basic.get('school') or ''
+    degree = edu0.get('degree') or basic.get('degree') or ''
+    if school:
+        bits.append(f'{school}{degree}' if degree and degree not in school else school)
+    elif degree:
+        bits.append(degree)
+    body = ('，'.join(bits) + '。') if bits else ''
+    # 自我评价放在最前，去掉自带句号再拼，避免出现「。，」这种断句
+    head = str(basic.get('bio') or '').strip().rstrip('。.')
+    if head:
+        return head + '。' + body
+    return body
 
-    skills_ctx = f'\n要包含的技能: {", ".join(skills)}' if skills else ''
-    industry_ctx = f'\n行业: {industry}' if industry else ''
-    exp_ctx = f'\n\n候选人提供的工作经历描述（请解析进 work_experience 并用于生成 summary/skills/projects）:\n---\n{experience}\n---' if experience else ''
 
-    prompt = f"""为「{job_title}」岗位生成本简历（{years} 年经验）。{skills_ctx}{industry_ctx}{exp_ctx}
+def _local_sections(profile: dict, params: dict) -> dict:
+    """本地构建 6 区块 —— 只搬运资料，不生成事实"""
+    basic = profile.get('basic') or {}
+    job_title = (params.get('job_title') or basic.get('targetPosition') or '').strip()
 
-{GENERATE_SCHEMA_DESC}"""
+    skills: list[str] = []
+    for s in list(params.get('skills') or []) + list(profile.get('skills') or []):
+        name = str(s).strip()
+        if name and name not in skills:
+            skills.append(name)
 
-    try:
-        result = complete(
-            LLMTier.STRONG,
-            _generate_system_prompt(language),
-            [{'role': 'user', 'content': prompt}],
-            json_mode=True,
-            max_tokens=16384,
-        )
-        data = result.get('raw')
-        if not data:
-            data = _try_parse_json(result.get('text', ''))
-        if not data:
-            return {'success': False, 'error': '模型输出无法解析为 JSON'}
-        return {'success': True, 'data': {'resume': data, 'source': result.get('provider', 'llm')}, 'error': None}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
+    work = []
+    for i, item in enumerate(profile.get('work') or []):
+        work.append({
+            'id': str(i + 1),
+            'company': item.get('company', ''),
+            'position': item.get('position', ''),
+            'location': item.get('location', ''),
+            'startDate': item.get('startDate') or '',
+            'endDate': item.get('endDate') or None,
+            'current': bool(item.get('current')),
+            'description': item.get('description', ''),
+            'technologies': item.get('technologies') or [],
+            'highlights': item.get('highlights') or [],
+        })
+
+    education = []
+    for i, item in enumerate(profile.get('education') or []):
+        education.append({
+            'id': str(i + 1),
+            'institution': item.get('institution', ''),
+            'degree': item.get('degree', ''),
+            'field': item.get('field', ''),
+            'location': item.get('location', ''),
+            'startDate': item.get('startDate') or '',
+            'endDate': item.get('endDate') or '',
+            'gpa': item.get('gpa', ''),
+            'highlights': item.get('highlights') or [],
+        })
+
+    projects = []
+    for i, item in enumerate(profile.get('projects') or []):
+        projects.append({
+            'id': str(i + 1),
+            'name': item.get('name', ''),
+            'url': item.get('url', ''),
+            'startDate': item.get('startDate') or '',
+            'endDate': item.get('endDate') or '',
+            'description': item.get('description', ''),
+            'technologies': item.get('technologies') or [],
+            'highlights': item.get('highlights') or [],
+        })
+
+    return {
+        'personal_info': {
+            'fullName': basic.get('fullName', ''),
+            'jobTitle': job_title,
+            'email': basic.get('email', ''),
+            'phone': basic.get('phone', ''),
+            'location': basic.get('city', ''),
+            'website': '', 'github': '', 'linkedin': '',
+        },
+        'summary': {'text': _template_summary(profile, params, job_title, skills)},
+        'work_experience': {'items': work},
+        'education': {'items': education},
+        'skills': {'categories': _group_skills(skills) if skills else []},
+        'projects': {'items': projects},
+    }
+
+
+def build_resume_from_profile(profile: dict, params: dict, polish: bool = True) -> dict:
+    """按用户已有资料生成简历
+
+    profile: services/resume_profile.collect_profile() 的返回值
+    params:  job_title / years_of_experience / skills / industry / language
+    polish:  是否让模型润色措辞（用户自主选择）
+
+    返回 {success, data: {resume, source, polished, profile_meta, warnings}, error}
+    """
+    sections = _local_sections(profile, params)
+    polished = False
+    source = 'profile'
+
+    warnings: list[str] = []
+    if not profile.get('has_any'):
+        warnings.append('你的账号还没有填写任何资料，已生成空白框架，请先补个人信息')
+    elif profile.get('missing'):
+        warnings.append('资料里还缺：' + '、'.join(profile['missing']))
+    if not (sections['work_experience']['items'] or sections['projects']['items']):
+        warnings.append('没有工作或项目经历，这部分留空了，请在编辑器里补充')
+
+    if polish:
+        result = polish_sections(sections, profile, params)
+        if result:
+            sections = result['sections']
+            polished = True
+            source = 'profile+ai'
+        else:
+            # 模型没配、Mock 模式、输出不合规都会走到这里：如实告诉用户，别假装润色过
+            warnings.append('AI 润色这次没有生效（模型未启用或返回内容不合规），已使用资料原文')
+
+    return {
+        'success': True,
+        'data': {
+            'resume': sections,
+            'source': source,
+            'polished': polished,
+            'profile_meta': {
+                'filled': profile.get('filled') or [],
+                'missing': profile.get('missing') or [],
+                'has_any': bool(profile.get('has_any')),
+                'skill_count': len(profile.get('skills') or []),
+                'work_count': len(profile.get('work') or []),
+                'source_resume_id': (profile.get('source_resume') or {}).get('id'),
+            },
+            'warnings': warnings,
+        },
+        'error': None,
+    }
 
 
 def optimize_section(section_type: str, content: dict, instruction: str = '优化措辞', language: str = 'zh') -> dict:
-    """优化简历某个区块的内容
+    """优化简历某个区块的内容（编辑器里用户主动点的那次）
 
     section_type: personal_info/summary/work_experience/education/skills/projects
     content:      该区块当前内容（dict）
@@ -166,6 +254,18 @@ def optimize_section(section_type: str, content: dict, instruction: str = '优�
             data = _try_parse_json(result.get('text', ''))
         if not data:
             return {'success': False, 'error': '模型输出无法解析为 JSON'}
+        # 逐区块优化也守着同一条线：不许出现原文没有的数字、公司或学校
+        src = json.dumps(content, ensure_ascii=False)
+        dst = json.dumps(data, ensure_ascii=False)
+        extra_nums = numbers_in(dst) - numbers_in(src)
+        src_orgs = orgs_in(src)
+        extra_orgs = {o for o in orgs_in(dst)
+                      if not any(o == k or o in k or k in o for k in src_orgs)}
+        if extra_nums or extra_orgs:
+            return {
+                'success': False,
+                'error': '优化结果里出现了原文没有的内容，已取消本次优化（请重试或换个说法）',
+            }
         return {'success': True, 'data': {'content': data, 'source': result.get('provider', 'llm')}, 'error': None}
     except Exception as e:
         return {'success': False, 'error': str(e)}
