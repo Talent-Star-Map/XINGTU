@@ -4,10 +4,10 @@
 """
 import os
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
-import bcrypt, random, re, smtplib, uuid
+import bcrypt, secrets, re, smtplib, uuid
 from email.mime.text import MIMEText
 
 router = APIRouter(prefix='/api/auth', tags=['auth'])
@@ -45,18 +45,27 @@ def send_email(to, code):
     body = f'''<div style="max-width:560px;margin:0 auto;padding:32px;font-family:sans-serif;background:#fff;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:28px;font-weight:800;background:linear-gradient(135deg,#0052D9,#5B21B6);-webkit-background-clip:text;color:transparent">✦ 星图</span></div><p style="font-size:14px;color:#434654">您好！<br>您的验证码为：</p><div style="text-align:center;margin:24px 0"><span style="display:inline-block;font-size:36px;font-weight:800;letter-spacing:8px;padding:12px 32px;background:#f0f4ff;border-radius:12px;color:#0052D9">{code}</span></div><p style="font-size:12px;color:#8a8fa0">星图 · 岗位能力图谱系统</p></div>'''
     msg = MIMEText(body, 'html', 'utf-8')
     msg['Subject'] = f'星图验证码：{code}'; msg['From'] = SMTP_USER; msg['To'] = to
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s: s.login(SMTP_USER, SMTP_PASS); s.send_message(msg)
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s: s.login(SMTP_USER, SMTP_PASS); s.send_message(msg)
 
 @router.post('/send-code')
 def send_code(req: SendCodeReq):
     if '@' not in req.account: raise HTTPException(400, '目前仅支持邮箱注册')
-    code = ''.join(random.choices('0123456789', k=6))
+    code = ''.join(secrets.choice('0123456789') for _ in range(6))
     session = get_session()
-    session.query(VerifyCode).filter(VerifyCode.target == req.account).delete()
-    session.add(VerifyCode(target=req.account, code=code))
-    session.commit(); session.close()
-    try: send_email(req.account, code); return {'success': True, 'message': '验证码已发送到邮箱'}
-    except Exception: print(f'\n===== 验证码 [{req.account}]：{code} =====\n'); return {'success': True, 'message': f'验证码: {code}'}
+    try:
+        session.query(VerifyCode).filter(VerifyCode.target == req.account).delete()
+        session.add(VerifyCode(target=req.account, code=code))
+        session.flush()
+        send_email(req.account, code)
+        session.commit()
+    except Exception:
+        session.rollback()
+        return JSONResponse(status_code=503, content={
+            'success': False, 'message': '验证码发送失败，请稍后重试',
+        })
+    finally:
+        session.close()
+    return {'success': True, 'message': '验证码已发送到邮箱'}
 
 @router.post('/register')
 def register(req: RegisterReq):
