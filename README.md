@@ -139,14 +139,36 @@ python -c "import bcrypt; print(bcrypt.hashpw('新密码'.encode(), bcrypt.gensa
 
 ```bash
 cd backend
-python tests/test_jd_parser.py     # JD 技能解析   F1 0.9553（104 条 JD）
-python tests/test_resume.py        # 简历技能提取   F1 0.9633（100 条简历）
-python tests/test_job_agent.py     # 人岗匹配       Top-5 1.0000 / MRR 0.9525（全量约 7 分钟，--quick 更快）
-python tests/test_our_modules.py   # 纯函数单测     20 PASS
-python tests/test_quality.py       # 质检模块单测   14 PASS
+python tests/test_jd_parser.py      # JD 技能解析   F1 0.9553（104 条 JD）
+python tests/test_resume.py         # 简历技能提取   F1 0.9633（100 条简历）
+python tests/test_resume_fields.py  # 简历字段提取   61 项（姓名/手机/邮箱/学校/经历分条）
+python tests/test_resume_gen.py     # AI 生成不编造  57 项（事实取自资料 + 润色校验）
+python tests/test_resume_formats.py # 简历格式覆盖   5 项（图片/扫描 PDF/.doc；缺 OCR 依赖时 SKIP）
+python tests/test_job_agent.py      # 人岗匹配       Top-5 1.0000 / MRR 0.9525（全量约 7 分钟，--quick 更快）
+python tests/test_our_modules.py    # 纯函数单测     20 PASS
+python tests/test_quality.py        # 质检模块单测   14 PASS
 ```
 
+`test_resume_formats.py` 需要可选依赖（RapidOCR / LibreOffice / Word 任一），缺失的用例记 SKIP 不记 FAIL，换机器不会莫名其妙变红。
+
 测试集在 `backend/test_data/`（104 条 JD + 100 条简历 + 100 组匹配对），口径细节见 `docs/JOBMATCH-LOGIC.md` 与各脚本头部注释。
+
+权限校验需要连库（先按上文起好后端依赖的 MySQL）：
+
+```bash
+cd backend
+python tests/test_authz.py         # 未登录 / 角色错误 / 越权访问 35 项
+```
+
+## 提交前自检
+
+CI 的 `Credential check` 会扫描所有已跟踪文件，扫到疑似明文凭据就整条流水线失败。推送前本地跑一遍，省一次「推上去才红」的来回：
+
+```bash
+python scripts/check_repository_secrets.py    # 输出 0 finding(s) 才算过
+```
+
+连接串里的占位密码统一写 `REMOVED_SECRET`（脚本显式排除该标记），测试要用的密钥现生成或写占位常量，不要提交像真实凭据的字面量。
 
 ---
 
