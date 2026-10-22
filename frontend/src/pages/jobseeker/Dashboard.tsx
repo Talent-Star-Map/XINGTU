@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, ChevronRight, BookOpen, Target, Clock } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Briefcase, Upload, LineChart, TrendingUp, Sparkles, ChevronRight, BookOpen, Target, Clock, Share2, RefreshCw, AlertCircle } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import { useLearning } from '../../lib/LearningContext'
 import StatsCounter from '../../components/ui/StatsCounter'
@@ -23,12 +23,7 @@ interface HistoryItem {
   timestamp: number
 }
 
-const statsData = [
-  { label: '收录岗位', value: 2817, color: 'var(--color-primary)' },
-  { label: '技能标签', value: 1024, color: 'var(--accent-purple)' },
-  { label: '新岗位发现', value: 12, color: 'var(--accent-green)' },
-  { label: '平台用户', value: 8642, color: 'var(--accent-orange)' },
-]
+const METRIC_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
 
 /** 安全地将各种日期格式转为时间戳 */
 function toTimestamp(v: any): number {
@@ -55,8 +50,51 @@ function fmtDate(ts: number): string {
 
 export default function Dashboard() {
   const { setPage } = JSNav.use()
-  const { masteredSkills } = useLearning()
+  const { masteredSkills, learningProgress, refreshProgress } = useLearning()
+  const reducedMotion = useReducedMotion()
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [historyCount, setHistoryCount] = useState(0)
+  const [totalJobs, setTotalJobs] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [reload, setReload] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let disposed = false
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
+    setLoading(true)
+    setLoadError('')
+    void (async () => {
+      try {
+        const response = await fetch('/api/jobs/stats', { signal: controller.signal })
+        const result = await response.json()
+        const count = result.data?.total
+        if (!response.ok || !result.success || typeof count !== 'number' || !Number.isFinite(count) || count < 0) {
+          throw new Error('岗位统计暂时不可用')
+        }
+        if (!disposed) setTotalJobs(count)
+      } catch {
+        if (!disposed) setLoadError('岗位统计加载失败，请重试')
+      } finally {
+        window.clearTimeout(timeout)
+        if (!disposed) setLoading(false)
+      }
+    })()
+    return () => { disposed = true; controller.abort(); window.clearTimeout(timeout) }
+  }, [reload])
+
+  useEffect(() => { void refreshProgress() }, [refreshProgress])
+
+  const learningSkills = new Set(learningProgress.filter(p => p.status === 'learning' && !masteredSkills.has(p.skill_name)).map(p => p.skill_name))
+  const trackedSkills = new Set([...masteredSkills, ...learningProgress.map(p => p.skill_name)])
+  const learningPercent = trackedSkills.size ? Math.round(masteredSkills.size / trackedSkills.size * 100) : 0
+  const statsData = [
+    { label: '收录岗位', value: totalJobs, icon: Briefcase, page: 'match' as const },
+    { label: '已掌握技能', value: masteredSkills.size, icon: Sparkles, page: 'my-skill-graph' as const },
+    { label: '诊断记录', value: historyCount, icon: Target, page: 'match' as const },
+    { label: '学习中技能', value: learningSkills.size, icon: BookOpen, page: 'learning' as const },
+  ]
 
   // 从 localStorage 读诊断历史（Diagnosis.tsx 写入）
   useEffect(() => {
@@ -73,6 +111,7 @@ export default function Dashboard() {
             seen.add(key)
             return true
           })
+          setHistoryCount(unique.length)
           setHistory(unique.slice(0, 3).map((h: any) => ({
             id: h.id || 0,
             jobId: h.jobId || h.job_id || 0,
@@ -109,6 +148,7 @@ export default function Dashboard() {
             seen.add(key)
             return true
           })
+          setHistoryCount(unique.length)
           setHistory(unique.slice(0, 3).map((h: any) => ({
             id: h.id || 0,
             jobId: h.jobId || h.job_id || 0,
@@ -127,7 +167,7 @@ export default function Dashboard() {
             timestamp: toTimestamp(h.timestamp || h.created_at),
           })))
         }
-      }
+      } else { setHistory([]); setHistoryCount(0) }
     } catch {}
   }
 
@@ -164,10 +204,11 @@ export default function Dashboard() {
   }
 
   const quickActions = [
-    { icon: Upload, label: '上传简历', desc: 'AI 自动解析，1 分钟建立能力档案', color: 'var(--color-primary)', page: 'resume' as const },
-    { icon: Briefcase, label: '浏览岗位', desc: '基于能力图谱精准推荐', color: 'var(--accent-purple)', page: 'match' as const },
-    { icon: LineChart, label: '人岗匹配', desc: '多维度匹配诊断与差距分析', color: 'var(--accent-green)', page: 'match' as const },
-    { icon: TrendingUp, label: '趋势洞察', desc: '实时追踪技能需求变化', color: 'var(--accent-orange)', page: 'trend' as const },
+    { icon: Upload, label: '上传简历', desc: '解析简历，建立能力档案', color: '#3b82f6', page: 'resume' as const },
+    { icon: Share2, label: '岗位图谱', desc: '探索岗位与技能关系', color: '#8b5cf6', page: 'skill-graph' as const },
+    { icon: LineChart, label: '人岗匹配', desc: '多维度匹配与差距分析', color: '#10b981', page: 'match' as const },
+    { icon: BookOpen, label: '学习路径', desc: '围绕目标岗位补齐技能', color: '#f97316', page: 'learning' as const },
+    { icon: TrendingUp, label: '趋势洞察', desc: '查看岗位与技能需求变化', color: '#f59e0b', page: 'trend' as const },
   ]
 
   const getGradeColor = (grade: string) => {
@@ -176,7 +217,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       {/* 欢迎横幅 */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-2xl p-6"
@@ -193,32 +234,62 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
+      {loading && (
+        <div role="status" aria-live="polite" className="space-y-2">
+          <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>正在加载工作台数据…</p>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+            <motion.div className="h-full w-1/3 rounded-full" style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }}
+              initial={{ x: '-100%' }} animate={{ x: reducedMotion ? '100%' : ['-100%', '300%'] }}
+              transition={{ duration: reducedMotion ? 0 : 1.25, repeat: reducedMotion ? 0 : Infinity, ease: 'easeInOut' }} />
+          </div>
+        </div>
+      )}
+      {loadError && (
+        <div role="alert" className="flex items-center gap-2 rounded-xl border px-4 py-3 text-sm"
+          style={{ borderColor: 'var(--accent-orange)', color: 'var(--color-on-surface)', background: 'var(--color-surface-container-lowest)' }}>
+          <AlertCircle className="h-4 w-4 shrink-0" style={{ color: 'var(--accent-orange)' }} />
+          <span className="flex-1">{loadError}{totalJobs !== null ? '，当前显示上次加载结果。' : ''}</span>
+          <button type="button" onClick={() => setReload(v => v + 1)} className="flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>
+            <RefreshCw className="h-3.5 w-3.5" />重试
+          </button>
+        </div>
+      )}
+
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4">
-        {statsData.map((s, i) => (
-          <motion.div key={s.label}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-busy={loading}>
+        {statsData.map((s, i) => {
+          const color = METRIC_COLORS[i]
+          const Icon = s.icon
+          const isPending = i === 0 && loading
+          return (
+          <motion.button type="button" key={s.label} onClick={() => setPage(s.page)}
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
             whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-            className="rounded-2xl border p-5 shadow-sm"
+            className="rounded-2xl border p-5 shadow-sm text-left transition-all"
             style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium" style={{ color: 'var(--color-on-surface-variant)' }}>{s.label}</span>
+              <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: `${color}15` }}>
+                <Icon className="h-4 w-4" style={{ color }} />
+              </div>
             </div>
-            <p className="text-3xl font-bold tabular-nums" style={{ color: s.color }}><StatsCounter value={s.value} /></p>
-            <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
+            {isPending ? <div className="h-9 w-24 rounded-lg motion-safe:animate-pulse" aria-label="岗位统计加载中" style={{ background: 'var(--color-surface-container-high)' }} />
+              : <p className="text-3xl font-bold tabular-nums" style={{ color }}>{s.value === null ? '—' : <StatsCounter value={s.value} />}</p>}
+            <div aria-hidden="true" className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
               <motion.div className="h-full rounded-full"
-                initial={{ width: 0 }} animate={{ width: '60%' }} transition={{ duration: 0.8, delay: i * 0.1 }}
-                style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}aa)` }} />
+                initial={{ width: 0 }} animate={{ width: isPending ? '30%' : s.value === null ? '0%' : '60%', opacity: isPending ? [0.35, 1, 0.35] : 1 }}
+                transition={{ width: { duration: reducedMotion ? 0 : 0.8, delay: i * 0.1 }, opacity: { duration: 1, repeat: isPending && !reducedMotion ? Infinity : 0 } }}
+                style={{ background: `linear-gradient(90deg, ${color}, ${color}aa)` }} />
             </div>
-          </motion.div>
-        ))}
+          </motion.button>
+        )})}
       </div>
 
       {/* 快捷功能 */}
       <div>
         <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--color-on-surface)' }}>快捷功能</h2>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           {quickActions.map((action, i) => (
             <motion.button key={action.label}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -239,9 +310,9 @@ export default function Dashboard() {
       </div>
 
       {/* 底部双栏:最近诊断 + 学习进度 */}
-      <div className="grid grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* 最近诊断 */}
-        <div className="col-span-3 rounded-2xl border p-5 shadow-sm"
+        <div className="lg:col-span-3 rounded-2xl border p-5 shadow-sm"
           style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>最近诊断</h2>
@@ -312,7 +383,7 @@ export default function Dashboard() {
         </div>
 
         {/* 学习进度 */}
-        <div className="col-span-2 rounded-2xl border p-5 shadow-sm"
+        <div className="lg:col-span-2 rounded-2xl border p-5 shadow-sm"
           style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>学习进度</h2>
@@ -327,12 +398,12 @@ export default function Dashboard() {
             <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
               已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredSkills.size}</span> 项技能
             </p>
-            <div className="mt-4 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
-              <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(masteredSkills.size * 5, 100)}%` }}
-                transition={{ duration: 1 }} style={{ background: 'var(--color-primary)' }} />
+            <div className="mt-4 h-2 rounded-full overflow-hidden" role="progressbar" aria-label="已记录技能的掌握进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={learningPercent} style={{ background: 'var(--color-surface-container-high)' }}>
+              <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${learningPercent}%` }}
+                transition={{ duration: reducedMotion ? 0 : 0.8 }} style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }} />
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-              {masteredSkills.size < 10 ? '继续加油，多掌握几项核心技能！' : '技能储备不错，可以挑战更高匹配度！'}
+              {trackedSkills.size ? `已记录 ${trackedSkills.size} 项技能，掌握进度 ${learningPercent}%` : '诊断目标岗位后，开始记录你的学习进度'}
             </p>
             <button onClick={() => setPage('my-skill-graph')} className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer" style={{ background: 'var(--color-primary)' }}>
               查看能力图谱
