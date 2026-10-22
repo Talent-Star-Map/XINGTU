@@ -43,20 +43,54 @@ def _is_heading(line: str) -> bool:
     return any(s == h or s.startswith(h) for h in _ALL_HEADINGS)
 
 
+def is_heading(line: str) -> bool:
+    """公开的小标题判断（表格解析按行拆分时也要用同一套规则）"""
+    return _is_heading(line)
+
+
+def _cells(line: str) -> list[str]:
+    """按 | / 全角｜ / 制表符拆单元格（表格导出的文本会带这些分隔符）"""
+    return [c.strip() for c in re.split(r'\s*[|｜]\s*|\t+', line) if c.strip()]
+
+
+def _heading_of(line: str) -> str:
+    """取一行的「小标题」候选：表格行看第一格，普通行看整行"""
+    cells = _cells(line)
+    return cells[0] if cells else ''
+
+
+def _find_blocks(lines: list[str], aliases: tuple[str, ...]) -> list[list[str]]:
+    """收集所有命中别名的板块
+
+    一份简历可能同时有「实习经历」和「工作经历」两个标题，只看第一个会漏掉一半经历。
+    表格行（`工作经历 | 小米 | 工程师 | 2018.07-2021.08`）的小标题在第一格，
+    剩余单元格作为该板块的第一条内容。
+    """
+    blocks: list[list[str]] = []
+    current: list[str] | None = None
+    for line in lines:
+        head = _heading_of(line)
+        is_alias = any(head == a or (a in head and len(head) <= len(a) + 4) for a in aliases)
+        if is_alias:
+            cells = _cells(line)
+            current = []
+            blocks.append(current)
+            if len(cells) > 1:
+                current.append(' | '.join(cells[1:]))
+            continue
+        if current is None:
+            continue
+        if _is_heading(head):
+            current = None
+            continue
+        current.append(line.strip())
+    return blocks
+
+
 def _find_block(lines: list[str], aliases: tuple[str, ...]) -> list[str]:
-    """找到小标题，返回它到下一个标题之间的内容行"""
-    for i, line in enumerate(lines):
-        s = line.strip(' \t：:|｜·-—')
-        if any(s == a or (a in s and len(s) <= len(a) + 4) for a in aliases):
-            block: list[str] = []
-            for nxt in lines[i + 1:]:
-                if not nxt.strip():
-                    continue
-                if _is_heading(nxt):
-                    break
-                block.append(nxt.strip())
-            return block
-    return []
+    """兼容旧调用：返回第一个命中板块的内容行"""
+    blocks = _find_blocks(lines, aliases)
+    return blocks[0] if blocks else []
 
 
 def _entries(lines: list[str]) -> list[dict]:
@@ -95,8 +129,20 @@ def _header_parts(header: str) -> list[str]:
 def parse_work(text: str) -> list[dict]:
     lines = [l.strip() for l in (text or '').splitlines()]
     out = []
-    for entry in _entries(_find_block(lines, BLOCK_ALIASES['work'])):
-        parts = _header_parts(entry['header'])
+    work_lines: list[str] = []
+    for block in _find_blocks(lines, BLOCK_ALIASES['work']):
+        work_lines.extend(block)
+    for entry in _entries(work_lines):
+        header = entry['header']
+        # 「浙江大学 硕士 软件工程 2016.09-2019.03」这类教育行常被写在经历末尾，
+        # 带日期区间会被切成一条假工作经历，这里按「学校 + 学历词」排除
+        if _SCHOOL_HINT.search(header) and any(d in header for d in _DEGREE_WORDS):
+            continue
+        parts = _header_parts(header)
+        # 表格模板常把「公司 职位」写在同一格，这里按空格再拆一次
+        if len(parts) == 1 and len(parts[0].split()) > 1:
+            tokens = parts[0].split()
+            parts = [tokens[0], ' '.join(tokens[1:])]
         start, end, current = _dates(entry)
         body = entry['body']
         out.append({
@@ -116,15 +162,34 @@ def parse_work(text: str) -> list[dict]:
 def parse_education(text: str) -> list[dict]:
     lines = [l.strip() for l in (text or '').splitlines()]
     out = []
-    for entry in _entries(_find_block(lines, BLOCK_ALIASES['education'])):
+    edu_lines: list[str] = []
+    for block in _find_blocks(lines, BLOCK_ALIASES['education']):
+        edu_lines.extend(block)
+    for entry in _entries(edu_lines):
         parts = _header_parts(entry['header'])
         start, end, _ = _dates(entry)
-        institution = next((p for p in parts if _SCHOOL_HINT.search(p)), '')
-        degree = next((p for p in parts if any(d in p for d in _DEGREE_WORDS)), '')
-        rest = [p for p in parts if p not in (institution, degree)]
+        school_hit = next((_SCHOOL_HINT.search(p) for p in parts if _SCHOOL_HINT.search(p)), None)
+        institution = school_hit.group(0) if school_hit else ''
+        degree = next((d for d in _DEGREE_WORDS if any(d in p for p in parts)), '')
+        # 专业：从「学校 学历 专业」这一格里去掉学校与学历词后剩下的内容
         major = ''
-        for p in rest:
-            if not re.fullmatch(r'[\d\s.\-/年月]+', p):
+        for p in parts:
+            if not _SCHOOL_HINT.search(p):
+                continue
+            rest = _SCHOOL_HINT.sub(' ', p)
+            for d in _DEGREE_WORDS:
+                rest = rest.replace(d, ' ')
+            rest = re.sub(r'\s+', ' ', rest).strip()
+            if rest and not re.fullmatch(r'[\d\s.\-/年月]+', rest):
+                major = rest
+            break
+        if not major:
+            # 段落式写法「浙江大学  本科  软件工程」：学校单独成段，专业在后面一段
+            for p in parts:
+                if p == institution or p == degree or not p:
+                    continue
+                if re.fullmatch(r'[\d\s.\-/年月]+', p):
+                    continue
                 major = p
                 break
         out.append({
@@ -141,7 +206,10 @@ def parse_education(text: str) -> list[dict]:
 def parse_projects(text: str) -> list[dict]:
     lines = [l.strip() for l in (text or '').splitlines()]
     out = []
-    for entry in _entries(_find_block(lines, BLOCK_ALIASES['projects'])):
+    proj_lines: list[str] = []
+    for block in _find_blocks(lines, BLOCK_ALIASES['projects']):
+        proj_lines.extend(block)
+    for entry in _entries(proj_lines):
         parts = _header_parts(entry['header'])
         start, end, _ = _dates(entry)
         body = entry['body']

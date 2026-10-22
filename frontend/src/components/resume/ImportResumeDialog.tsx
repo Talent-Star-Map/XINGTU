@@ -6,6 +6,7 @@ const getToken = () => localStorage.getItem('xingtu_token') || ''
 
 interface ImportMeta {
   method: string
+  extract_via?: string
   filename: string
   confidence_avg: number
   verified_count: number
@@ -38,7 +39,7 @@ const SECTION_TEXT: Record<string, string> = {
   certifications: '证书资质',
 }
 
-const ACCEPT = '.pdf,.docx,.doc,.txt'
+const ACCEPT = '.pdf,.docx,.doc,.txt,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff'
 
 export default function ImportResumeDialog({ onClose, onImported, onToast }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,12 +51,12 @@ export default function ImportResumeDialog({ onClose, onImported, onToast }: Pro
   const pick = (f?: File | null) => {
     if (!f) return
     const ext = f.name.split('.').pop()?.toLowerCase() || ''
-    if (!['pdf', 'docx', 'doc', 'txt'].includes(ext)) {
-      onToast('只支持 PDF / Word / TXT')
+    if (!['pdf', 'docx', 'doc', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff'].includes(ext)) {
+      onToast('支持 PDF / Word / TXT / 图片')
       return
     }
-    if (f.size > 8 * 1024 * 1024) {
-      onToast('文件不能超过 8MB')
+    if (f.size > 12 * 1024 * 1024) {
+      onToast('文件不能超过 12MB')
       return
     }
     setFile(f)
@@ -128,14 +129,14 @@ export default function ImportResumeDialog({ onClose, onImported, onToast }: Pro
                 ) : (
                   <>
                     <p className="text-sm" style={{ color: 'var(--color-on-surface)' }}>拖拽文件到这里，或点击选择</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>支持 PDF / DOCX / DOC / TXT，最大 8MB</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-on-surface-variant)' }}>支持 PDF / DOCX / DOC / TXT / 图片（扫描件会走 OCR），最大 12MB</p>
                   </>
                 )}
               </div>
 
               <div className="mt-4 text-[11px] leading-relaxed space-y-1" style={{ color: 'var(--color-on-surface-variant)' }}>
                 <p>· 解析会尽量抽取姓名、联系方式、教育、工作与项目经历，导入后逐块核对即可</p>
-                <p>· 扫描版 PDF（纯图片）无法抽取文字，请改用文字版或先做 OCR</p>
+                <p>· 扫描版 PDF 与图片简历会自动走 OCR，页数多时会慢一些（最多取前 3 页）</p>
                 <p>· 解析通常需要 10~30 秒，配置了模型密钥时结果更完整</p>
               </div>
             </>
@@ -148,6 +149,8 @@ export default function ImportResumeDialog({ onClose, onImported, onToast }: Pro
                   <p className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
                     已生成 {result.sections.length} 个可编辑区块
                     {(result.import_meta?.method === 'deepseek') ? ' · AI 解析' : ' · 规则解析'}
+                    {(result.import_meta?.extract_via || '').includes('ocr') ? ' · OCR 识别' : ''}
+                    {(result.import_meta?.extract_via === 'doc-convert') ? ' · 由 Word 转换' : ''}
                   </p>
                 </div>
               </div>

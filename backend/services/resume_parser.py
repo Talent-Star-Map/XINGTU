@@ -16,19 +16,60 @@ def extract_pdf_text(path: str) -> str:
                 t = page.extract_text()
                 if t:
                     text += t + '\n'
-    except Exception as e:
-        text = f'[PDF解析错误: {e}]'
+    except Exception:
+        # 解析失败返回空串：调用方据此返回「无法提取文本内容」，
+        # 不能把错误信息当正文继续抽字段（会生成一份全是垃圾字段的简历）
+        return ''
     return text
 
 
+def _iter_docx_blocks(doc):
+    """按文档顺序产出段落与表格
+
+    很多中文简历模板把教育/工作/技能放在表格里，只读 doc.paragraphs 会
+    一行都拿不到（实测表格版简历只抽出姓名和求职意向两行）。
+    """
+    from docx.oxml.ns import qn
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    body = doc.element.body
+    for child in body.iterchildren():
+        if child.tag == qn('w:p'):
+            yield Paragraph(child, doc)
+        elif child.tag == qn('w:tbl'):
+            yield Table(child, doc)
+
+
 def extract_docx_text(path: str) -> str:
-    """提取 DOCX 文本"""
+    """提取 DOCX 文本（段落 + 表格，保持文档顺序）"""
     try:
         from docx import Document
         doc = Document(path)
-        return '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
-    except Exception as e:
-        return f'[DOCX解析错误: {e}]'
+        lines: list[str] = []
+        for block in _iter_docx_blocks(doc):
+            if hasattr(block, 'rows'):          # 表格
+                from services.resume_text_blocks import is_heading
+                for row in block.rows:
+                    cells = [c.text.strip().replace('\n', ' ') for c in row.cells if c.text.strip()]
+                    if not cells:
+                        continue
+                    if len(cells) > 1 and is_heading(cells[0]):
+                        # 首格是「教育背景」这类小标题：单独成行，后续内容另起一行，
+                        # 否则整行变成一个长句，板块切分和条目切分都认不出来
+                        lines.append(cells[0])
+                        lines.append(' | '.join(cells[1:]))
+                    else:
+                        # 单元格用 | 分隔：板块切分按小标题走，条目切分按 | 拆字段，
+                        # 比拼成一句话更接近这些模板的真实结构
+                        lines.append(' | '.join(cells))
+            else:                                # 段落
+                if block.text.strip():
+                    lines.append(block.text.strip())
+        return '\n'.join(lines)
+    except Exception:
+        # .doc 旧二进制格式 python-docx 读不了，这里返回空串让上游报「无法提取文本」
+        return ''
 
 
 def extract_txt(path: str) -> str:
@@ -36,15 +77,79 @@ def extract_txt(path: str) -> str:
         return f.read()
 
 
-def extract_text(path: str) -> str:
+IMAGE_EXTS = {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff'}
+# 少于这个字数就认为 PDF 没有可用文字层（扫描件）
+_PDF_TEXT_MIN = 40
+
+
+class TextExtractError(Exception):
+    """文本提取失败，message 直接给用户看"""
+
+
+def extract_text_detail(path: str) -> tuple[str, str]:
+    """提取文本并返回 (文本, 来源)
+
+    来源取值：pdf-text / pdf-ocr / docx / doc-convert / txt / image-ocr
+    """
     ext = path.rsplit('.', 1)[-1].lower() if '.' in path else ''
+
     if ext == 'pdf':
-        return extract_pdf_text(path)
-    elif ext in ('docx', 'doc'):
-        return extract_docx_text(path)
-    elif ext == 'txt':
-        return extract_txt(path)
-    return ''
+        text = extract_pdf_text(path)
+        if len(re.sub(r'\s', '', text)) >= _PDF_TEXT_MIN:
+            return text, 'pdf-text'
+        # 没有文字层：扫描件，走 OCR
+        try:
+            from services.resume_ocr import extract_text_from_scanned_pdf
+            return extract_text_from_scanned_pdf(path), 'pdf-ocr'
+        except Exception as e:
+            raise TextExtractError(f'这份 PDF 没有文字层，扫描件识别也失败了：{e}')
+
+    if ext == 'docx':
+        text = extract_docx_text(path)
+        if not text.strip():
+            raise TextExtractError('Word 文档里没有可读文字（可能是纯图片排版）')
+        return text, 'docx'
+
+    if ext == 'doc':
+        from services.doc_convert import DocConvertError, cleanup_converted, doc_to_docx, doc_to_text
+        try:
+            converted = doc_to_docx(path)
+        except DocConvertError as e:
+            # 转 docx 不可用时退一步，用 antiword/catdoc 拿纯文本
+            try:
+                return doc_to_text(path), 'doc-convert'
+            except DocConvertError:
+                raise TextExtractError(str(e))
+        try:
+            text = extract_docx_text(converted)
+        finally:
+            cleanup_converted(converted)
+        if not text.strip():
+            try:
+                return doc_to_text(path), 'doc-convert'
+            except DocConvertError:
+                raise TextExtractError('这份 .doc 里没有读到文字')
+        return text, 'doc-convert'
+
+    if ext == 'txt':
+        return extract_txt(path), 'txt'
+
+    if ext in IMAGE_EXTS:
+        try:
+            from services.resume_ocr import extract_text_from_image
+            return extract_text_from_image(path), 'image-ocr'
+        except Exception as e:
+            raise TextExtractError(f'图片识别失败：{e}')
+
+    raise TextExtractError(f'暂不支持的文件类型：.{ext}')
+
+
+def extract_text(path: str) -> str:
+    """兼容旧调用：只返回文本，失败返回空串"""
+    try:
+        return extract_text_detail(path)[0]
+    except TextExtractError:
+        return ''
 
 
 def _kw_hit(keyword: str, text_lower: str) -> bool:
@@ -77,9 +182,10 @@ def rule_based_extract(text: str) -> dict:
     m = re.search(r'[\w.+-]+@[\w-]+\.[\w.-]+', text)
     if m: result['email'] = m.group()
 
-    # 手机号
-    m = re.search(r'1[3-9]\d{9}', text)
-    if m: result['phone'] = m.group()
+    # 手机号：兼容 13900001111 / 139 0000 1111 / 138-0013-8000 / +86 前缀
+    m = re.search(r'(?<!\d)(?:\+?86[\s-]?)?(1[3-9]\d)[\s-]?(\d{4})[\s-]?(\d{4})(?!\d)', text)
+    if m:
+        result['phone'] = m.group(1) + m.group(2) + m.group(3)
 
     # 姓名（常见模式）
     for pat in [r'姓名[：:]\s*(\S{2,4})', r'名字[：:]\s*(\S{2,4})']:
@@ -90,13 +196,23 @@ def rule_based_extract(text: str) -> dict:
     # 兜底：简历首屏常把姓名单独放一行（没有「姓名：」标签），
     # 取前 6 行里第一个 2~4 字的中文短行，排除常见标题
     if not result['name']:
-        skip = {'个人简历', '求职简历', '简历', '个人信息', '联系方式'}
-        for line in text.splitlines()[:6]:
+        skip = {'个人简历', '求职简历', '简历', '个人信息', '联系方式', '教育背景', '工作经历'}
+        for line in text.splitlines()[:8]:
             s_line = line.strip()
-            if s_line in skip:
-                continue
-            if re.fullmatch(r'[\u4e00-\u9fa5]{2,4}', s_line):
-                result['name'] = s_line
+            # 表格行取第一格（「陈嘉禾 | 求职意向：…」）
+            first = re.split(r'\s*\|\s*|\t+|\s{2,}', s_line)[0].strip()
+            for cand in (first, s_line):
+                if not cand or cand in skip or '：' in cand or ':' in cand:
+                    continue
+                if re.fullmatch(r'[\u4e00-\u9fa5]{2,4}', cand):
+                    result['name'] = cand
+                    break
+                # 英文简历：John Smith / Li Si
+                if re.fullmatch(r"[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,2}", cand) \
+                        and not re.search(r'resume|curriculum|vitae', cand, re.I):
+                    result['name'] = cand
+                    break
+            if result['name']:
                 break
 
     # 技能关键词（与前端 ManualSkillInput 同步）
@@ -107,10 +223,10 @@ def rule_based_extract(text: str) -> dict:
         'Git', 'Maven', 'Gradle', 'CMake', 'Lua', 'Perl', 'MATLAB',
         # 前端框架
         'React', 'Vue', 'Angular', 'Svelte', 'Next.js', 'Nuxt', 'HTML', 'CSS',
-        'Node.js', 'jQuery', 'Webpack', 'Vite', 'Tailwind CSS', 'Ant Design',
+        'Node.js', 'jQuery', 'Webpack', 'Vite', 'Tailwind', 'Ant Design',
         'Element Plus', 'Taro', 'uni-app', 'Electron',
         # 后端框架
-        'Spring Boot', 'Spring Cloud', 'Django', 'Flask', 'FastAPI', 'Express',
+        'Spring Boot', 'Spring Cloud', 'Django', 'Flask', 'FastAPI', 'Express', 'ELK',
         'MyBatis', 'Hibernate', 'Gin', 'gRPC', 'RESTful', 'Dubbo', 'Netty',
         'Quarkus', 'Koa', 'NestJS', 'Thrift', 'GraphQL',
         # 数据库
@@ -129,7 +245,7 @@ def rule_based_extract(text: str) -> dict:
         'Presto', 'Trino', 'Superset',
         # 云原生/DevOps
         'Docker', 'Kubernetes', 'K8s', 'CI/CD', 'Jenkins', 'Terraform', 'Nginx',
-        'Linux', 'AWS', '阿里云', '腾讯云', '华为云', 'Serverless', 'GitLab', 'ArgoCD',
+        'Linux', 'AWS', '阿里云', '腾讯云', '华为云', 'Serverless', 'GitLab', 'GitLab CI', 'ArgoCD',
         'Prometheus', 'Grafana', 'Istio', 'Consul', 'Vault', 'Ansible', 'Vagrant',
         'Harbor', 'RabbitMQ', 'RocketMQ',
         # 公有云与云基础设施
@@ -157,19 +273,30 @@ def rule_based_extract(text: str) -> dict:
         'iOS', 'Android', 'Core Data', 'App Store', 'Firebase',
         'Push Notifications', 'SwiftUI', 'UIKit', 'ARKit',
         # 架构/分布式
-        '微服务', '分布式', '高并发', '架构设计', '分布式事务', '分布式缓存',
+        '微服务', 'Microservices', '分布式', '高并发', '架构设计', '分布式事务', '分布式缓存',
         '消息队列', '负载均衡', '服务网格', 'DDD', '链路追踪', 'SkyWalking',
         'Seata', 'Nacos', 'Sentinel',
     ]
     text_lower = text.lower()
     found = [s for s in skill_keywords if _kw_hit(s, text_lower)]
+    # 「GitLab CI」命中时不再单独算一条 GitLab，避免同一概念在简历里出现两次
+    _more_specific = {'GitLab': 'GitLab CI'}
+    found = [s for s in found if not (s in _more_specific and _more_specific[s] in found)]
     result['skills'] = found
 
-    # 学历
+    # 学历（中英双写法：英文简历写 Bachelor/Master/PhD）
     for edu in ['博士', '硕士', '本科', '大专']:
         if edu in text:
             result['education'] = edu
             break
+    else:
+        for pat, label in ((r'\bPh\.?D\b|Doctor', '博士'),
+                           (r'\bMaster', '硕士'),
+                           (r'\bBachelor', '本科'),
+                           (r'\bAssociate', '大专')):
+            if re.search(pat, text, re.I):
+                result['education'] = label
+                break
 
     # 学校
     # 注意不能用「大学」当标签再取后面的词：简历里「河南工业大学  本科」这种写法
@@ -213,62 +340,83 @@ def rule_based_extract(text: str) -> dict:
     return result
 
 
-def deepseek_extract(text: str) -> dict | None:
-    """调用 DeepSeek API 做精确简历解析
-
-    除了扁平的姓名/学历/技能字段，还要求返回分条的经历（工作、教育、项目），
-    简历中心的「导入旧简历」需要这些数组才能生成可编辑的区块；其它调用方
-    （人岗匹配的画像提取）只读 skills/education/experience，多出来的字段不影响它。
-    """
-    api_key = os.getenv('DEEPSEEK_API_KEY', '')
-    if not api_key:
+def _parse_json_loose(text: str) -> dict | None:
+    """容错解析模型输出（可能带 markdown 包裹或前后解释文字）"""
+    if not text:
         return None
-    system_prompt = (
-        '你是一个中文简历解析助手。从简历文本中精确提取字段，只填有明确文本证据的内容，'
-        '没有就留空字符串或空数组，禁止编造公司、学校、时间。\n'
-        '扁平字段：\n'
-        '- name 姓名；phone 11位手机号；email 邮箱；\n'
-        '- school 学校全称；education 学历+专业，如"本科·数据科学与大数据技术"；\n'
-        '- experience 工作/项目经验摘要(1-2句)；target_position 期望岗位；\n'
-        '- bio 个人简介/自我评价(200字以内)；skills 技术技能标签数组；\n'
-        '- location 现居城市；github GitHub 主页(没有就空)。\n'
-        '分条字段(没有就返回空数组，不要用一条空记录占位)：\n'
-        '- work_experience: [{company, position, location, startDate, endDate, current, '
-        'description, technologies[], highlights[]}]，时间格式 YYYY-MM，在职则 endDate 留空且 current=true；\n'
-        '- education_items: [{institution, degree, field, startDate, endDate, highlights[]}]；\n'
-        '- projects: [{name, role, startDate, endDate, description, technologies[], highlights[]}]；\n'
-        '- certifications: [{name, issuer, date}]；\n'
-        '- languages: [{language, proficiency}]。\n'
-        'highlights 是每段经历下 2-4 条成果要点，尽量保留原文里的数字与指标。\n'
-        '严格只返回 JSON，不要 markdown 包裹，不要任何解释。'
-    )
     try:
-        import requests
-        resp = requests.post(
-            'https://api.deepseek.com/v1/chat/completions',
-            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-            json={
-                'model': 'deepseek-chat',
-                'messages': [
-                    {'role': 'system', 'content': system_prompt},
-                    {'role': 'user', 'content': f'简历内容：\n{text[:6000]}'}
-                ],
-                'temperature': 0.1, 'max_tokens': 2600,
-            },
-            timeout=45
-        )
-        raw = resp.json()['choices'][0]['message']['content'].strip()
-        # 清理可能的markdown包裹
-        if raw.startswith('```'): raw = raw.split('\n', 1)[1].rsplit('\n```', 1)[0]
-        return json.loads(raw)
+        return json.loads(text)
     except Exception:
+        pass
+    m = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except Exception:
+            pass
+    m = re.search(r'\{[\s\S]*\}', text)
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except Exception:
+            pass
+    return None
+
+
+RESUME_EXTRACT_PROMPT = (
+    '你是简历信息抽取器。只输出 JSON，不要任何解释或 markdown。\n'
+    '规则：只抽有明确文本证据的内容；抽不到就留空字符串或空数组；禁止编造公司、学校、时间。\n'
+    '返回字段：\n'
+    '- name 姓名；phone 11 位手机号（去掉空格和横线）；email 邮箱；\n'
+    '- school 学校全称；education 学历（博士/硕士/本科/大专）；\n'
+    '- target_position 求职意向/期望岗位；location 现居城市；\n'
+    '- experience 工作经历摘要（1-2 句）；bio 自我评价（≤200 字）；\n'
+    '- skills 技术技能标签数组（保留原文写法）；\n'
+    '- years_of_experience 经验年限，如 "3年"；\n'
+    '- work_experience: [{company, position, location, startDate, endDate, current, description, technologies[], highlights[]}]，'
+    '日期格式 YYYY-MM，在职时 endDate 留空且 current=true；\n'
+    '- education_items: [{institution, degree, field, startDate, endDate, highlights[]}]；\n'
+    '- projects: [{name, role, startDate, endDate, description, technologies[], highlights[]}]。\n'
+    'highlights 每段 2-4 条，保留原文数字与指标。'
+)
+
+
+def deepseek_extract(text: str) -> dict | None:
+    """用大模型抽取简历字段（走 services/llm.py 的统一路由层）
+
+    与模型配置页联动：管理员关掉 AI 或处于 Mock 模式时直接返回 None，
+    由规则路径兜底。Mock 返回的是示例简历（张小明），绝不能当解析结果用。
+    """
+    if not text or not text.strip():
         return None
+    try:
+        from services.llm import complete, LLMTier, is_mock_mode, is_global_enabled
+        if is_mock_mode() or not is_global_enabled():
+            return None
+        result = complete(
+            LLMTier.FAST,
+            RESUME_EXTRACT_PROMPT,
+            [{'role': 'user', 'content': f'简历原文：\n{text[:6000]}'}],
+            json_mode=True,
+            max_tokens=2600,
+        )
+    except Exception:
+        # 没配 key / 网络不通 / 上游 5xx —— 一律回退规则路径，不要让上传失败
+        return None
+
+    raw = result.get('raw') or _parse_json_loose(result.get('text', ''))
+    if not isinstance(raw, dict):
+        return None
+    return raw
 
 
 def parse_resume(file_path: str) -> dict:
-    """主入口：提取文本 → 大模型优先 → 规则兜底"""
-    text = extract_text(file_path)
-    if not text:
+    """主入口：提取文本（文本层 / OCR / .doc 转换）→ 大模型优先 → 规则兜底"""
+    try:
+        text, via = extract_text_detail(file_path)
+    except TextExtractError as e:
+        return {'success': False, 'message': str(e), 'data': {}}
+    if not text.strip():
         return {'success': False, 'message': '无法提取文本内容', 'data': {}}
 
     # 大模型优先
@@ -301,6 +449,7 @@ def parse_resume(file_path: str) -> dict:
         'data': {
             **final,
             'raw_text_preview': text[:3000],
+            'extract_via': via,
             'method': 'deepseek' if llm_result else 'rule_based',
             'quality': {
                 'scored_skills': scored,

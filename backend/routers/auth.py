@@ -174,17 +174,26 @@ async def upload_avatar(file: UploadFile = File(...), token: str = Depends(reque
 
 # 文件大小限制（建议 #8 合规）
 MAX_FILE_SIZE = {
-    'pdf': 5 * 1024 * 1024,    # 5MB
+    'pdf': 10 * 1024 * 1024,   # 10MB（扫描件体积偏大）
     'doc': 10 * 1024 * 1024,   # 10MB
     'docx': 10 * 1024 * 1024,  # 10MB
     'txt': 2 * 1024 * 1024,    # 2MB
+    'png': 5 * 1024 * 1024,    # 图片简历
+    'jpg': 5 * 1024 * 1024,
+    'jpeg': 5 * 1024 * 1024,
+    'webp': 5 * 1024 * 1024,
+    'bmp': 5 * 1024 * 1024,
+    'tif': 5 * 1024 * 1024,
+    'tiff': 5 * 1024 * 1024,
 }
+RESUME_EXTS = set(MAX_FILE_SIZE)
 
 @router.post('/resume-parse')
 async def resume_parse(file: UploadFile = File(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     ext = file.filename.split('.')[-1].lower() if '.' in (file.filename or '') else ''
-    if ext not in ('pdf', 'docx', 'doc', 'txt'): raise HTTPException(400, '仅支持 pdf/docx/doc/txt')
+    if ext not in RESUME_EXTS:
+        raise HTTPException(400, '仅支持 pdf / docx / doc / txt / 图片(png jpg webp bmp tif)')
 
     # 大小校验（建议 #8）
     content = await file.read()

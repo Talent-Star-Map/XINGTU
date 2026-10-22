@@ -128,10 +128,11 @@ def _years_of_experience(*texts) -> str:
         if not t:
             continue
         raw = str(t)
-        m = re.search(r'(\d+(?:\.\d+)?)\s*年(?:以上)?(?:工作|开发|相关|后端|前端)?经验', raw)
+        # 「3 年经验」「三年互联网产品经验」「5年以上后端开发经验」都要能认
+        m = re.search(r'(\d+(?:\.\d+)?)\s*年[^。\n]{0,8}?经验', raw)
         if m:
             return f'{m.group(1)}年'
-        m = re.search(r'([一二两三四五六七八九十])\s*年(?:以上)?(?:工作|开发|相关|后端|前端)?经验', raw)
+        m = re.search(r'([一二两三四五六七八九十])\s*年[^。\n]{0,8}?经验', raw)
         if m:
             return f'{_CN_NUM.get(m.group(1), 1)}年'
     return ''

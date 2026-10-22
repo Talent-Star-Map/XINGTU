@@ -183,7 +183,7 @@ export default function Resume() {
                 background: dragOver ? 'var(--accent-cyan-dim)' : 'var(--color-surface-container-lowest)',
                 borderStyle: 'dashed',
               }}>
-              <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFile} hidden />
+              <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff" onChange={handleFile} hidden />
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4" style={{ background: 'var(--accent-cyan-dim)' }}>
                 <Upload className="h-8 w-8" style={{ color: 'var(--color-primary)' }} />
               </div>

@@ -25,3 +25,8 @@ neo4j>=5.20.0           # Python 驱动
 langchain>=0.3.0        # LLM 编排
 langchain-openai>=0.2   # OpenAI 接口 (embedding + 备用 LLM)
 langgraph>=0.2          # Agent 编排 (StateGraph for Plan-Execute-Report)
+
+# ── 简历识别：图片/扫描件 OCR、扫描版 PDF 渲染 ─────────────────────
+pypdfium2>=4.30          # PDF 页面渲染（把扫描件转成图片再 OCR）
+rapidocr_onnxruntime>=1.3  # 离线中文 OCR（onnxruntime，无需 torch）
+olefile>=0.46            # 解析 .doc(OLE) 的 WordDocument 流，纯 Python 兜底

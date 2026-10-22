@@ -19,7 +19,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::htt
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libgbm1 libpango-1.0-0 libcairo2 libasound2 \
+    antiword libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
+
+# .doc（Word 97-2003）解析：antiword 只能取纯文本。
+# 需要保留表格结构时再装 LibreOffice（镜像 +300MB 左右）：
+#   RUN apt-get update && apt-get install -y --no-install-recommends libreoffice-writer-nogui
 
 ENV CHROMIUM_PATH=/usr/bin/chromium \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
