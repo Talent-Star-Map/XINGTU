@@ -160,6 +160,9 @@ export default function ProfileHome() {
         highlights: x.role ? [`职责：${x.role}`] : [],
       }))
   const gotoResume = () => setPage('resume-center')
+  // 简介读简历的 summary：导入/生成时 summary 已经吸收了账号 bio，
+  // 两边读同一段文字才不会出现「主页一段、简历另一段」
+  const bioText = String(secContent('summary').text || p.bio || '').trim()
   const userStr = localStorage.getItem('xingtu_user')
   const userData = userStr ? JSON.parse(userStr) : null
   const contact = p.email?.trim() || p.phone?.trim() || '暂无联系方式'
@@ -332,8 +335,8 @@ export default function ProfileHome() {
                 </button>
               </div>
             </div>
-            {hasVal(p.bio) ? (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-on-surface)' }}>{p.bio}</p>
+            {bioText ? (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-on-surface)' }}>{bioText}</p>
             ) : (
               <p className="text-sm italic" style={{ color: 'var(--color-on-surface-variant)' }}>
                 点击 <button onClick={openModal} className="underline cursor-pointer" style={{ color: 'var(--color-primary)' }}>编辑资料</button> 添加个人简介
