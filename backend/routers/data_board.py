@@ -6,7 +6,8 @@
 - /benchmark  企业岗位 vs 市场对标
 - /jobs       图表下钻的岗位明细
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from auth_guard import request_token, require_enterprise
 
 from database import Enterprise, Job, get_session, verify_token
 from services.market_board import (
@@ -17,7 +18,7 @@ from services.market_board import (
     get_dataset,
 )
 
-router = APIRouter(prefix='/api/enterprise/data-board', tags=['enterprise-data-board'])
+router = APIRouter(prefix='/api/enterprise/data-board', tags=['enterprise-data-board'], dependencies=[Depends(require_enterprise)])
 
 
 def _ok(data, message: str = 'ok'):
@@ -42,7 +43,7 @@ def _enterprise_id(token: str) -> int | None:
 
 @router.get('/overview')
 def overview(
-    token: str = Query(''),
+    token: str = Depends(request_token),
     city: str = Query(''),
     field: str = Query(''),
     experience: str = Query(''),
@@ -58,7 +59,7 @@ def overview(
 
 @router.get('/skills')
 def skills(
-    token: str = Query(''),
+    token: str = Depends(request_token),
     city: str = Query(''),
     field: str = Query(''),
     experience: str = Query(''),
@@ -73,7 +74,7 @@ def skills(
 
 
 @router.get('/benchmark')
-def benchmark(token: str = Query('')):
+def benchmark(token: str = Depends(request_token)):
     eid = _enterprise_id(token)
     if eid is None:
         return _err('UNAUTHORIZED', '需要企业端登录')
@@ -96,7 +97,7 @@ def benchmark(token: str = Query('')):
 
 @router.get('/jobs')
 def board_jobs(
-    token: str = Query(''),
+    token: str = Depends(request_token),
     city: str = Query(''),
     field: str = Query(''),
     experience: str = Query(''),

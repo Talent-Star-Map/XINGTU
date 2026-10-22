@@ -9,7 +9,8 @@ GET  /api/learning/progress    ← 获取学习进度
 POST /api/learning/progress    ← 更新学习进度
 """
 
-from fastapi import APIRouter, Query, HTTPException
+from auth_guard import request_token
+from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -45,7 +46,7 @@ class SkillReq(BaseModel):
 
 
 @router.get('/skills')
-def get_skills(token: str = Query(...), job_id: Optional[int] = Query(None)):
+def get_skills(token: str = Depends(request_token), job_id: Optional[int] = Query(None)):
     uid, role = _get_uid(token)
     session = get_session()
     try:
@@ -68,7 +69,7 @@ def get_skills(token: str = Query(...), job_id: Optional[int] = Query(None)):
 
 
 @router.post('/skills')
-def toggle_skill(req: SkillReq, token: str = Query(...)):
+def toggle_skill(req: SkillReq, token: str = Depends(request_token)):
     from services.skill_synonyms import canonical_name
     uid, role = _get_uid(token)
     req.skill_name = canonical_name(req.skill_name)
@@ -132,7 +133,7 @@ class HistoryReq(BaseModel):
 
 
 @router.get('/history')
-def get_history(token: str = Query(...), limit: int = Query(20)):
+def get_history(token: str = Depends(request_token), limit: int = Query(20)):
     uid, role = _get_uid(token)
     session = get_session()
     try:
@@ -161,7 +162,7 @@ def get_history(token: str = Query(...), limit: int = Query(20)):
 
 
 @router.post('/history')
-def add_history(req: HistoryReq, token: str = Query(...)):
+def add_history(req: HistoryReq, token: str = Depends(request_token)):
     uid, role = _get_uid(token)
     session = get_session()
     try:
@@ -200,7 +201,7 @@ class ProgressReq(BaseModel):
 
 
 @router.get('/progress')
-def get_progress(token: str = Query(...), job_id: Optional[int] = Query(None)):
+def get_progress(token: str = Depends(request_token), job_id: Optional[int] = Query(None)):
     uid, role = _get_uid(token)
     session = get_session()
     try:
@@ -225,7 +226,7 @@ def get_progress(token: str = Query(...), job_id: Optional[int] = Query(None)):
 
 
 @router.post('/progress')
-def update_progress(req: ProgressReq, token: str = Query(...)):
+def update_progress(req: ProgressReq, token: str = Depends(request_token)):
     from services.skill_synonyms import canonical_name
     uid, role = _get_uid(token)
     req.skill_name = canonical_name(req.skill_name)

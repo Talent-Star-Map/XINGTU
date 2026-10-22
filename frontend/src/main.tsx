@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ThemeProvider } from './components/ThemeProvider'
 import './index.css'
+import { installApiAuthentication } from './lib/authFetch'
+
+installApiAuthentication()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

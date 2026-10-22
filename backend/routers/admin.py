@@ -31,15 +31,8 @@ from services.llm import (
 
 
 # ─── 管理员鉴权依赖 — 所有 admin 接口强制校验 token + role=admin ──────────────
-def require_admin(token: str = Query(...)):
-    """校验 query 参数中的 token 是否为管理员身份"""
-    try:
-        payload = verify_token(token)
-    except ValueError as e:
-        raise HTTPException(401, str(e))
-    if payload.get('role') != 'admin':
-        raise HTTPException(403, '需要管理员权限')
-    return payload
+from auth_guard import require_admin
+
 
 
 # 路由级依赖：注册到此 router 的所有接口都自动应用 require_admin 鉴权

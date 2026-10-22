@@ -11,7 +11,8 @@ DELETE /api/match/cache      ←→ 删除用户所有匹配缓存 + 简历缓�
 @owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 
-from fastapi import APIRouter, Query, HTTPException
+from auth_guard import request_token
+from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 import os, re, json, glob, hashlib
@@ -71,7 +72,7 @@ class AnalyzeReq(BaseModel):
 # ──────────────────────────────────────────────
 
 @router.post('/analyze')
-def api_match_analyze(req: AnalyzeReq, token: str = Query(...)):
+def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
     # 1. 鉴权
     from database import verify_token
     try:
@@ -241,7 +242,7 @@ class RecommendReq(BaseModel):
 def api_match_recommend(
     req: RecommendReq,
     n: Optional[int] = Query(None, ge=1, le=50),
-    token: str = Query(...),
+    token: str = Depends(request_token),
 ):
     """推荐岗位 Top N（支持传入技能列表或 resume_text）
 
@@ -440,7 +441,7 @@ def api_match_recommend(
 # ──────────────────────────────────────────────
 
 @router.delete('/cache')
-def api_clear_cache(token: str = Query(...)):
+def api_clear_cache(token: str = Depends(request_token)):
     from database import verify_token
     try:
         payload = verify_token(token)
@@ -448,6 +449,9 @@ def api_clear_cache(token: str = Query(...)):
         raise HTTPException(401, str(e))
 
     user_id = payload['user_id']
+    # Reject a role mismatch before touching user-id-keyed files.
+    if payload.get('role') != 'jobseeker':
+        raise HTTPException(403, '需要求职者身份')
     deleted = []
 
     # 删除匹配缓存

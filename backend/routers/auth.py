@@ -3,7 +3,8 @@
 @owner: 佳豪（求职端"我的"+企业端企业信息+幻觉防控）
 """
 import os
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File
+from auth_guard import request_token
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
@@ -110,7 +111,7 @@ def admin_login(req: AdminLoginReq):
     return {'success': True, 'data': {k: v for k, v in user.items() if k != 'password'} | {'token': token}}
 
 @router.get('/profile')
-def get_profile(token: str = Query(...)):
+def get_profile(token: str = Depends(request_token)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     session = get_session()
@@ -127,15 +128,23 @@ def get_profile(token: str = Query(...)):
     return {'success': True, 'data': data}
 
 @router.put('/profile')
-def update_profile(req: ProfileUpdate, token: str = Query(...)):
+def update_profile(req: ProfileUpdate, token: str = Depends(request_token)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     session = get_session()
     Model = get_user_model_by_role(payload['role'])
     user = session.query(Model).filter(Model.id == payload['user_id']).first()
     if not user: raise HTTPException(404, '用户不存在')
-    for k, v in req.model_dump().items():
-        if hasattr(user, k):
+    common = {'phone', 'city', 'avatar'}
+    seeker_fields = {'real_name', 'gender', 'age', 'education', 'school', 'target_city',
+                     'expected_salary', 'target_position', 'experience', 'skills', 'bio', 'projects'}
+    enterprise_fields = {'company_name', 'industry', 'company_size', 'company_desc',
+                         'company_website', 'company_logo', 'company_benefits'}
+    allowed = common | (seeker_fields if payload['role'] == 'jobseeker' else
+                        enterprise_fields if payload['role'] == 'enterprise' else set())
+    # Enterprise verification is managed by administrators, never by profile edits.
+    for k, v in req.model_dump(exclude_unset=True).items():
+        if k in allowed and hasattr(user, k):
             setattr(user, k, v)
     session.commit(); session.close()
     return {'success': True, 'message': '保存成功'}
@@ -147,7 +156,7 @@ os.makedirs(os.path.join(UPLOAD_DIR, 'avatars'), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, 'resumes'), exist_ok=True)
 
 @router.post('/avatar')
-async def upload_avatar(file: UploadFile = File(...), token: str = Query(...)):
+async def upload_avatar(file: UploadFile = File(...), token: str = Depends(request_token)):
     try: payload = verify_token(token)
     except ValueError as e: raise HTTPException(401, str(e))
     ext = file.filename.split('.')[-1].lower() if '.' in (file.filename or '') else 'png'
@@ -172,7 +181,7 @@ MAX_FILE_SIZE = {
 }
 
 @router.post('/resume-parse')
-async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
+async def resume_parse(file: UploadFile = File(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     ext = file.filename.split('.')[-1].lower() if '.' in (file.filename or '') else ''
     if ext not in ('pdf', 'docx', 'doc', 'txt'): raise HTTPException(400, '仅支持 pdf/docx/doc/txt')
@@ -199,7 +208,7 @@ async def resume_parse(file: UploadFile = File(...), token: str = Query(...)):
     return result
 
 @router.get('/resume-history')
-def resume_history(token: str = Query(...)):
+def resume_history(token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     uid = payload['user_id']
     import glob as _glob
@@ -229,7 +238,7 @@ def resume_history(token: str = Query(...)):
     return {'success': True, 'data': files}
 
 @router.post('/resume-reparse')
-def resume_reparse(filename: str = Query(...), token: str = Query(...)):
+def resume_reparse(filename: str = Query(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     uid = payload['user_id']
     safe = os.path.basename(filename)
@@ -245,7 +254,7 @@ def resume_reparse(filename: str = Query(...), token: str = Query(...)):
     return result
 
 @router.delete('/resume-delete')
-def resume_delete(filename: str = Query(...), token: str = Query(...)):
+def resume_delete(filename: str = Query(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     uid = payload['user_id']
     safe = os.path.basename(filename)
@@ -260,7 +269,7 @@ def resume_delete(filename: str = Query(...), token: str = Query(...)):
 
 
 @router.get('/resume-file')
-def resume_file(filename: str = Query(...), token: str | None = Query(None)):
+def resume_file(filename: str = Query(...), token: str = Depends(request_token)):
     """下载自己上传的简历附件
 
     以前 /uploads 整目录是 StaticFiles 公开挂载的，知道文件名就能绕过登录下载别人简历。

@@ -20,7 +20,7 @@ from sqlalchemy import func, text
 import bisect
 import json
 
-from auth_guard import require_enterprise
+from auth_guard import require_enterprise, require_admin
 from database import get_session, Job, Jobseeker, MatchRecord, Message
 from database import get_neo4j_driver
 from sqlalchemy import func as _func
@@ -236,9 +236,9 @@ def get_match_weights(ent: dict = Depends(require_enterprise)):
 
 
 @router.post('/calibrate')
-def calibrate_match_weights(ent: dict = Depends(require_enterprise)):
+def calibrate_match_weights(admin: dict = Depends(require_admin)):
     """
-    反馈闭环校准 — 从 HR 的 accept/reject 历史数据学习五维权重（维度区分度法）。
+    管理员全局校准 — 从 HR 的 accept/reject 历史数据学习共享五维权重。
 
     逻辑:
         1. 统计 accepted / rejected 两组在各维度的平均分差（区分度）

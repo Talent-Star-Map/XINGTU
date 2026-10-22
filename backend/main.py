@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import init_db
+from auth_guard import APIAuthorizationMiddleware
 # 路由模块已迁移到 routers/ 子目录，import 路径需带前缀
 from routers.auth import router as auth_router
 from routers.jobs import router as jobs_router
@@ -46,6 +47,7 @@ app.mount(
     name='avatars',
 )
 
+app.add_middleware(APIAuthorizationMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
