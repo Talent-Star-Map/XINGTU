@@ -162,6 +162,36 @@ def _group_skills(skills: list[str]) -> list[dict]:
     ]
 
 
+# 工作线索：时间区间、公司后缀、任职类动词
+_WORK_TEXT_HINT = re.compile(
+    r'(\d{4}\s*[.\-/年]\s*\d{1,2})'
+    r'|(有限责任公司|有限公司|集团|科技公司|研究院|事务所|工作室)'
+    r'|(任职|就职|入职|在职|实习于|担任|岗位职责|汇报给)'
+)
+
+
+def _looks_like_work(text: str) -> bool:
+    """一段文字像不像工作经历
+
+    解析层经常把「自我评价」塞进 experience 字段，直接落成工作经历就会出现
+    「没有公司、没有时间、内容是自我介绍」的脏条目（实测简历里出现过
+    「2027届软件工程本科生，完成过SFT与DPO比较…」被当成一段工作经历）。
+    只有命中公司/任职/时间线索才认，否则宁可留空让用户自己补。
+    """
+    return bool(_WORK_TEXT_HINT.search(text or ''))
+
+
+def _work_item_valid(item: dict) -> bool:
+    """分条校验：有公司或起止时间就算合法；都没有时再看内容像不像工作"""
+    if (item.get('company') or '').strip():
+        return True
+    if (item.get('startDate') or '').strip() or (item.get('endDate') or '').strip():
+        return True
+    if item.get('current'):
+        return True
+    return _looks_like_work(item.get('description', '')) or _looks_like_work(item.get('position', ''))
+
+
 def _build_work_items(data: dict, raw_text: str = '') -> list[dict]:
     items = []
     for i, raw in enumerate(_as_list(data.get('work_experience'))):
@@ -200,8 +230,10 @@ def _build_work_items(data: dict, raw_text: str = '') -> list[dict]:
                 'highlights': [h for h in (w.get('highlights') or []) if h][:6],
             })
 
-    if not items and data.get('experience'):
-        # 解析层只给了「经历摘要」一段话：落成一条，让用户自己补公司/时间
+    if not items and data.get('experience') and _looks_like_work(str(data['experience'])):
+        # 解析层只给了「经历摘要」一段话：落成一条，让用户自己补公司/时间。
+        # 必须先确认它像工作经历 —— 否则自我评价也会被塞成一条工作经历，
+        # 而这段文字本来已经进了「个人简介」（summary 取 bio or experience）。
         desc = str(data['experience']).strip()
         items.append({
             'id': _sid('work', 0),
@@ -240,6 +272,10 @@ def _build_education_items(data: dict, raw_text: str = '') -> list[dict]:
             'gpa': str(raw.get('gpa') or '').strip(),
             'highlights': [str(h).strip() for h in _as_list(raw.get('highlights')) if str(h).strip()],
         })
+
+    # 学校、学历、专业全空的条目没有意义（模型偶尔会吐一条空壳）
+    items = [x for x in items if (x.get('institution') or '').strip()
+             or (x.get('degree') or '').strip() or (x.get('field') or '').strip()]
 
     if not items and raw_text:
         for i, e in enumerate(parse_education(raw_text)):
@@ -290,6 +326,9 @@ def _build_project_items(data: dict, raw_text: str = '') -> list[dict]:
             'technologies': [str(t).strip() for t in _as_list(raw.get('technologies')) if str(t).strip()],
             'highlights': highlights,
         })
+    # 既没名字也没描述的项目条目直接丢掉
+    items = [x for x in items if (x.get('name') or '').strip() or (x.get('description') or '').strip()]
+
     if not items and raw_text:
         for i, p in enumerate(parse_projects(raw_text)):
             items.append({
@@ -338,7 +377,7 @@ def build_sections(data: dict) -> list[dict]:
     }]
 
     raw_text = str(data.get('raw_text_preview') or '')
-    work = _build_work_items(data, raw_text)
+    work = [w for w in _build_work_items(data, raw_text) if _work_item_valid(w)]
     if work:
         sections.append({'section_type': 'work_experience', 'title': '工作经历',
                          'content': {'items': work}})
