@@ -11,6 +11,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 
 from .tencent import extract_skills, persist, plain
 from .role_catalog import classify_title
+from .job_times import time_fields
 
 DEFAULT_KEYWORDS = 'Java,Python,Go,前端,大模型,测试工程师,大数据,云原生,网络安全,数据治理'
 BASE = 'https://www.zhaopin.com'
@@ -79,7 +80,29 @@ def normalize(item, description, observed_at):
             'skills': sorted(evidence), 'skill_evidence': evidence, 'observed_at': observed_at,
             'raw_salary': salary if salary and '*' not in salary else None,
             'education': plain(item.get('education')) or None,
-            'description_scope': 'full_public' if description else 'login_required'}
+            'description_scope': 'full_public' if description else 'login_required',
+            **time_fields(item.get('publish_time_raw'), item.get('source_update_time_raw'), observed_at,
+                          item.get('publish_time_source', ''), item.get('source_update_time_source', ''))}
+
+
+
+def visible_time_fields(panel):
+    """Only explicitly labeled, visible source dates; never recruiter activity."""
+    import re
+    values = {}
+    locator = panel.get_by_text(re.compile(r'^(?:发布时间|发布日期|发布于|更新时间|更新于)\s*[:：]?\s*'))
+    for index in range(min(locator.count(), 20)):
+        node = locator.nth(index)
+        if not node.is_visible():
+            continue
+        text = node.inner_text().strip()
+        if len(text) > 120:
+            continue
+        if re.match(r'^(?:发布时间|发布日期|发布于)', text) and 'publish_time_raw' not in values:
+            values.update(publish_time_raw=text, publish_time_source='visible_publication_label')
+        elif re.match(r'^(?:更新时间|更新于)', text) and 'source_update_time_raw' not in values:
+            values.update(source_update_time_raw=text, source_update_time_source='visible_update_label')
+    return values
 
 
 def collect(max_details=50, max_pages=1, delay=3.0):
@@ -155,6 +178,7 @@ def collect(max_details=50, max_pages=1, delay=3.0):
                         clipped = body.count() and 'guest-clamp' in (body.first.get_attribute('class') or '')
                         if body.count() == 1 and not gated and not clipped:
                             description = body.inner_text()
+                        item.update(visible_time_fields(panel))
                         record = normalize(item, description, datetime.utcnow())
                         is_new = persist(record, {'listing': item, 'description': description,
                                                  'description_scope': record['description_scope']})

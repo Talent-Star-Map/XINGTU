@@ -14,6 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from database.mysql import get_connection
 from .role_catalog import classify_title
+from .job_times import tencent_times
 
 BASE = 'https://careers.tencent.com/tencentcareer/api/post/'
 LOGS = Path('/app/logs')
@@ -53,7 +54,8 @@ def normalize(post, observed_at):
             'title': title, 'company_name': plain(post.get('ComName')) or '腾讯',
             'city': plain(post.get('LocationName')), 'experience': plain(post.get('RequireWorkYearsName')) or None,
             'description': description, 'skills': sorted(evidence), 'skill_evidence': evidence,
-            'category': plain(post.get('CategoryName')), 'observed_at': observed_at}
+            'category': plain(post.get('CategoryName')), 'observed_at': observed_at,
+            **tencent_times(post, observed_at)}
 
 
 def persist(record, raw_response):
@@ -71,34 +73,41 @@ def persist(record, raw_response):
     directory.mkdir(parents=True, exist_ok=True)
     payload = {'observed_at_utc': now.isoformat(), 'source': record['source'],
                'source_job_id': record['source_job_id'], 'source_url': record['source_url'],
-               'response': raw_response, 'skill_evidence': record['skill_evidence']}
+               'response': raw_response, 'skill_evidence': record['skill_evidence'],
+               'time_evidence': record.get('publish_time_evidence')}
     serialized = json.dumps(payload, ensure_ascii=False)
     with (directory / f'{now:%Y%m%d}.jsonl').open('a', encoding='utf-8') as f:
         f.write(serialized + '\n')
     try:
         with c.cursor() as q:
-            q.execute('SELECT id,raw_description,raw_skills FROM job_raw WHERE source=%s AND source_job_id=%s LIMIT 1',
+            q.execute('SELECT id,raw_description,raw_skills,publish_time,source_update_time,publish_time_evidence FROM job_raw WHERE source=%s AND source_job_id=%s LIMIT 1',
                       (record['source'], record['source_job_id']))
             existing = q.fetchone()
             # Public list-only refreshes cannot erase a previously available JD.
             if description is None and existing and existing[1] and existing[2]:
                 skills = existing[2]
+            published = record.get('publish_time') or (existing[3] if existing else None)
+            updated = record.get('source_update_time') or (existing[4] if existing else None)
+            evidence = (existing[5] if existing and existing[3] and not record.get('publish_time')
+                        else json.dumps(record.get('publish_time_evidence'), ensure_ascii=False))
+            if isinstance(evidence, dict):
+                evidence = json.dumps(evidence, ensure_ascii=False)
             values = (record['source_url'], record['title'][:500], record['company_name'][:200],
-                      record['city'][:100], record['experience'], description, now, skills)
+                      record['city'][:100], record['experience'], description, now, skills, published, updated, evidence)
             if existing:
                 raw_id = existing[0]
-                q.execute('UPDATE job_raw SET source_url=%s,raw_job_name=%s,raw_company_name=%s,raw_city=%s,raw_experience=%s,raw_description=COALESCE(%s,raw_description),crawl_time=%s,raw_skills=%s WHERE id=%s', values+(raw_id,))
+                q.execute('UPDATE job_raw SET source_url=%s,raw_job_name=%s,raw_company_name=%s,raw_city=%s,raw_experience=%s,raw_description=COALESCE(%s,raw_description),crawl_time=%s,raw_skills=%s,publish_time=%s,source_update_time=%s,publish_time_evidence=%s WHERE id=%s', values+(raw_id,))
             else:
-                q.execute('INSERT INTO job_raw (source_url,raw_job_name,raw_company_name,raw_city,raw_experience,raw_description,crawl_time,raw_skills,source,source_job_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', values+(record['source'],record['source_job_id']))
+                q.execute('INSERT INTO job_raw (source_url,raw_job_name,raw_company_name,raw_city,raw_experience,raw_description,crawl_time,raw_skills,publish_time,source_update_time,publish_time_evidence,source,source_job_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', values+(record['source'],record['source_job_id']))
                 raw_id = q.lastrowid
             q.execute('SELECT id FROM job_info WHERE raw_id=%s LIMIT 1', (raw_id,))
             clean = q.fetchone()
             values = (record['title'][:200], record['company_name'][:200], record['city'][:100],
-                      record['experience'], record['category'][:100], skills, description, now)
+                      record['experience'], record['category'][:100], skills, description, now, published, updated, evidence)
             if clean:
-                q.execute('UPDATE job_info SET job_name=%s,company_name=%s,city=%s,experience=%s,job_category=%s,skills=%s,job_description=COALESCE(%s,job_description),crawl_time=%s,sync_status=0 WHERE id=%s', values+(clean[0],))
+                q.execute('UPDATE job_info SET job_name=%s,company_name=%s,city=%s,experience=%s,job_category=%s,skills=%s,job_description=COALESCE(%s,job_description),crawl_time=%s,publish_time=%s,source_update_time=%s,publish_time_evidence=%s,sync_status=0 WHERE id=%s', values+(clean[0],))
             else:
-                q.execute('INSERT INTO job_info (job_name,company_name,city,experience,job_category,skills,job_description,crawl_time,raw_id,sync_status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0)', values+(raw_id,))
+                q.execute('INSERT INTO job_info (job_name,company_name,city,experience,job_category,skills,job_description,crawl_time,publish_time,source_update_time,publish_time_evidence,raw_id,sync_status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0)', values+(raw_id,))
             clean_id = clean[0] if clean else q.lastrowid
             if record.get('raw_salary'):
                 q.execute('UPDATE job_raw SET raw_salary=%s WHERE id=%s', (record['raw_salary'], raw_id))

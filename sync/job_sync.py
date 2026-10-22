@@ -10,7 +10,7 @@ from database.mysql import get_connection
 COLUMNS = ('data_type','source','source_url','title','skill_tags','technology_field',
            'company_name','city','area','salary_min','salary_max','salary_months',
            'education','experience','job_type','company_type','job_description',
-           'summary','publish_time','crawl_time','update_time')
+           'summary','publish_time','crawl_time','update_time','source_update_time','publish_time_evidence')
 
 
 def get_server_connection():
@@ -34,6 +34,9 @@ def job_to_dict(job):
         raise ValueError('source name required for production synchronization')
     description = job.get('job_description') or ''
     data = {name: job.get(name) for name in COLUMNS}
+    evidence = data.get('publish_time_evidence')
+    if isinstance(evidence, dict):
+        data['publish_time_evidence'] = json.dumps(evidence, ensure_ascii=False)
     data.update(data_type=1, source=source_name, source_url=url,
                 title=job.get('job_name') or '', skill_tags=json.dumps(skills,ensure_ascii=False),
                 technology_field=job.get('job_category'), job_description=description,

@@ -70,6 +70,8 @@ def main():
             with connection.cursor() as q: q.execute('SELECT 1')
             connection.close()
         result['stages']['database']='healthy'; record()
+        from .job_history import ensure_schema, capture_weekly_snapshot
+        result['stages']['time_schema'] = ensure_schema(); record()
         if not args.skip_collection:
             sources = [name.strip() for name in args.sources.split(',') if name.strip()]
             if not sources or any(name not in ('tencent', 'zhilian') for name in sources):
@@ -84,8 +86,22 @@ def main():
                     result['stages'][name] = {'status': 'failed', 'error_type': type(exc).__name__}
                 record()
         result['stages']['sync']=sync_jobs(backfill=args.backfill); record()
-        from .graph_sync import sync_graph
-        result['stages']['graph']=sync_graph(); record()
+        source_states = [result['stages'][name].get('status') for name in ('tencent', 'zhilian') if name in result['stages']]
+        if not args.skip_collection and source_states and all(state in ('succeeded', 'unchanged') for state in source_states):
+            result['stages']['weekly_snapshot'] = capture_weekly_snapshot()
+        else:
+            result['stages']['weekly_snapshot'] = {'status': 'skipped', 'reason': 'collection_not_complete; retry_next_healthy_run'}
+        record()
+        # Run graph publication after a healthy collection + SQL sync, never on a partial failed batch.
+        sources_healthy = args.skip_collection or (source_states and all(state in ('succeeded', 'unchanged') for state in source_states))
+        sync_healthy = result['stages']['sync'].get('status') in ('succeeded', 'unchanged')
+        if sources_healthy and sync_healthy:
+            from .graph_sync import sync_graph
+            result['stages']['graph'] = {'status': 'running'}; record()
+            result['stages']['graph'] = {'status': 'succeeded', **sync_graph()}
+        else:
+            result['stages']['graph'] = {'status': 'skipped', 'reason': 'collection_or_sql_sync_not_complete; retain_last_graph'}
+        record()
         states=[value.get('status') for value in result['stages'].values() if isinstance(value,dict)]
         result['status']='partial_failure' if any(x in ('failed','blocked','empty','partial_failure') for x in states) else 'succeeded'
     except Exception as exc:
