@@ -6,7 +6,6 @@ import ResumeEditor from '../../components/resume/editor/ResumeEditor'
 import ImportResumeDialog from '../../components/resume/ImportResumeDialog'
 import ShareResumeDialog from '../../components/resume/ShareResumeDialog'
 import GenerateResumeDialog from '../../components/resume/GenerateResumeDialog'
-import PageHeader from '../../components/PageHeader'
 import { templateName as tplName } from '../../lib/resumeTemplateNames'
 import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
@@ -400,31 +399,37 @@ export default function ResumeCenter() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* ── 顶部操作栏（与个人主页共用 PageHeader，样式保持一致） ── */}
-      <PageHeader
-        icon={FileText}
-        title="简历工作台"
-        badge={{ text: `共 ${resumes.length} 份` }}
-        sticky={false}
-        actions={<>
-          <button onClick={() => setGenOpen(true)} data-tour="dash-ai-generate"
-            className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5"
-            style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
-            <Wand2 className="h-4 w-4" /> AI 生成简历
-          </button>
-          <button onClick={() => setImportOpen(true)}
-            className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
-            style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}
-            title="上传已有的 PDF / Word 简历，自动整理成在线简历">
-            <Upload className="h-4 w-4" /> 导入旧简历
-          </button>
-          <button onClick={() => setCreateOpen(true)} data-tour="dash-create"
-            className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
-            style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
-            <Plus className="h-4 w-4" /> 新建
-          </button>
-        </>}
-      />
+      {/* ── 顶部操作栏 ── */}
+      <header className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
+        <div className="max-w-[1400px] mx-auto px-8 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5" style={{ color: 'var(--accent-blue)' }} />
+            <h1 className="text-lg font-semibold" style={{ color: 'var(--color-on-surface)' }}>简历工作台</h1>
+            <span className="text-xs tabular-nums px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--accent-blue-dim, #dbeafe)', color: 'var(--accent-blue, #3b82f6)' }}>
+              共 {resumes.length} 份
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setGenOpen(true)} data-tour="dash-ai-generate"
+              className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5"
+              style={{ background: 'var(--accent-blue)', color: '#fff' }}>
+              <Wand2 className="h-4 w-4" /> AI 生成简历
+            </button>
+            <button onClick={() => setImportOpen(true)}
+              className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
+              style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}
+              title="上传已有的 PDF / Word 简历，自动整理成在线简历">
+              <Upload className="h-4 w-4" /> 导入旧简历
+            </button>
+            <button onClick={() => setCreateOpen(true)} data-tour="dash-create"
+              className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
+              style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface-variant)' }}>
+              <Plus className="h-4 w-4" /> 新建
+            </button>
+          </div>
+        </div>
+      </header>
 
       {/* ── 工具栏（搜索/排序/视图切换） ── */}
       <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
