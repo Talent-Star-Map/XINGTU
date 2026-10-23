@@ -742,6 +742,8 @@ def get_llm_config():
 @router.post('/llm-config')
 def save_llm_config(req: LlmConfigReq):
     """保存模型配置（upsert 到 llm_configs 表）"""
+    if req.configs.get('mock_mode') not in (None, '', '0'):
+        return _err('INVALID_CONFIG', '模拟输出已移除，请配置真实模型')
     # 校验只接受白名单 key
     invalid = [k for k in req.configs if k not in _LLM_CONFIG_KEYS]
     if invalid:

@@ -37,7 +37,8 @@ def cross_validate(skills_per_source: list[tuple[str, list[str]]]) -> dict:
                 skill_sources[key] = set()
                 skill_evidence[key] = []
             skill_sources[key].add(source)
-            skill_evidence[key].append(f"[{source}] 要求掌握 {key}")
+            # A source label and a skill list contain no verbatim JD quote.
+            # Never synthesize a sentence and present it as observed evidence.
 
     result = {}
     total_sources = len(skills_per_source)
@@ -55,7 +56,8 @@ def cross_validate(skills_per_source: list[tuple[str, list[str]]]) -> dict:
             'source_count': source_count,
             'sources': list(sources),
             'confidence': round(confidence, 2),
-            'evidence': skill_evidence[skill][:3],
+            'evidence': [],
+            'evidence_status': 'no_verbatim_source_text',
             'status': 'verified' if verified else ('high_conf' if confidence >= 0.7 else 'unconfirmed'),
         }
     return result

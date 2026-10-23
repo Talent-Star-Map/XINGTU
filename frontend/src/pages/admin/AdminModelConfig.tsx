@@ -9,7 +9,6 @@ const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=
 // ─── 类型定义 ───
 interface LlmConfigData {
   configs: Record<string, string>
-  mock_mode: boolean
   global_enabled: boolean
   resolved: {
     strong: { provider: string; model: string; base_url: string }
@@ -40,7 +39,6 @@ const PROVIDER_OPTIONS = ['openai-compatible', 'deepseek', 'qwen', 'kimi', 'anth
 
 export default function AdminModelConfig() {
   const [configs, setConfigs] = useState<Record<string, string>>({})
-  const [mockMode, setMockMode] = useState(true)
   const [globalEnabled, setGlobalEnabled] = useState(true)
   const [resolved, setResolved] = useState<LlmConfigData['resolved'] | null>(null)
 
@@ -65,7 +63,6 @@ export default function AdminModelConfig() {
       const d = await r.json()
       if (d.success) {
         setConfigs(d.data.configs || {})
-        setMockMode(d.data.mock_mode)
         setGlobalEnabled(d.data.global_enabled)
         setResolved(d.data.resolved)
       } else showToast(d.error?.message || '加载失败')
@@ -86,7 +83,7 @@ export default function AdminModelConfig() {
       const payload: Record<string, string> = {
         ...configs,
         global_enabled: globalEnabled ? '1' : '0',
-        mock_mode: mockMode ? '1' : '0',
+        mock_mode: '0', // 保存时清理历史模拟开关，不再提供模拟模式。
       }
       const r = await fetch(withToken('/api/admin/llm-config'), {
         method: 'POST',
@@ -211,11 +208,7 @@ export default function AdminModelConfig() {
           <div className="flex items-center gap-3">
             <Cpu className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
             <h1 className="text-lg font-semibold" style={{ color: 'var(--color-on-surface)' }}>模型配置</h1>
-            <span className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: mockMode ? 'var(--accent-green-dim, #d1fae5)' : 'var(--accent-blue-dim, #dbeafe)',
-                       color: mockMode ? 'var(--accent-green, #10b981)' : 'var(--accent-blue, #3b82f6)' }}>
-              {mockMode ? '自定义模式' : '默认模式'}
-            </span>
+
           </div>
           <button onClick={save} disabled={saving}
             className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 disabled:opacity-60"
@@ -240,12 +233,12 @@ export default function AdminModelConfig() {
                     <div>
                       <h3 className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>全局开关</h3>
                       <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                        Mock 模式下不调用任何外部 API（零费用，开发期建议开启）；关闭后使用下方配置的真实模型
+                        AI 功能仅调用已配置的真实模型；服务不可用时显示错误，不返回模拟内容
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="mt-4">
                   <div className="flex items-center justify-between rounded-xl border px-4 py-3"
                     style={{ borderColor: 'var(--color-outline-variant)' }}>
                     <div>
@@ -261,21 +254,7 @@ export default function AdminModelConfig() {
                         style={{ left: globalEnabled ? 'calc(100% - 22px)' : '2px', transition: 'left .2s' }} />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl border px-4 py-3"
-                    style={{ borderColor: 'var(--color-outline-variant)' }}>
-                    <div>
-                      <div className="text-sm font-medium flex items-center gap-1.5" style={{ color: 'var(--color-on-surface)' }}>
-                        <Zap className="h-4 w-4" /> 自定义调用模式开关
-                      </div>
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>开启=使用下方自定义配置的模型，关闭=使用默认调用方式</div>
-                    </div>
-                    <button onClick={() => setMockMode(v => !v)}
-                      className="relative w-11 h-6 rounded-full transition-colors"
-                      style={{ background: mockMode ? 'var(--accent-green)' : 'var(--color-outline)', transition: 'background .2s' }}>
-                      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all"
-                        style={{ left: mockMode ? 'calc(100% - 22px)' : '2px', transition: 'left .2s' }} />
-                    </button>
-                  </div>
+
                 </div>
               </div>
 

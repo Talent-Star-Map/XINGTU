@@ -19,61 +19,27 @@ Agent 流水线:
     DeerFlow 编排提供语义级深度洞察 → 作为规则引擎的补充而非替代
 
 降级策略:
-    LongCat API 不可用时，返回明确错误，前端展示"AI 分析暂不可用"
+    模型 API 不可用时，返回明确错误，前端展示"AI 分析暂不可用"
     不影响规则引擎对比的正常使用
 
 @owner: 张东阳（人岗匹配+企业端人才星界面）
 """
 
-import os
 import json
 import re
-import httpx
 from typing import List, Dict, Any, Optional
 
 
-# ─── LongCat API 配置（复用 chat_api 的配置）─────────────────────────
-
-def _get_config() -> Dict[str, str]:
-    """读取 LongCat API 配置"""
-    return {
-        'key': os.getenv('LONGCAT_API_KEY', ''),
-        'model': os.getenv('LONGCAT_MODEL', 'LongCat-2.0'),
-        'base_url': os.getenv('LONGCAT_BASE_URL', 'https://api.longcat.chat/anthropic'),
-    }
-
-
 def _call_llm(system_prompt: str, user_message: str, max_tokens: int = 2048) -> Optional[str]:
-    """
-    调用 LongCat API（Anthropic Messages 格式），返回文本内容。
-    失败时返回 None，由调用方处理降级。
-    """
-    cfg = _get_config()
-    if not cfg['key']:
-        return None
-
+    """Use the shared LLM provider; return None when analysis is unavailable."""
+    from services.llm import complete, LLMTier
     try:
-        with httpx.Client(timeout=60) as client:
-            r = client.post(
-                f'{cfg["base_url"]}/v1/messages',
-                headers={
-                    'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {cfg["key"]}',
-                    'anthropic-version': '2023-06-01',
-                },
-                json={
-                    'model': cfg['model'],
-                    'max_tokens': max_tokens,
-                    'system': system_prompt,
-                    'messages': [{'role': 'user', 'content': user_message}],
-                }
-            )
-            if r.status_code != 200:
-                return None
-            data = r.json()
-            content = data.get('content', [])
-            text_parts = [c.get('text', '') for c in content if c.get('type') == 'text']
-            return ''.join(text_parts) or None
+        result = complete(LLMTier.STRONG, system_prompt,
+                          [{'role': 'user', 'content': user_message}],
+                          max_tokens=max_tokens)
+        if result.get('mock'):
+            return None
+        return result.get('text') or None
     except Exception:
         return None
 

@@ -55,6 +55,8 @@ cv = cross_validate([
 ])
 check("cross: Java 双源 verified", cv["java"]["verified"] is True)
 check("cross: MySQL 单源 unconfirmed", cv["mysql"]["verified"] is False)
+check("cross: 来源标签不得伪造招聘原句", cv["java"]["evidence"] == []
+      and cv["java"]["evidence_status"] == "no_verbatim_source_text")
 
 # 4) 抄袭检测
 pl = detect_plagiarism([

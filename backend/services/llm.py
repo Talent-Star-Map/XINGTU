@@ -4,7 +4,7 @@
 设计原则:
     1. 模型无关: 业务代码只声明「任务档次」(STRONG/FAST/VISION)，不指定具体模型
     2. 配置存库: 管理员端「模型配置」页维护 llm_configs 表，读取优先级 表 > .env > 默认值
-    3. 开发期零成本: Mock 模式返回预设假数据，不调用任何外部 API
+    3. 只返回真实模型结果；未启用或配置缺失时明确报错
     4. 大模型+小模型协同: STRONG→大模型(复杂生成/推理), FAST→小模型(简单提取/分类), VISION→多模态(预留)
 
 用法:
@@ -62,6 +62,9 @@ _CACHE_TTL = 30
 
 def _load_config() -> dict:
     """读取 llm_configs 表全量配置（带缓存 TTL），返回 {config_key: config_value}"""
+    # Local deployments may pin their provider without changing shared DB config.
+    if os.getenv('LLM_CONFIG_SOURCE', '').lower() == 'env':
+        return {}
     now = time.time()
     if _CACHE['data'] is not None and now - _CACHE['ts'] < _CACHE_TTL:
         return _CACHE['data']
@@ -97,8 +100,8 @@ def get_config(config_key: str, default: str = '') -> str:
 
 
 def is_mock_mode() -> bool:
-    """是否 Mock 模式（开发期零成本）"""
-    return get_config('mock_mode', '1') == '1'
+    """兼容检测旧配置；模拟输出已移除，旧开关启用时只允许明确报错。"""
+    return get_config('mock_mode', '0') == '1'
 
 
 def is_global_enabled() -> bool:
@@ -137,51 +140,8 @@ def _get_base_url(tier: LLMTier) -> str:
 
 
 def get_provider_name(tier: LLMTier) -> str:
-    """当前 tier 实际使用的 Provider 名（mock 或 provider 配置）"""
-    if is_mock_mode():
-        return 'mock'
+    """当前 tier 的真实模型 Provider 名。"""
     return get_config(f'{tier.value}_provider', 'openai-compatible')
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# Mock Provider — 开发期假数据，零费用
-# ════════════════════════════════════════════════════════════════════════════
-
-# 预设假简历 JSON（结构完全正确，供 AI 简历生成功能 mock 使用）
-_MOCK_RESUME_JSON = {
-    'personal_info': {'fullName': '张小明', 'jobTitle': 'AI应用开发工程师',
-                      'email': 'zhang@example.com', 'phone': '13800000000', 'location': '北京'},
-    'summary': {'text': '3 年大模型应用开发经验，熟悉 RAG 架构与智能体编排，主导过企业级知识库问答系统落地。'},
-    'work_experience': {'items': [{'company': '星图科技', 'position': 'AI应用开发工程师', 'startDate': '2023-07',
-                                    'endDate': '2026-08', 'current': True,
-                                    'highlights': ['主导 RAG 知识库问答系统，检索准确率提升 30%',
-                                                   '搭建多 Agent 协作流水线，处理效率提升 2 倍']}]},
-    'education': {'items': [{'institution': '某某大学', 'degree': '本科', 'field': '计算机科学与技术',
-                              'startDate': '2019-09', 'endDate': '2023-06'}]},
-    'skills': {'categories': [{'name': '编程语言', 'skills': ['Python', 'TypeScript']},
-                               {'name': 'AI 框架', 'skills': ['LangChain', 'DeepSeek API', 'RAG']}]},
-    'projects': {'items': [{'name': '岗位能力图谱平台', 'startDate': '2025-01', 'endDate': '2026-08',
-                             'technologies': ['FastAPI', 'React', 'Neo4j'],
-                             'highlights': ['构建岗位-技能知识图谱与三维可视化',
-                                            '实现基于 RAG 的智能问答']}]},
-}
-
-
-class MockProvider:
-    """开发期 Mock — 不调用任何外部 API，返回结构正确的预设数据"""
-    name = 'mock'
-
-    def complete(self, system: str, messages: list[dict], json_mode: bool = False,
-                 max_tokens: int = 2048, **kwargs) -> dict:
-        if json_mode:
-            raw = dict(_MOCK_RESUME_JSON)  # 深拷贝，避免调用方修改缓存
-            text = json.dumps(raw, ensure_ascii=False)
-            return {'text': text, 'raw': raw, 'usage': {'mock': True},
-                    'provider': 'mock', 'mock': True}
-        text = ('[Mock 模式响应] 已成功连接 Mock Provider，未调用任何外部 API。'
-                '这是开发期预设的模拟输出，正式接入模型后此处将返回真实生成结果。')
-        return {'text': text, 'raw': None, 'usage': {'mock': True},
-                'provider': 'mock', 'mock': True}
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -291,7 +251,7 @@ def complete(tier: LLMTier, system: str, messages: list[dict],
         raise LLMConfigError('AI 功能已由管理员关闭，请在管理员端「模型配置」中开启')
 
     if is_mock_mode():
-        return MockProvider().complete(system, messages, json_mode, max_tokens, **kwargs)
+        raise LLMConfigError('模拟输出已停用，请使用真实模型配置')
 
     provider = OpenAICompatibleProvider(
         api_key=_get_api_key(tier),
@@ -309,8 +269,7 @@ def test_connection(tier: LLMTier) -> dict:
     if not is_global_enabled():
         return {'success': False, 'message': '全局 AI 总开关已关闭，请先开启'}
     if is_mock_mode():
-        return {'success': True, 'provider': 'mock', 'model': 'mock',
-                'mock': True, 'message': 'Mock 模式：无需外部连接，已可用', 'latency_ms': 0}
+        return {'success': False, 'message': '模拟输出已停用，请使用真实模型配置'}
     start = time.time()
     provider = OpenAICompatibleProvider(
         api_key=_get_api_key(tier),

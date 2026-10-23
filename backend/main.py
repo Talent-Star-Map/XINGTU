@@ -35,7 +35,8 @@ import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    if os.getenv('XINGTU_SKIP_DB_INIT', '').lower() not in ('1', 'true'):
+        init_db()
     yield
 
 app = FastAPI(title='星图 API', version='1.0.0', lifespan=lifespan)

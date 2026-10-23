@@ -69,3 +69,16 @@ tmp/
 
 # Local instructions for coding assistants
 /AGENTS.md
+
+# Retained local exclusions
+backend/.env
+data/external/
+
+# Private local datasets, annotation outputs and independent applet checkout
+/data/
+/outputs/
+/applet-local/
+/backend/neo4j_backup_*.json
+/backend/planner_debug.py
+/backend/scripts/seed_internet_jobs.py
+/ops/**/*.zip

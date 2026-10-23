@@ -27,3 +27,5 @@ tmp/
 *.pem
 *.key
 uploads/
+
+# Retained local exclusions

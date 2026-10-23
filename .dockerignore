@@ -67,3 +67,5 @@ backups/
 tmp/
 *.pem
 *.key
+
+# Retained local exclusions

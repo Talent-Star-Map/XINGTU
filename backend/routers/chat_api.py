@@ -7,7 +7,8 @@ POST /api/chat/resources ←→ 根据技能列表获取学习资源
 @owner: 佳豪（幻觉防控）
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from auth_dependencies import require_login
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -67,17 +68,17 @@ class ResourcesReq(BaseModel):
     skills: list[str]
 
 
-@router.post('/chat')
+@router.post('/chat', dependencies=[Depends(require_login)])
 async def chat(req: ChatReq):
     cfg = _get_config()
     if not cfg['key']:
-        return ChatResp(answer='AI 问答服务未配置，请联系管理员。')
+        raise HTTPException(503, 'AI 问答服务暂不可用，请联系管理员')
 
     # 构造消息历史
     system = _build_system_prompt(req.diagnosis)
     messages = [{'role': 'system', 'content': system}]
     for msg in (req.history or [])[-6:]:
-        messages.append({'role': msg.get('role', 'user'), 'content': msg.get('text', '')})
+        messages.append({'role': msg.get('role', 'user'), 'content': msg.get('text') or msg.get('content', '')})
     messages.append({'role': 'user', 'content': req.message})
 
     try:
@@ -95,17 +96,21 @@ async def chat(req: ChatReq):
                 }
             )
             if r.status_code == 429:
-                return ChatResp(answer='请求太频繁，请稍后再试。')
+                raise HTTPException(429, '请求太频繁，请稍后再试')
             if r.status_code != 200:
-                return ChatResp(answer='抱歉，AI 服务暂时不可用，请稍后再试。')
+                raise HTTPException(503, 'AI 服务暂时不可用，请稍后再试')
             data = r.json()
-            answer = data.get('choices', [{}])[0].get('message', {}).get('content', '') or '抱歉，我没有理解你的问题。'
+            answer = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+            if not answer:
+                raise HTTPException(503, 'AI 服务未返回有效回答，请稍后再试')
             resp = JSONResponse(content={'answer': answer})
             resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
             resp.headers['Pragma'] = 'no-cache'
             return resp
+    except HTTPException:
+        raise
     except Exception:
-        return ChatResp(answer='网络繁忙，请稍后再试。')
+        raise HTTPException(503, 'AI 服务暂时不可用，请稍后再试') from None
 
 
 @router.post('/chat/resources')

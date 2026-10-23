@@ -1,10 +1,11 @@
-FROM python:3.12-slim
+# 锁 bookworm (deb12) — aliyun trixie (deb13) 镜像未同步 Packages 会 404
+FROM python:3.12-bookworm
 
-# apt 换阿里云公共镜像源（国内各云均可访问，速度快）
-# 兼容 deb822 格式(trixie 的 debian.sources)与旧版 sources.list
+# apt 换清华镜像源（aliyun 的 CDN 节点偶发连不上，tuna 更稳）
+# 兼容 deb822 格式(bookworm 的 debian.sources)与旧版 sources.list
 RUN for f in /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list; do \
       if [ -f "$f" ]; then \
-        sed -i 's@deb.debian.org@mirrors.aliyun.com@g; s@security.debian.org@mirrors.aliyun.com@g' "$f"; \
+        sed -i 's@deb.debian.org@mirrors.tuna.tsinghua.edu.cn@g; s@security.debian.org@mirrors.tuna.tsinghua.edu.cn@g' "$f"; \
       fi; \
     done
 
@@ -19,12 +20,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::htt
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libgbm1 libpango-1.0-0 libcairo2 libasound2 \
-    antiword libgl1 libglib2.0-0 \
+    antiword libreoffice-writer-nogui libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-# .doc（Word 97-2003）解析：antiword 只能取纯文本。
-# 需要保留表格结构时再装 LibreOffice（镜像 +300MB 左右）：
-#   RUN apt-get update && apt-get install -y --no-install-recommends libreoffice-writer-nogui
+# LibreOffice 为原始 .doc/.docx 附件提供本机 PDF 预览，保留版式和表格。
 
 ENV CHROMIUM_PATH=/usr/bin/chromium \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \

@@ -1,0 +1,42 @@
+name: xingtu-dev
+services:
+  api:
+    image: xingtu-api:latest
+    pull_policy: never
+    env_file:
+      - path: ../../tmp/docker-dev.env
+        format: raw
+    environment:
+      XINGTU_SKIP_DB_INIT: "1"
+      FRONTEND_BASE_URL: http://frontend:5173
+      WATCHFILES_FORCE_POLLING: "true"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8081", "--reload", "--reload-dir", "/app/routers", "--reload-dir", "/app/services", "--reload-include", "*.py", "--no-access-log"]
+    volumes:
+      - ../../backend:/app
+    ports:
+      - "127.0.0.1:8082:8081"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/api/health', timeout=5).read()"]
+      interval: 15s
+      timeout: 6s
+      retries: 8
+      start_period: 90s
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile.dev
+    image: xingtu-frontend:dev
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8081
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ../../frontend:/app
+      - frontend_modules:/app/node_modules
+    ports:
+      - "127.0.0.1:3000:5173"
+    depends_on:
+      - api
+    restart: unless-stopped
+volumes:
+  frontend_modules:
