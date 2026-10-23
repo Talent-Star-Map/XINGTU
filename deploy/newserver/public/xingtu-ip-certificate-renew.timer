@@ -1,0 +1,8 @@
+[Unit]
+Description=Check XINGTU IP certificate twice daily
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=20m
+Persistent=true
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=XINGTU public IP TLS certificate renewal
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/data/xingtu
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/data/xingtu/tools/certbot-5.4.0/bin/certbot renew --non-interactive --config-dir /data/xingtu/secrets/letsencrypt --work-dir /data/xingtu/tools/acme-work --logs-dir /data/xingtu/operations/public_access/acme-logs --deploy-hook /data/xingtu/tools/reload-public-tls.sh
