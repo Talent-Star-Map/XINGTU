@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from 'react'
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import RoleSelect from './pages/RoleSelect'
 import Login from './pages/Login'
@@ -29,8 +29,17 @@ export default function App() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('xingtu_token')
     localStorage.removeItem('xingtu_role')
+    // 掉线后不要把上一个人的资料留在浏览器里：共享电脑上登录态已失效，
+    // 但 xingtu_user 里的姓名/邮箱仍可读
+    localStorage.removeItem('xingtu_user')
     setUser(null)
   }, [])
+
+  // 任一受保护接口回 401（token 过期/失效）→ authFetch 广播事件，这里统一退回登录页
+  useEffect(() => {
+    window.addEventListener('xingtu:unauthorized', handleLogout)
+    return () => window.removeEventListener('xingtu:unauthorized', handleLogout)
+  }, [handleLogout])
 
   return (
     <div className="relative h-full w-full" style={{ background: 'var(--color-background)', color: 'var(--color-on-surface)' }}>

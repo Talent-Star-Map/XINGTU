@@ -29,12 +29,14 @@ def _err(code: str, message: str):
 
 
 def _own_record(session, match_record_id: int, jobseeker_id: int) -> MatchRecord:
-    """取会话并校验归属：不存在 404，不属于自己 403"""
+    """取会话并校验归属
+
+    不属于自己的会话按“不存在”回 404——回 403 等于承认这条 match_record
+    真实存在，只是不归你，自增 ID 可被逐个试探枚举。
+    """
     mr = session.query(MatchRecord).filter(MatchRecord.id == match_record_id).first()
-    if not mr:
+    if not mr or mr.jobseeker_id != jobseeker_id:
         raise HTTPException(404, f'会话不存在: id={match_record_id}')
-    if mr.jobseeker_id != jobseeker_id:
-        raise HTTPException(403, '无权访问该会话')
     return mr
 
 
