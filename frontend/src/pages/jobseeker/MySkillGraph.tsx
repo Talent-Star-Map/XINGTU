@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { Target, BookOpen, AlertCircle, ArrowRight, Sparkles } from 'lucide-react'
+import { Target, BookOpen, AlertCircle, ArrowRight } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import { useLearning } from '../../lib/LearningContext'
-import UserSkillSphere from '../../components/kg/UserSkillSphere'
+import PersonalExperienceGraph from '../../components/kg/PersonalExperienceGraph'
 import { SkillCardGrid } from '../../components/kg/SkillCard'
 import ProfileSidebar from '../../components/ProfileSidebar'
 
@@ -32,7 +32,7 @@ function formatDate(iso: string) {
 
 export default function MySkillGraph() {
   const { setPage } = JSNav.use()
-  const { masteredSkills, diagnosisHistory, skillsLoading: loading, skillsError, profileName: username, refreshSkills, refreshHistory } = useLearning()
+  const { masteredSkills, diagnosisHistory, skillsLoading: loading, skillsError, refreshSkills, refreshHistory } = useLearning()
   useEffect(() => { void refreshHistory() }, [refreshHistory])
   const allSkills = Array.from(masteredSkills).sort()
   const skillCount = loading || skillsError ? '—' : allSkills.length
@@ -48,33 +48,15 @@ export default function MySkillGraph() {
     borderColor: 'var(--color-outline-variant)',
     background: 'var(--color-surface-container-lowest)',
   } as const
-  // 3D 球 section:透明背景,让页面底色透出
-  const sphereSectionStyle = {
-    borderColor: 'var(--color-outline-variant)',
-    background: 'transparent',
-    overflow: 'hidden' as const,
-  }
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="flex gap-8">
         <ProfileSidebar />
 
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 min-w-0 space-y-6">
           {/* ── 3D 能力星系 ── */}
-          <section className="rounded-2xl border" style={sphereSectionStyle}>
-            <div className="px-8 pt-6 pb-3 flex items-center justify-between">
-              <h3 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                <Sparkles className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
-                能力星系 · {skillCount} 颗技能星
-              </h3>
-              <span className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
-                按技能类别自动分色 · 拖动旋转 / 滚轮缩放 / 悬停查看
-              </span>
-            </div>
-            {!loading && !skillsError && <UserSkillSphere skills={allSkills} username={username} height={460} autoRotate={true} />}
-          </section>
-
+          <PersonalExperienceGraph onOpenResume={() => setPage('resume-center')} />
           {/* ── 已掌握技能 ── */}
           <section className="rounded-2xl border p-8" style={sectionStyle}>
             <div className="flex items-center justify-between mb-5">

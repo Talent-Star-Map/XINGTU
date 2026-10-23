@@ -20,6 +20,7 @@ from time_util import fmt
 from services import kg_service
 from services.role_catalog import build_public_catalog, filter_catalog_rows
 from auth_dependencies import require_admin
+from auth_guard import require_jobseeker
 
 router = APIRouter(prefix='/api/kg', tags=['kg'])
 
@@ -323,6 +324,17 @@ async def semantic_search(body: SemanticSearchBody):
 # ────────────────────────────────────────────────────────────
 # 个性化(需要登录)
 # ────────────────────────────────────────────────────────────
+
+@router.get('/personal/graph')
+def personal_graph(me: dict = Depends(require_jobseeker)):
+    """Current user's latest resume/profile only; no schema or data writes."""
+    from services.personal_graph import load_personal_graph
+    with SessionLocal() as session:
+        graph = load_personal_graph(session, me['user_id'])
+    if graph is None:
+        raise HTTPException(404, '用户资料不存在')
+    return _ok(graph)
+
 
 @router.get("/personal/recommend")
 async def personal_recommend(request: Request, limit: int = Query(5)):

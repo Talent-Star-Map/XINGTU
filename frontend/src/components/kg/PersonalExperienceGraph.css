@@ -1,0 +1,65 @@
+.peg-shell{--peg-bg:#f5f8fa;--peg-panel:#fff;--peg-text:#243746;--peg-muted:#627581;--peg-line:#dce5eb;--peg-accent:#906f2d;border:1px solid var(--peg-line);border-radius:18px;background:var(--peg-bg);color:var(--peg-text);overflow:hidden;text-align:left}
+.peg-shell[data-theme=dark]{--peg-bg:#101820;--peg-panel:#14212b;--peg-text:#e7edf1;--peg-muted:#a0b1bd;--peg-line:#2c3d49;--peg-accent:#e4ba69}
+.peg-shell:fullscreen{overflow:auto;border-radius:0;max-width:none;width:100%;height:100%;padding:2vw}
+.peg-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:26px 28px 18px}
+.peg-kicker{font-size:11px;letter-spacing:.08em;color:var(--peg-accent);margin:0 0 7px}
+.peg-header h2{font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1.4;margin:0}
+.peg-subtitle{font-size:12px;color:var(--peg-muted);margin:8px 0 0;line-height:1.6}
+.peg-tools,.peg-zoom{display:flex;gap:6px}
+.peg-shell button{font:inherit;cursor:pointer}
+.peg-tools button,.peg-zoom button{display:flex;align-items:center;justify-content:center;border:1px solid var(--peg-line);color:var(--peg-text);background:var(--peg-panel);border-radius:7px;width:31px;height:31px}
+.peg-shell button:focus-visible,.peg-directory summary:focus-visible{outline:2px solid var(--peg-accent);outline-offset:3px}
+.peg-shell button:disabled{opacity:.35;cursor:default}
+.peg-shell button:hover:not(:disabled){border-color:var(--peg-accent)}
+.peg-summary{display:flex;flex-wrap:wrap;gap:14px;padding:0 28px 18px;font-size:11px;color:var(--peg-muted)}
+.peg-summary>span:not(.peg-source){color:var(--peg-text)}
+.peg-source{margin-left:auto;max-width:50%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.peg-source-warning{margin:0;padding:9px 28px;background:var(--peg-panel);font-size:12px;color:var(--peg-muted)}
+.peg-body{display:grid;grid-template-columns:minmax(0,1fr) 268px;border-top:1px solid var(--peg-line);min-height:440px}
+.peg-stage{position:relative;min-width:0;min-height:440px;background:radial-gradient(ellipse at 45% 48%,rgba(127,185,200,.07),transparent 68%)}
+.peg-viewport{position:absolute;inset:0 0 44px;overflow:hidden;min-width:0;touch-action:pan-y}
+.peg-viewport canvas{display:block;max-width:100%;touch-action:none}
+.peg-labels,.peg-leaders{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.peg-label{position:absolute;left:0;top:0;pointer-events:auto;max-width:158px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 7px;border:1px solid var(--peg-line);border-left:2px solid #9b8cad;background:var(--peg-panel);color:var(--peg-text);border-radius:4px;line-height:1.5;font-size:12px!important;font-weight:600;box-shadow:0 1px 5px #00000008}
+.peg-label[data-kind=person]{border-left-color:#d7a94f}
+.peg-label[data-kind=project]{border-left-color:#6eabb6}
+.peg-label[data-kind=work]{border-left-color:#8a9fc8}
+.peg-label[aria-pressed=true]{outline:1px solid var(--peg-accent);z-index:2}
+.peg-stage-caption{position:absolute;left:20px;bottom:16px;font-size:10px;color:var(--peg-muted);pointer-events:none}
+.peg-zoom{position:absolute;right:14px;bottom:12px}
+.peg-detail{border-left:1px solid var(--peg-line);padding:24px 21px;max-height:500px;overflow:auto;background:var(--peg-panel)}
+.peg-kind{font-size:11px;color:var(--peg-muted);margin:0 0 8px}
+.peg-detail h3{font-size:18px;font-weight:700;line-height:1.5;margin:0 0 12px;overflow-wrap:anywhere}
+.peg-role{font-size:12px;color:var(--peg-accent);margin:0 0 8px}
+.peg-date{font-size:11px;color:var(--peg-muted);margin:0 0 12px}
+.peg-description,.peg-highlight{font-size:12px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 12px}
+.peg-related h4,.peg-proofs h4{font-size:11px;font-weight:600;color:var(--peg-muted);margin:19px 0 9px}
+.peg-related>div{display:flex;flex-wrap:wrap;gap:6px}
+.peg-related button{font-size:11px;border:1px solid var(--peg-line);border-radius:4px;padding:4px 7px;max-width:100%;overflow-wrap:anywhere;text-align:left;background:var(--peg-bg);color:var(--peg-text)}
+.peg-proofs article{border-top:1px solid var(--peg-line);padding:10px 0}
+.peg-proof-label{font-size:10px;color:var(--peg-muted);line-height:1.6;margin:0 0 6px}
+.peg-proofs blockquote{border-left:2px solid #6eabb6;padding-left:10px;font-size:12px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 6px}
+.peg-proofs small{font-size:10px;line-height:1.6;color:var(--peg-muted)}
+.peg-resume-link{font-size:12px!important;color:var(--color-primary,#3478bd);display:inline-flex;align-items:center;gap:3px;margin-top:18px;background:none;border:0;padding:0}
+.peg-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--peg-line);padding:13px 22px}
+.peg-filters{display:flex;gap:6px}
+.peg-filters button{padding:5px 11px;border:1px solid var(--peg-line);border-radius:5px;font-size:11px;background:var(--peg-panel);color:var(--peg-text)}
+.peg-filters button[aria-pressed=true]{border-color:var(--peg-accent);color:var(--peg-accent)}
+.peg-legend{display:flex;gap:12px;font-size:10px;color:var(--peg-muted)}
+.peg-legend>span{display:flex;gap:5px;align-items:center}
+.peg-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ad98c2}
+.peg-legend i[data-kind=person]{background:#d7a94f;border-radius:1px}
+.peg-legend i[data-kind=project]{background:#6eabb6;border-radius:1px;transform:rotate(45deg)}
+.peg-bottom{padding:0 22px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:var(--peg-muted)}
+.peg-bottom p{margin:0;line-height:1.6}
+.peg-bottom button{white-space:nowrap;color:var(--peg-accent);background:none;border:0;padding:0}
+.peg-directory{border-top:1px solid var(--peg-line);padding:13px 22px;font-size:11px;color:var(--peg-muted)}
+.peg-directory summary{cursor:pointer}
+.peg-directory>div{display:flex;flex-wrap:wrap;gap:7px;padding-top:13px;max-height:250px;overflow:auto}
+.peg-directory button{font-size:11px;padding:5px 8px;text-align:left;border:1px solid var(--peg-line);background:var(--peg-panel);color:var(--peg-text);border-radius:4px}
+.peg-directory button>span{color:var(--peg-muted);font-size:10px;margin-right:7px}
+.peg-state{padding:45px 28px;min-height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:var(--peg-muted);font-size:13px;text-align:center}
+.peg-state button{background:none;border:0;color:var(--peg-accent)}
+.peg-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;padding:30px;color:var(--peg-muted);text-align:center}
+@media(max-width:1100px){.peg-body{grid-template-columns:minmax(0,1fr) 230px}.peg-header{padding:22px}.peg-detail{padding:22px 16px}}
+@media(max-width:760px){.peg-body{grid-template-columns:1fr}.peg-stage{min-height:390px}.peg-detail{border-left:0;border-top:1px solid var(--peg-line);max-height:340px}.peg-header{padding:20px 17px;align-items:flex-start;gap:8px}.peg-header h2{font-size:19px}.peg-tools{flex-wrap:wrap;justify-content:flex-end;max-width:76px}.peg-tools button{width:29px;height:29px}.peg-summary{padding:0 17px 16px;gap:11px}.peg-source{max-width:100%;margin-left:0;width:100%}.peg-viewport .peg-label{max-width:130px}.peg-bottom{align-items:flex-start;flex-direction:column}.peg-footer{padding:12px 17px}.peg-legend{gap:10px}}

@@ -28,6 +28,7 @@ async function postJson<T = any>(url: string, body: any): Promise<T> {
 const withToken = (path: string) => `${path}${path.includes('?') ? '&' : '?'}token=${TOKEN()}`
 
 export const kgApi = {
+  personalGraph: () => getJson('/api/kg/personal/graph'),
   overview: () => getJson(withToken('/api/kg/jobs/overview')),
   catalog: (includeUnverified = false, techStack = '', level = '') => {
     const p = new URLSearchParams({ include_unverified: String(includeUnverified) })
