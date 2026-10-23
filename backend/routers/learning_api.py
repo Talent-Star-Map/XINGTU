@@ -50,18 +50,20 @@ def get_skills(token: str = Depends(request_token), job_id: Optional[int] = Quer
     uid, role = _get_uid(token)
     session = get_session()
     try:
-        query = 'SELECT id, skill_name, mastered, mastered_at FROM user_skills WHERE user_id = :uid'
+        query = 'SELECT id, skill_name, mastered, mastered_at, job_id FROM user_skills WHERE user_id = :uid'
         params = {'uid': uid}
         if job_id is not None:
             query += ' AND (job_id = :jid OR job_id IS NULL)'
             params['jid'] = job_id
+        query += ' ORDER BY id DESC'
         result = session.execute(text(query), params)
         rows = result.fetchall()
         return {
             'success': True,
             'data': [{
                 'id': r[0], 'skill_name': r[1],
-                'mastered': bool(r[2]), 'mastered_at': str(r[3]) if r[3] else None
+                'mastered': bool(r[2]), 'mastered_at': str(r[3]) if r[3] else None,
+                'job_id': r[4],
             } for r in rows]
         }
     finally:

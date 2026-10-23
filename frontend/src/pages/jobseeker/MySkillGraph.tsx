@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Target, BookOpen, AlertCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import { useLearning } from '../../lib/LearningContext'
@@ -32,27 +31,9 @@ function formatDate(iso: string) {
 
 export default function MySkillGraph() {
   const { setPage } = JSNav.use()
-  const { masteredSkills, diagnosisHistory } = useLearning()
-  const [profileSkills, setProfileSkills] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  // 中心立方体展示用用户名(当前写死为演示名,后续接真实用户)
-  const username = '星图测试用户'
-
-  useEffect(() => {
-    const token = localStorage.getItem('xingtu_token') || ''
-    if (!token) { setLoading(false); return }
-    fetch(`/api/auth/profile?token=${token}`)
-      .then(r => r.json())
-      .then(d => {
-        const raw = d?.data?.skills
-        if (Array.isArray(raw)) setProfileSkills(raw.map(String))
-        else if (typeof raw === 'string') setProfileSkills(raw.split(',').map(s => s.trim()).filter(Boolean))
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const allSkills = Array.from(new Set([...profileSkills, ...masteredSkills])).sort()
+  const { masteredSkills, diagnosisHistory, skillsLoading: loading, skillsError, profileName: username, refreshSkills } = useLearning()
+  const allSkills = Array.from(masteredSkills).sort()
+  const skillCount = loading || skillsError ? '—' : allSkills.length
   const latest = diagnosisHistory[0]
   const missing = latest?.skills?.miss ?? []
   const missingSorted = [...missing].sort((a: any, b: any) => {
@@ -83,20 +64,20 @@ export default function MySkillGraph() {
             <div className="px-8 pt-6 pb-3 flex items-center justify-between">
               <h3 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
                 <Sparkles className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
-                能力星系 · {allSkills.length} 颗技能星
+                能力星系 · {skillCount} 颗技能星
               </h3>
               <span className="text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
                 按技能类别自动分色 · 拖动旋转 / 滚轮缩放 / 悬停查看
               </span>
             </div>
-            <UserSkillSphere skills={allSkills} username={username} height={460} autoRotate={true} />
+            {!loading && !skillsError && <UserSkillSphere skills={allSkills} username={username} height={460} autoRotate={true} />}
           </section>
 
           {/* ── 已掌握技能 ── */}
           <section className="rounded-2xl border p-8" style={sectionStyle}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-black" style={{ color: 'var(--color-on-surface)' }}>
-                已掌握技能 · {allSkills.length}
+                已掌握技能 · {skillCount}
               </h3>
               <button onClick={() => setPage('profile-home')} className="text-xs font-medium flex items-center gap-1"
                 style={{ color: 'var(--color-primary)' }}>
@@ -105,6 +86,8 @@ export default function MySkillGraph() {
             </div>
             {loading ? (
               <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>加载中...</p>
+            ) : skillsError ? (
+              <p role="status" className="text-sm">{skillsError}<button onClick={() => void refreshSkills()} className="ml-3 underline">重试</button></p>
             ) : allSkills.length === 0 ? (
               <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
                 还没有技能记录。去「岗位」页先做一次诊断,或到个人主页补全技能。

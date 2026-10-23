@@ -2,18 +2,20 @@ import { useState, useRef, useEffect } from 'react'
 import { Upload, Loader2, CheckCircle, FileText, AlertCircle, ArrowRight, RefreshCw, User, Briefcase, GraduationCap, Code, Phone, Mail, Clock, Download, RotateCcw, Trash2, Eye, X, MapPin, Star } from 'lucide-react'
 import ProfileSidebar from '../../components/ProfileSidebar'
 import { JSNav } from '../../lib/NavContext'
+import ResumeAttachment, { downloadAttachment, attachmentSize, type AttachmentInfo } from '../../components/resume/ResumeAttachment'
 
 interface ParseResult {
   name: string; phone: string; email: string
   skills: string[]; education: string; school: string
   experience: string; target_position: string; bio: string
   method?: string; raw_text_preview?: string
+  attachment?: AttachmentInfo
   quality?: { scored_skills: {skill:string;confidence:number;status:string;matched_in_text:boolean}[];
     traces: {skill:string;evidence:string[];found:boolean}[];
     confidence_avg: number; verified_count: number; unconfirmed_count: number }
 }
 
-interface HistoryItem {
+interface HistoryItem extends AttachmentInfo {
   path: string; date: string; filename: string
   skills: string[]; skill_count: number
   name: string; target_position: string
@@ -35,15 +37,19 @@ export default function Resume() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [preview, setPreview] = useState<ParseResult | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [downloadPath, setDownloadPath] = useState('')
 
   const fetchHistory = () => {
     const token = localStorage.getItem('xingtu_token')
     if (!token) return
     setHistoryLoading(true)
+    setHistoryError('')
     fetch(`/api/auth/resume-history?token=${token}`).then(r => r.json()).then(d => {
       if (d.success) setHistory(d.data)
+      else setHistoryError('附件列表加载失败，请重试')
       setHistoryLoading(false)
-    }).catch(() => setHistoryLoading(false))
+    }).catch(() => { setHistoryError('附件列表加载失败，请重试'); setHistoryLoading(false) })
   }
 
   useEffect(() => { fetchHistory() }, [])
@@ -61,10 +67,10 @@ export default function Resume() {
     try {
       const r = await fetch(`/api/auth/resume-parse?token=${token}`, { method: 'POST', body: fd })
       const d = await r.json()
+      fetchHistory()
       if (d.success) {
         setParseResult(d.data)
         setParseDone(true)
-        fetchHistory()
       } else {
         setParsing(false)
         setError(d.message || '解析失败')
@@ -119,30 +125,29 @@ export default function Resume() {
   const deleteHistory = async (path: string) => {
     const token = localStorage.getItem('xingtu_token')
     try {
-      await fetch(`/api/auth/resume-delete?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'DELETE' })
-    } catch { /* ignore */ }
-    setHistory(h => h.filter(i => i.path !== path))
+      const response = await fetch(`/api/auth/resume-delete?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'DELETE' })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error('删除附件失败')
+      setHistory(h => h.filter(i => i.path !== path))
+    } catch { setHistoryError('删除附件失败，请重试') }
   }
 
-  const exportResults = async (path: string) => {
-    const token = localStorage.getItem('xingtu_token')
-    const r = await fetch(`/api/auth/resume-reparse?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'POST' })
-    const d = await r.json()
-    if (!d.success) return
-    const blob = new Blob([JSON.stringify(d.data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = path.replace(/\.[^.]+$/, '') + '_parsed.json'
-    a.click(); URL.revokeObjectURL(url)
+  const downloadHistory = async (item: HistoryItem) => {
+    setDownloadPath(item.path); setHistoryError('')
+    try { await downloadAttachment(item) }
+    catch (e) { setHistoryError(e instanceof Error ? e.message : '下载失败，请重试') }
+    finally { setDownloadPath('') }
   }
 
   const previewHistory = async (path: string) => {
     setPreviewLoading(true); setPreview(null)
     const token = localStorage.getItem('xingtu_token')
     try {
-      const r = await fetch(`/api/auth/resume-reparse?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'POST' })
+      const r = await fetch(`/api/auth/resume-detail?filename=${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${token}` } })
       const d = await r.json()
-      if (d.success) setPreview(d.data)
-    } catch { /* ignore */ }
+      if (!r.ok || !d.success) throw new Error('读取简历失败')
+      setPreview({ name: '', phone: '', email: '', skills: [], education: '', school: '', experience: '', target_position: '', bio: '', ...d.data })
+    } catch { setHistoryError('读取简历失败，请重试') }
     setPreviewLoading(false)
   }
 
@@ -212,13 +217,18 @@ export default function Resume() {
           )}
 
           {/* 历史上传记录 */}
-          {history.length > 0 && !confirmed && (
+          {previewLoading && <p role="status" className="text-sm">正在读取简历预览…</p>}
+          {(
             <div className="rounded-2xl border" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
                 <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
-                  <Clock className="h-4 w-4" /> 历史上传 ({history.length})
+                  <Clock className="h-4 w-4" /> 简历附件 ({history.length})
                 </h3>
+                <button onClick={fetchHistory} disabled={historyLoading} className="text-xs flex items-center gap-1"><RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />刷新</button>
               </div>
+              {historyError && <p role="alert" className="p-4 text-sm">{historyError}</p>}
+              {historyLoading && <p role="status" className="p-4 text-sm">附件列表加载中…</p>}
+              {!historyLoading && !historyError && history.length === 0 && <p className="p-6 text-sm opacity-70">暂无已上传附件，上传后可在这里预览或下载原文件。</p>}
               <div className="divide-y" style={{ borderColor: 'var(--color-outline-variant)' }}>
                 {history.map((item, i) => (
                   <div key={i} className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface)] transition-colors">
@@ -228,7 +238,7 @@ export default function Resume() {
                         <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-on-surface)' }}>{item.filename}</span>
                       </div>
                       <div className="flex items-center gap-4 mt-1.5">
-                        <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{item.date}</span>
+                        <span className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{item.date} · {item.extension?.toUpperCase()} · {attachmentSize(item.size)}</span>
                         {item.skill_count > 0 && (
                           <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                             {item.skill_count} 项技能
@@ -240,7 +250,7 @@ export default function Resume() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 ml-4">
-                      <button onClick={() => previewHistory(item.path)}
+                      <button onClick={() => previewHistory(item.path)} disabled={previewLoading}
                         className="p-2 rounded-lg transition-colors" title="预览"
                         style={{ color: 'var(--color-on-surface-variant)' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--color-primary)' }}
@@ -254,15 +264,15 @@ export default function Resume() {
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
                         <RotateCcw className="h-4 w-4" />
                       </button>
-                      <button onClick={() => exportResults(item.path)}
-                        className="p-2 rounded-lg transition-colors" title="导出解析结果"
+                      <button onClick={() => downloadHistory(item)} disabled={downloadPath === item.path}
+                        className="p-2 rounded-lg transition-colors disabled:opacity-50" title="下载原附件"
                         style={{ color: 'var(--color-on-surface-variant)' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--color-primary)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
-                        <Download className="h-4 w-4" />
+                        {downloadPath === item.path ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                       </button>
                       <button onClick={() => deleteHistory(item.path)}
-                        className="p-2 rounded-lg transition-colors" title="从列表移除"
+                        className="p-2 rounded-lg transition-colors" title="删除原附件及解析记录"
                         style={{ color: 'var(--color-on-surface-variant)' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)'; e.currentTarget.style.color = 'var(--accent-red)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-on-surface-variant)' }}>
@@ -329,9 +339,9 @@ export default function Resume() {
 
           {/* 预览弹窗 */}
           {preview && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
-              <div className="rounded-2xl border w-full max-w-xl max-h-[80vh] overflow-y-auto" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
-                <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: 'var(--color-scrim)' }} onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
+              <div role="dialog" aria-modal="true" aria-label="简历预览" className="rounded-2xl border w-full max-w-xl max-h-[80vh] overflow-y-auto" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+                <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 z-10" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                   <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
                     <FileText className="h-5 w-5" style={{ color: 'var(--color-primary)' }} /> 简历预览
                   </h3>
@@ -363,12 +373,7 @@ export default function Resume() {
                       <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--color-on-surface)' }}>{preview.bio}</p>
                     </div>
                   )}
-                  {preview.raw_text_preview && (
-                    <details>
-                      <summary className="text-xs cursor-pointer" style={{ color: 'var(--color-on-surface-variant)' }}>原文预览</summary>
-                      <pre className="mt-2 text-xs p-3 rounded-lg whitespace-pre-wrap max-h-40 overflow-y-auto" style={{ background: 'var(--color-surface-container)', color: 'var(--color-on-surface-variant)' }}>{preview.raw_text_preview}</pre>
-                    </details>
-                  )}
+                  {preview.attachment && <ResumeAttachment item={preview.attachment} />}
                 </div>
               </div>
             </div>

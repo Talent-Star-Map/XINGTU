@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, MessageCircle, BookOpen, Video, FileText, CheckCircle, ArrowRight, Star, Compass, Rocket, Brain, Zap, Target, RotateCcw, ExternalLink, Play, Clock } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import LearningGantt from '../../components/visuals/LearningGantt'
 import { useLearning } from '../../lib/LearningContext'
 import { groupMissingSkills, activePhases, estimateWeeks, PHASE_TITLES } from '../../lib/learningPhases'
 
@@ -11,28 +12,6 @@ interface Job { id: number; title: string; company: string; salary: string; loca
 
 const typeIcons: Record<string, any> = { '文档': FileText, '课程': Video, '教程': BookOpen, '文章': FileText, '项目': Rocket, '视频': Play }
 const typeColors: Record<string, string> = { '文档': 'var(--color-primary)', '视频': '#ef4444', '教程': 'var(--accent-green)', '课程': 'var(--accent-purple)' }
-
-const tutuKnowledge: { keywords: string[]; answer: string }[] = [
-  { keywords: ['langchain', 'langchain'], answer: 'LangChain 是当前最主流的 LLM 应用开发框架。建议从官方文档的 Quickstart 开始，先理解 Chain、Agent、Memory 三个核心概念，然后动手写一个简单的 QA 应用。 📚' },
-  { keywords: ['rag', '检索增强', '知识库'], answer: 'RAG（检索增强生成）是企业级 LLM 应用的核心模式。关键步骤：文档分割 → 向量化 → 存储到向量数据库 → 检索相关片段 → 送入 LLM 生成。推荐先掌握 Chroma 或 Milvus 作为向量数据库。 🔍' },
-  { keywords: ['agent', '智能体', '工具调用'], answer: 'Agent 是让 LLM 具备行动能力的关键技术。核心思路：LLM 作为大脑，根据任务目标决定调用什么工具（搜索、计算、API等），然后根据工具结果做下一步决策。建议从 LangChain 的 ReAct Agent 入门。 🤖' },
-  { keywords: ['prompt', '提示词', 'prompt engineering'], answer: 'Prompt Engineering 是操控 LLM 的核心技能。关键原则：1）明确角色设定 2）给出具体任务 3）提供示例（Few-shot）4）指定输出格式。推荐学习吴恩达的 ChatGPT Prompt Engineering 课程。 ✍️' },
-  { keywords: ['部署', '生产', '上线', 'docker', 'kubernetes'], answer: 'LLM 应用部署关键点：1）模型服务化（FastAPI/Flask）2）容器化（Docker）3）负载均衡 4）监控告警 5）成本控制。建议先用 Docker + FastAPI 做单机部署，再进阶到 K8s。 🚀' },
-  { keywords: ['向量数据库', 'embedding', '向量化', 'chroma', 'milvus'], answer: '向量数据库是 RAG 的存储核心。轻量级推荐 Chroma（本地开发）和 Qdrant（生产环境），大规模场景用 Milvus 或 Weaviate。关键指标：检索速度、召回率、支持的数据规模。 💾' },
-  { keywords: ['mcp', '协议', 'model context protocol'], answer: 'MCP（Model Context Protocol）是 Anthropic 提出的标准协议，让 LLM 能标准化地连接各种数据源和工具。它定义了 Client-Server 架构，类似"AI 的 USB-C 接口"。建议关注官方规范文档。 🔌' },
-  { keywords: ['怎么学', '如何开始', '入门', '新手', '初学'], answer: '学习建议：1）先选一个目标岗位，明确技能要求 2）对照差距，按优先级补核心技能 3）每个技能配合动手项目 4）定期重新诊断看进步。星星已经帮你规划好了路径，按阶段推进就行！ 🌟' },
-  { keywords: ['面试', '简历', '求职', '找工作'], answer: '求职建议：1）简历突出项目经验，量化成果 2）准备 2-3 个核心项目的深度讲解 3）刷 LeetCode + 系统设计 4）了解目标公司的技术栈。匹配度提升到 80+ 会更有竞争力！ 💪' },
-  { keywords: ['谢谢', '感谢', 'thanks', 'thank'], answer: '不客气！有问题随时找我。加油学习，早日拿到心仪 Offer！ 🎉' },
-  { keywords: ['你好', 'hi', 'hello', '嗨'], answer: '你好呀！我是图图，你的 AI 学习助手。可以问我任何关于技能学习、求职、技术的问题哦~ 😊' },
-]
-
-const getTutuResponse = (msg: string): string => {
-  const lower = msg.toLowerCase()
-  for (const item of tutuKnowledge) {
-    if (item.keywords.some(k => lower.includes(k))) return item.answer
-  }
-  return '这个问题很有意思！建议你：1）在左侧学习路径中找到对应阶段 2）完成该阶段的学习目标 3）动手做一个小项目巩固。如果还有具体问题，可以换个方式问我哦~ 🤔'
-}
 
 /** 从诊断结果构建学习阶段（兼容 Diagnosis.tsx 和 LearningPath.tsx 两种数据格式） */
 function buildPhases(diagnosis: DiagnosisResult | null): Phase[] {
@@ -166,15 +145,23 @@ export default function LearningPath() {
 
       const r = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('xingtu_token') || ''}`,
+        },
         body: JSON.stringify({ message: text, diagnosis: diagnosisContext, history }),
         cache: 'no-store',
       })
       const d = await r.json()
-      const reply = (d && d.answer) ? d.answer : getTutuResponse(text)
+      if (r.status === 401 || r.status === 403) {
+        setChatLog(prev => [...prev.slice(0, -1), { role: 'tutu', text: '请先登录，登录过期后请重新登录。' }])
+        return
+      }
+      if (!r.ok || !d?.answer) throw new Error('AI response unavailable')
+      const reply = d.answer
       setChatLog(prev => [...prev.slice(0, -1), { role: 'tutu', text: reply }])
     } catch (e) {
-      setChatLog(prev => [...prev.slice(0, -1), { role: 'tutu', text: getTutuResponse(text) }])
+      setChatLog(prev => [...prev.slice(0, -1), { role: 'tutu', text: 'AI 学习助手暂不可用，请稍后重试。' }])
     }
   }
 
@@ -273,6 +260,7 @@ export default function LearningPath() {
         </div>
       </motion.div>
 
+      {!!phases.length && <LearningGantt phases={phases.map((p, i) => ({ phase: i + 1, title: p.title, duration: p.duration, skills: p.skills }))} />}
       {/* 当前重点快捷区 */}
       {phases.length > 0 && phases[step] && (
         <div className="rounded-2xl border p-4" style={{ borderColor: `${phases[step].color}30`, background: `${phases[step].color}08` }}>

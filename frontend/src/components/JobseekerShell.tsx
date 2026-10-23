@@ -211,7 +211,7 @@ export default function JobseekerShell({ onLogout }: Props) {
       </header>
       <main className="flex-1 overflow-y-auto min-h-0">
         <div className="max-w-[1440px] mx-auto h-full">
-          <LearningProvider>
+          <LearningProvider refreshKey={page}>
             <JSNav.Provider value={{ setPage, page, params, updateParams }}>
               {(chatVisited || page === 'ai-chat') && (
                 <div hidden={page !== 'ai-chat'} className="h-full">

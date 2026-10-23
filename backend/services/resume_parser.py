@@ -550,10 +550,10 @@ def _jd_llm_extract(text: str):
     try:
         import requests
         resp = requests.post(
-            'https://api.deepseek.com/v1/chat/completions',
+            os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com/v1').rstrip('/') + '/chat/completions',
             headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
             json={
-                'model': 'deepseek-chat',
+                'model': os.getenv('DEEPSEEK_MODEL', 'deepseek-chat'),
                 'messages': [
                     {'role': 'system', 'content':
                      '你是岗位描述（JD）技能解析器。只提取正文中明确出现的技术技能、编程语言、框架、工具、平台。'
@@ -577,11 +577,13 @@ def _jd_llm_extract(text: str):
 def extract_jd_skills(text: str) -> dict:
     """JD 技能提取主入口：规则 + LLM，全部经"原文证据"硬过滤，返回规范技能名与证据。"""
     from services.skill_synonyms import SYNONYM_MAP
+    from services.evidence_extraction import verify_skill_quote
     rule_items = _jd_rule_extract(text)
     llm_items = _jd_llm_extract(text)
     _dict_lower = {s.lower() for s in _JD_SKILLS}
 
     merged: list[dict] = []
+    novel_candidates: list[dict] = []
     seen: set[str] = set()
 
     def _has_evidence(skill: str) -> bool:
@@ -589,6 +591,8 @@ def extract_jd_skills(text: str) -> dict:
                bool(_evidence_sentences(skill, text)[0] != '(原文未找到明确提及)')
 
     for it in llm_items:
+        if not isinstance(it, dict):
+            continue
         s = str(it.get('skill', '')).strip()
         if not s or not _has_evidence(s):
             continue  # 幻觉过滤：无原文证据即剔除
@@ -597,14 +601,23 @@ def extract_jd_skills(text: str) -> dict:
             if s.lower() == std or s.lower() in syns:
                 canonical = std
                 break
-        # 词典约束：只保留技能词典/同义词表内的技能，避免 LLM 输出领域外词汇
+        quote = verify_skill_quote(text, s, str(it.get('evidence', '')))
+        # Open vocabulary is useful for emerging roles, but never merge an
+        # unreviewed concept into the canonical skill graph.
         if canonical not in _dict_lower and canonical not in SYNONYM_MAP:
+            if quote is not None:
+                novel_candidates.append({'skill': s, 'evidence': quote,
+                                         'status': 'review_required'})
             continue
         if canonical in seen:
             continue
         seen.add(canonical)
-        ev = str(it.get('evidence', '')).strip()
-        merged.append({'skill': canonical, 'evidence': [ev] if ev else _evidence_sentences(s, text)})
+        # Never return a model-invented quote. Recover a literal rule sentence
+        # only for an already-known concept; novel concepts require a valid quote.
+        ev = quote['quote'] if quote is not None else _evidence_sentences(s, text)[0]
+        if ev == '(原文未找到明确提及)' or ev not in text:
+            continue
+        merged.append({'skill': canonical, 'evidence': [ev]})
 
     for canon, ev in rule_items:
         if canon not in seen:
@@ -625,4 +638,5 @@ def extract_jd_skills(text: str) -> dict:
     skills = [m['skill'] for m in final_items]
     evidence = {m['skill']: m['evidence'] for m in final_items}
     return {'skills': skills, 'evidence': evidence,
+            'novel_candidates': novel_candidates,
             'method': 'llm+rule' if llm_items else 'rule'}

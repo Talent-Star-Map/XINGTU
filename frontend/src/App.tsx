@@ -10,6 +10,7 @@ const EnterpriseShell = lazy(() => import('./components/EnterpriseShell'))
 const AdminShell = lazy(() => import('./components/AdminShell'))
 const ResumePrint = lazy(() => import('./pages/ResumePrint'))
 const SharedResume = lazy(() => import('./pages/SharedResume'))
+const ResumeAttachmentReader = lazy(() => import('./pages/jobseeker/ResumeAttachmentReader'))
 
 export default function App() {
   // 角色类型扩展为三态：求职者 / 企业 / 管理员
@@ -60,7 +61,10 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             ) : user.role === 'jobseeker' ? (
-              <Route path="*" element={<JobseekerShell onLogout={handleLogout} />} />
+              <>
+                <Route path="/resume-reader" element={<ResumeAttachmentReader />} />
+                <Route path="*" element={<JobseekerShell onLogout={handleLogout} />} />
+              </>
             ) : user.role === 'admin' ? (
               <Route path="*" element={<AdminShell onLogout={handleLogout} />} />
             ) : (

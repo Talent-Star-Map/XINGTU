@@ -5,7 +5,9 @@
 import os
 from auth_guard import request_token
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Depends
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
+from services.resume_attachments import owned_path, cached_data, metadata, remember_filename, word_pdf, pdf_page, EXTENSIONS
+from pathlib import Path
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
 import bcrypt, secrets, re, smtplib, uuid
@@ -204,6 +206,7 @@ async def resume_parse(file: UploadFile = File(...), token: str = Depends(reques
     name = f"{payload['user_id']}_{uuid.uuid4().hex[:8]}.{ext}"
     path = os.path.join(UPLOAD_DIR, 'resumes', name)
     with open(path, 'wb') as f: f.write(content)
+    remember_filename(Path(path), file.filename)
 
     from services.resume_parser import parse_resume
     import json as _json
@@ -211,6 +214,8 @@ async def resume_parse(file: UploadFile = File(...), token: str = Depends(reques
     cache_path = path + '.json'
     with open(cache_path, 'w', encoding='utf-8') as f:
         _json.dump({**result.get('data', {}), 'filename': file.filename, 'parsed_at': __import__('datetime').datetime.now().isoformat()}, f, ensure_ascii=False)
+
+    result.setdefault('data', {})['attachment'] = metadata(Path(path))
 
     # PII 脱敏日志：只打印 uid + 文件名，不打印手机号/邮箱（建议 #8）
     print(f'[resume-parse] uid={payload["user_id"]} file={file.filename} size={len(content)} method={result.get("data",{}).get("method","")}')
@@ -224,8 +229,8 @@ def resume_history(token: str = Depends(request_token)):
     import json as _json
     pattern = os.path.join(UPLOAD_DIR, 'resumes', f'{uid}_*')
     files = []
-    for f in sorted(_glob.glob(pattern), reverse=True):
-        if f.endswith('.json'): continue
+    for f in sorted(_glob.glob(pattern), key=os.path.getmtime, reverse=True):
+        if not os.path.isfile(f) or os.path.islink(f) or Path(f).suffix[1:].lower() not in EXTENSIONS: continue
         base = os.path.basename(f)
         info: dict = {'path': base, 'date': '', 'skills': [], 'name': '', 'target_position': '', 'filename': base, 'skill_count': 0}
         try:
@@ -243,6 +248,7 @@ def resume_history(token: str = Depends(request_token)):
                 info['target_position'] = c.get('target_position', '')
                 info['filename'] = c.get('filename', base)
             except Exception: pass
+        info.update(metadata(Path(f)))
         files.append(info)
     return {'success': True, 'data': files}
 
@@ -250,27 +256,27 @@ def resume_history(token: str = Depends(request_token)):
 def resume_reparse(filename: str = Query(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     uid = payload['user_id']
-    safe = os.path.basename(filename)
-    if not safe.startswith(f'{uid}_'): raise HTTPException(403, '无权访问')
-    path = os.path.join(UPLOAD_DIR, 'resumes', safe)
-    if not os.path.exists(path): raise HTTPException(404, '文件不存在')
+    path = owned_path(os.path.join(UPLOAD_DIR, 'resumes'), uid, filename)
+    original_name = metadata(path)['filename']
+    remember_filename(path, original_name)
     from services.resume_parser import parse_resume
     import json as _json
-    result = parse_resume(path)
-    cache_path = path + '.json'
+    result = parse_resume(str(path))
+    if not result.get('success'):
+        return result
+    cache_path = str(path) + '.json'
     with open(cache_path, 'w', encoding='utf-8') as f:
-        _json.dump({**result.get('data', {}), 'filename': filename, 'parsed_at': __import__('datetime').datetime.now().isoformat()}, f, ensure_ascii=False)
+        _json.dump({**result.get('data', {}), 'filename': original_name, 'parsed_at': __import__('datetime').datetime.now().isoformat()}, f, ensure_ascii=False)
+    result.setdefault('data', {})['attachment'] = metadata(path)
     return result
 
 @router.delete('/resume-delete')
 def resume_delete(filename: str = Query(...), token: str = Depends(request_token)):
     payload = _require_jobseeker(token)
     uid = payload['user_id']
-    safe = os.path.basename(filename)
-    if not safe.startswith(f'{uid}_'): raise HTTPException(403, '无权删除')
-    path = os.path.join(UPLOAD_DIR, 'resumes', safe)
+    path = str(owned_path(os.path.join(UPLOAD_DIR, 'resumes'), uid, filename))
     deleted = []
-    for p in [path, path + '.json']:
+    for p in [path, path + '.json', path + '.metadata']:
         if os.path.exists(p):
             os.remove(p)
             deleted.append(os.path.basename(p))
@@ -278,7 +284,8 @@ def resume_delete(filename: str = Query(...), token: str = Depends(request_token
 
 
 @router.get('/resume-file')
-def resume_file(filename: str = Query(...), token: str = Depends(request_token)):
+def resume_file(filename: str = Query(...), preview: bool = Query(False),
+                page: int | None = Query(None, ge=1, le=10000), token: str = Depends(request_token)):
     """下载自己上传的简历附件
 
     以前 /uploads 整目录是 StaticFiles 公开挂载的，知道文件名就能绕过登录下载别人简历。
@@ -286,10 +293,47 @@ def resume_file(filename: str = Query(...), token: str = Depends(request_token))
     """
     payload = _require_jobseeker(token)
     uid = payload['user_id']
-    safe = os.path.basename(filename or '')
-    if not safe or not safe.startswith(f'{uid}_'):
-        raise HTTPException(403, '无权访问该文件')
-    path = os.path.join(UPLOAD_DIR, 'resumes', safe)
-    if not os.path.exists(path):
-        raise HTTPException(404, '文件不存在')
-    return FileResponse(path, filename=safe)
+    path = owned_path(os.path.join(UPLOAD_DIR, 'resumes'), uid, filename)
+    info = metadata(path)
+    headers = {'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'}
+    if preview and info['extension'] in {'doc', 'docx'}:
+        content = word_pdf(path)
+        if page is not None:
+            content, count = pdf_page(content, page)
+            headers['X-Page-Count'] = str(count)
+            return Response(content, media_type='image/png', headers=headers)
+        return Response(content, media_type='application/pdf', headers=headers)
+    if preview and info['extension'] == 'pdf' and page is not None:
+        content, count = pdf_page(str(path), page)
+        headers['X-Page-Count'] = str(count)
+        return Response(content, media_type='image/png', headers=headers)
+    if preview and info['extension'] in {'tif', 'tiff'}:
+        from PIL import Image, ImageSequence
+        from io import BytesIO
+        output = BytesIO()
+        with Image.open(path) as image:
+            pages = [frame.convert('RGB') for frame in ImageSequence.Iterator(image)]
+            pages[0].save(output, format='PDF', save_all=True, append_images=pages[1:])
+        content = output.getvalue()
+        if page is not None:
+            content, count = pdf_page(content, page)
+            headers['X-Page-Count'] = str(count)
+            return Response(content, media_type='image/png', headers=headers)
+        return Response(content, media_type='application/pdf', headers=headers)
+    if preview and info['extension'] == 'txt':
+        content = path.read_bytes()
+        try:
+            body = content.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            body = content.decode('gb18030', errors='replace')
+        return Response(body, media_type='text/plain', headers=headers)
+    return FileResponse(path, filename=info['filename'], media_type=info['content_type'],
+                        content_disposition_type='inline' if preview else 'attachment', headers=headers)
+
+
+@router.get('/resume-detail')
+def resume_attachment_detail(filename: str = Query(...), token: str = Depends(request_token)):
+    """预览已有解析结果，不调用模型，不改写缓存。原文件存在即可查看附件。"""
+    uid = _require_jobseeker(token)['user_id']
+    path = owned_path(os.path.join(UPLOAD_DIR, 'resumes'), uid, filename)
+    return {'success': True, 'data': {**cached_data(path), 'attachment': metadata(path)}}

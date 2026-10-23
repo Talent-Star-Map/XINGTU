@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { latestResume, resolveUserSkills, type UserSkillCategory } from './userSkills'
 
 const getToken = () => localStorage.getItem('xingtu_token') || ''
 
@@ -16,6 +17,11 @@ interface LearningProgress {
 
 interface LearningCtx {
   masteredSkills: Set<string>
+  skillCategories: UserSkillCategory[]
+  skillsLoading: boolean
+  skillsError: string
+  profileName: string
+  refreshSkills: () => Promise<void>
   toggleMastered: (skill: string, jobId?: number) => Promise<void>
   diagnosisHistory: DiagnosisRecord[]
   addDiagnosis: (record: Omit<DiagnosisRecord, 'id' | 'created_at'>) => Promise<void>
@@ -27,6 +33,7 @@ interface LearningCtx {
 
 const Ctx = createContext<LearningCtx>({
   masteredSkills: new Set(),
+  skillCategories: [], skillsLoading: true, skillsError: '', profileName: '', refreshSkills: async () => {},
   toggleMastered: async () => {},
   diagnosisHistory: [],
   addDiagnosis: async () => {},
@@ -38,44 +45,69 @@ const Ctx = createContext<LearningCtx>({
 
 export const useLearning = () => useContext(Ctx)
 
-export function LearningProvider({ children }: { children: ReactNode }) {
+export function LearningProvider({ children, refreshKey }: { children: ReactNode; refreshKey?: string }) {
   const [masteredSkills, setMasteredSkills] = useState<Set<string>>(new Set())
+  const [skillCategories, setSkillCategories] = useState<UserSkillCategory[]>([])
+  const [skillsLoading, setSkillsLoading] = useState(true)
+  const [skillsError, setSkillsError] = useState('')
+  const [profileName, setProfileName] = useState('')
+  const skillsRequest = useRef(0)
   const [diagnosisHistory, setDiagnosisHistory] = useState<DiagnosisRecord[]>([])
   const [learningProgress, setLearningProgress] = useState<LearningProgress[]>([])
 
   // ─── 技能掌握 ───────────────────────────
   const fetchSkills = useCallback(async () => {
     const t = getToken()
-    if (!t) return
+    const request = ++skillsRequest.current
+    if (!t) {
+      setMasteredSkills(new Set()); setSkillCategories([]); setProfileName(''); setSkillsLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
+    setSkillsLoading(true)
+    setSkillsError('')
     try {
-      const r = await fetch(`/api/learning/skills?token=${t}`)
-      const d = await r.json()
-      if (d.success) {
-        const mastered = new Set<string>()
-        d.data.filter((s: any) => s.mastered).forEach((s: any) => mastered.add(s.skill_name))
-        setMasteredSkills(mastered)
+      const read = async (path: string) => {
+        const response = await fetch(path, { headers: { Authorization: `Bearer ${t}` }, signal: controller.signal })
+        const result = await response.json()
+        if (!response.ok || !result.success) throw new Error('技能读取失败')
+        return result.data
       }
-    } catch { /* ignore */ }
+      const [marks, profile, resumes] = await Promise.all([
+        read(`/api/learning/skills?token=${t}`), read(`/api/auth/profile?token=${t}`),
+        read(`/api/resume-center/list?brief=1&token=${t}`),
+      ])
+      const latest = latestResume(resumes as { id: number; updated_at?: string; created_at?: string }[])
+      const resume = latest ? await read(`/api/resume-center/${latest.id}?token=${t}`) : null
+      if (request !== skillsRequest.current || t !== getToken()) return
+      const groups = resolveUserSkills(profile.skills, resume?.sections || [], marks)
+      setSkillCategories(groups)
+      setMasteredSkills(new Set(groups.flatMap(c => c.skills)))
+      setProfileName(profile.real_name?.trim() || profile.username || '我的技能')
+    } catch {
+      if (request === skillsRequest.current) setSkillsError('技能数据加载失败，请稍后重试')
+    } finally {
+      window.clearTimeout(timeout)
+      if (request === skillsRequest.current) setSkillsLoading(false)
+    }
   }, [])
 
   const toggleMastered = useCallback(async (skill: string, jobId?: number) => {
     const t = getToken()
     if (!t) return
-    const willMaster = !masteredSkills.has(skill)
-    // 乐观更新
-    setMasteredSkills(prev => {
-      const next = new Set(prev)
-      willMaster ? next.add(skill) : next.delete(skill)
-      return next
-    })
+    const willMaster = !Array.from(masteredSkills).some(s => s.toLocaleLowerCase() === skill.trim().toLocaleLowerCase())
     try {
-      await fetch(`/api/learning/skills?token=${t}`, {
+      const response = await fetch(`/api/learning/skills?token=${t}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skill_name: skill, job_id: jobId || null, mastered: willMaster }),
+        body: JSON.stringify({ skill_name: skill, job_id: null, mastered: willMaster }),
       })
-    } catch { /* ignore */ }
-  }, [masteredSkills])
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error('技能保存失败')
+      await fetchSkills()
+    } catch { setSkillsError('技能状态保存失败，请重试') }
+  }, [masteredSkills, fetchSkills])
 
   // ─── 诊断历史 ───────────────────────────
   const refreshHistory = useCallback(async () => {
@@ -128,13 +160,24 @@ export function LearningProvider({ children }: { children: ReactNode }) {
 
   // 初始化加载
   useEffect(() => {
-    fetchSkills()
     refreshHistory()
-  }, [fetchSkills, refreshHistory])
+  }, [refreshHistory])
+
+  useEffect(() => { void fetchSkills() }, [fetchSkills, refreshKey])
+  useEffect(() => {
+    const refresh = () => { if (!document.hidden) void fetchSkills() }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [fetchSkills])
 
   return (
     <Ctx.Provider value={{
       masteredSkills, toggleMastered,
+      skillCategories, skillsLoading, skillsError, profileName, refreshSkills: fetchSkills,
       diagnosisHistory, addDiagnosis, refreshHistory,
       learningProgress, updateProgress, refreshProgress,
     }}>

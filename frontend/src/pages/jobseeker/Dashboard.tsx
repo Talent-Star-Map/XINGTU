@@ -50,7 +50,7 @@ function fmtDate(ts: number): string {
 
 export default function Dashboard() {
   const { setPage } = JSNav.use()
-  const { masteredSkills, learningProgress, refreshProgress } = useLearning()
+  const { masteredSkills, skillsLoading, skillsError, refreshSkills, learningProgress, refreshProgress } = useLearning()
   const reducedMotion = useReducedMotion()
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyCount, setHistoryCount] = useState(0)
@@ -91,7 +91,7 @@ export default function Dashboard() {
   const learningPercent = trackedSkills.size ? Math.round(masteredSkills.size / trackedSkills.size * 100) : 0
   const statsData = [
     { label: '收录岗位', value: totalJobs, icon: Briefcase, page: 'match' as const },
-    { label: '已掌握技能', value: masteredSkills.size, icon: Sparkles, page: 'my-skill-graph' as const },
+    { label: '已掌握技能', value: skillsLoading || skillsError ? null : masteredSkills.size, icon: Sparkles, page: 'my-skill-graph' as const },
     { label: '诊断记录', value: historyCount, icon: Target, page: 'match' as const },
     { label: '学习中技能', value: learningSkills.size, icon: BookOpen, page: 'learning' as const },
   ]
@@ -244,6 +244,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {skillsError && <p role="status" className="mb-4 text-sm">{skillsError}<button onClick={() => void refreshSkills()} className="ml-3 underline">重试</button></p>}
       {loadError && (
         <div role="alert" className="flex items-center gap-2 rounded-xl border px-4 py-3 text-sm"
           style={{ borderColor: 'var(--accent-orange)', color: 'var(--color-on-surface)', background: 'var(--color-surface-container-lowest)' }}>
@@ -278,7 +279,7 @@ export default function Dashboard() {
               : <p className="text-3xl font-bold tabular-nums" style={{ color }}>{s.value === null ? '—' : <StatsCounter value={s.value} />}</p>}
             <div aria-hidden="true" className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-container-high)' }}>
               <motion.div className="h-full rounded-full"
-                initial={{ width: 0 }} animate={{ width: isPending ? '30%' : s.value === null ? '0%' : '60%', opacity: isPending ? [0.35, 1, 0.35] : 1 }}
+                initial={{ width: 0 }} animate={{ width: isPending ? '30%' : s.value === null ? '0%' : s.value === 0 ? '6%' : '60%', opacity: isPending ? [0.35, 1, 0.35] : 1 }}
                 transition={{ width: { duration: reducedMotion ? 0 : 0.8, delay: i * 0.1 }, opacity: { duration: 1, repeat: isPending && !reducedMotion ? Infinity : 0 } }}
                 style={{ background: `linear-gradient(90deg, ${color}, ${color}aa)` }} />
             </div>
@@ -396,7 +397,7 @@ export default function Dashboard() {
           <div className="text-center py-6">
             <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--color-on-surface-variant)' }} />
             <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-              已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{masteredSkills.size}</span> 项技能
+              已掌握 <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{skillsLoading || skillsError ? '—' : masteredSkills.size}</span> 项技能
             </p>
             <div className="mt-4 h-2 rounded-full overflow-hidden" role="progressbar" aria-label="已记录技能的掌握进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={learningPercent} style={{ background: 'var(--color-surface-container-high)' }}>
               <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${learningPercent}%` }}

@@ -5,6 +5,8 @@ import {
   Link2, Star, Building, FileText, Activity, Code2, Globe,
 } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import { useLearning } from '../../lib/LearningContext'
+import { latestResume } from '../../lib/userSkills'
 import ProfileSidebar from '../../components/ProfileSidebar'
 import {
   WorkSection, EducationSection, ProjectsSection, SkillsSection,
@@ -22,6 +24,7 @@ const requiredEdits = ['real_name', 'phone', 'education', 'target_position']
 
 export default function ProfileHome() {
   const { setPage } = JSNav.use()
+  const { skillCategories, skillsLoading, skillsError, refreshSkills } = useLearning()
   const [p, setP] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -50,8 +53,7 @@ export default function ProfileHome() {
       const lr = await fetch(`/api/resume-center/list?brief=1&token=${token}`).then(r => r.json())
       const list: any[] = lr.success ? (lr.data || []) : []
       if (!list.length) { setResume(null); return }
-      const latest = [...list].sort((a, b) =>
-        (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || ''))[0]
+      const latest = latestResume(list)!
       const dr = await fetch(`/api/resume-center/${latest.id}?token=${token}`).then(r => r.json())
       if (dr.success) setResume(dr.data)
       else setResumeError(dr.error?.message || '读取简历失败')
@@ -102,7 +104,7 @@ export default function ProfileHome() {
     setSaving(true); setSaved(false); setErrors([])
     const r = await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const d = await r.json()
-    if (d.success) { setSaved(true); fetchProfile(); setTimeout(() => setModal(false), 800) }
+    if (d.success) { setSaved(true); fetchProfile(); void refreshSkills(); setTimeout(() => setModal(false), 800) }
     setSaving(false); setTimeout(() => setSaved(false), 3000)
   }
 
@@ -146,12 +148,10 @@ export default function ProfileHome() {
   const name = p.real_name?.trim() || p.username || '未登录用户'
   const filledCount = ['real_name','phone','education','school','city','target_city','target_position','experience','bio'].filter(k => hasVal(p[k])).length
   const pct = Math.round((filledCount / 9) * 100)
-  const skillsArr: string[] = p.skills ? p.skills.split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : []
   const secContent = (t: string) =>
     (resume?.sections || []).find((x: any) => (x.section_type || x.type) === t)?.content || {}
   const workItems = secContent('work_experience').items || []
   const eduItems = secContent('education').items || []
-  const skillCats = secContent('skills').categories || []
   const resumePersonal = secContent('personal_info') || {}
   // 项目优先用简历里的（有起止/技术栈/亮点）；没有简历时退回账号里存的项目
   const projItems = (secContent('projects').items || []).length
@@ -346,7 +346,12 @@ export default function ProfileHome() {
           </section>
 
           {/* ── 技能特长：按简历里的分类展示 ── */}
-          <SkillsSection categories={skillCats} flat={skillsArr} onEdit={gotoResume} />
+          {skillsLoading || skillsError ? (
+            <div className="rounded-2xl border p-8 text-sm" role="status">
+              {skillsLoading ? '技能加载中…' : skillsError}
+              {!skillsLoading && <button onClick={() => void refreshSkills()} className="ml-3 underline">重试</button>}
+            </div>
+          ) : <SkillsSection categories={skillCategories} flat={[]} onEdit={gotoResume} />}
 
           {/* ── 项目经历：来自最近一份简历 ── */}
           <ProjectsSection items={projItems} onEdit={gotoResume} />

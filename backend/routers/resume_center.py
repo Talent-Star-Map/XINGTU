@@ -319,6 +319,10 @@ async def resume_import(
     with open(path, 'wb') as f:
         f.write(content)
 
+    from pathlib import Path
+    from services.resume_attachments import remember_filename
+    remember_filename(Path(path), filename)
+
     from services.resume_parser import parse_resume
     parsed = parse_resume(path)
     if not parsed.get('success'):
