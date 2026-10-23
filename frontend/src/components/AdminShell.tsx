@@ -1,7 +1,8 @@
-import { useState, lazy, Suspense, type ComponentType } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Star, LogOut, Sun, Moon, Menu, X, Users, Building2, Briefcase, BookOpen, Cpu, LayoutDashboard, Activity, GitBranch } from 'lucide-react'
+import { Star, LogOut, Sun, Moon, Menu, X, ChevronRight } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
+import { adminPages, adminGroups, groupForPage, readAdminPage, type AdminPage as Page, type AdminGroup } from '../lib/adminNavigation'
 
 // 页面按需加载，避免首屏一次性加载全部管理端代码
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'))
@@ -13,30 +14,6 @@ const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
 const AdminClassificationReview = lazy(() => import('../pages/admin/AdminClassificationReview'))
 const AdminRoleDefinitions = lazy(() => import('../pages/admin/AdminRoleDefinitions'))
 const AdminDataBoard = lazy(() => import('../pages/admin/AdminDataBoard'))
-
-// 管理员端功能模块：
-//   dashboard   — 工作台(平台总览 + 最近动态 + 系统状态)
-//   quality     — 质检(求职/企业端已下线,统一归管理员监管)
-//   jobseekers  — 求职者管理
-//   enterprises — 企业管理
-//   jobs        — 职位管理
-//   resources   — 学习资源管理
-//   models      — 模型配置(LLM 路由层 + Mock 开关)
-//   databoard   — 数据大屏(全平台指标与图表,答辩演示用)
-type Page = 'dashboard' | 'databoard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models' | 'role-definitions' | 'classification-review'
-
-const navItems: { key: Page; icon: any; label: string }[] = [
-  { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
-  { key: 'databoard', icon: Activity, label: '数据大屏' },
-  { key: 'jobseekers', icon: Users, label: '求职者' },
-  { key: 'enterprises', icon: Building2, label: '企业' },
-  { key: 'jobs', icon: Briefcase, label: '职位' },
-  { key: 'classification-review', icon: GitBranch, label: '岗位分类审核' },
-  { key: 'role-definitions', icon: GitBranch, label: '岗位定义' },
-  { key: 'resources', icon: BookOpen, label: '学习资源' },
-  { key: 'models', icon: Cpu, label: '模型配置' },
-  { key: 'quality', icon: Shield, label: '质检' },
-]
 
 // 用包装组件给 AdminUserManage 传 role prop（懒组件放在 Suspense 内）
 const JobseekerManagePage = () => <Suspense fallback={null}><AdminUserManage role="jobseeker" /></Suspense>
@@ -66,17 +43,40 @@ interface Props { onLogout: () => void }
 
 export default function AdminShell({ onLogout }: Props) {
   // 默认进入"工作台",管理员登录后第一眼看到平台总览
-  const [page, setPage] = useState<Page>('dashboard')
+  const [page, setPage] = useState<Page>(() => readAdminPage(window.location.hash))
+  const [lastPages, setLastPages] = useState<Partial<Record<AdminGroup, Page>>>({})
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
+  const navigate = useCallback((next: Page) => {
+    setPage(next); setMobileMenu(false); setProfileOpen(false)
+    setLastPages(current => ({ ...current, [groupForPage(next).key]: next }))
+    const hash = `#/admin/${next}`
+    if (window.location.hash !== hash) window.location.hash = hash
+  }, [])
+  useEffect(() => {
+    const handle = () => {
+      const next = readAdminPage(window.location.hash)
+      setPage(next); setMobileMenu(false)
+      setLastPages(current => ({ ...current, [groupForPage(next).key]: next }))
+    }
+    window.addEventListener('hashchange', handle)
+    return () => window.removeEventListener('hashchange', handle)
+  }, [])
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMobileMenu(false); setProfileOpen(false) } }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [])
+  const group = groupForPage(page)
+  const current = adminPages[page]
   const PageComp = pages[page]
 
   return (
     <div className="flex flex-col h-full w-full">
       <header className="shrink-0 border-b z-50" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
-        <div className="flex items-center justify-between pl-5 pr-6 h-16 max-w-[1440px] mx-auto">
-          <div className="flex items-center gap-10">
+        <div className="flex items-center justify-between px-4 md:px-6 h-16 max-w-[1440px] mx-auto">
+          <div className="flex min-w-0 items-center gap-5">
             <div className="flex items-center gap-2.5 pl-1">
               <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--accent-green-dim)' }}
                 animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 4, repeat: Infinity }}>
@@ -85,27 +85,25 @@ export default function AdminShell({ onLogout }: Props) {
               <span className="text-xl font-extrabold gradient-text">星图</span>
               <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>管理员</span>
             </div>
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map(item => {
-                const active = page === item.key
-                return (
-                  <button key={item.key} onClick={() => setPage(item.key)}
-                    className="relative px-4 py-2 rounded-lg transition-all flex items-center gap-2"
-                    style={{ color: active ? 'var(--accent-green)' : 'var(--color-on-surface-variant)' }}>
-                    {active && <motion.div layoutId="admin-nav" className="absolute inset-0 rounded-lg" style={{ background: 'var(--accent-green-dim)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />}
-                    <item.icon className="h-5 w-5 relative z-10" />
-                    <span className="relative z-10 text-sm font-semibold">{item.label}</span>
-                  </button>
-                )
+            <nav aria-label="管理员主导航" className="hidden lg:flex items-center gap-1">
+              {adminGroups.map(item => {
+                const active = group.key === item.key
+                return <button key={item.key} aria-current={active ? 'true' : undefined}
+                  onClick={() => navigate(lastPages[item.key] || (active ? page : item.pages[0]))}
+                  className="relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors hover:bg-black/5"
+                  style={{ color: active ? 'var(--accent-green)' : 'var(--color-on-surface-variant)' }}>
+                  {active && <motion.div layoutId="admin-nav" className="absolute inset-0 rounded-lg" style={{ background: 'var(--accent-green-dim)' }} />}
+                  <item.icon className="relative z-10 h-4 w-4" /><span className="relative z-10 whitespace-nowrap">{item.label}</span>
+                </button>
               })}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={toggle} className="p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }}>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={toggle} aria-label="切换主题" className="p-2.5 rounded-lg" style={{ color: 'var(--color-on-surface-variant)' }}>
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
             <div className="relative">
-              <button onClick={() => setProfileOpen(!profileOpen)}
+              <button onClick={() => setProfileOpen(!profileOpen)} aria-expanded={profileOpen} aria-label="管理员账号菜单"
                 className="flex items-center gap-2.5 px-3.5 py-2 rounded-lg transition-all"
                 style={{ background: profileOpen ? 'var(--color-surface-container)' : 'transparent' }}>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>管</div>
@@ -129,32 +127,33 @@ export default function AdminShell({ onLogout }: Props) {
                 </motion.div>
               )}
             </div>
-            <button className="md:hidden p-2" onClick={() => setMobileMenu(!mobileMenu)} style={{ color: 'var(--color-on-surface-variant)' }}>
+            <button className="lg:hidden p-2" aria-label="展开管理导航" aria-expanded={mobileMenu} aria-controls="admin-mobile-navigation" onClick={() => setMobileMenu(!mobileMenu)} style={{ color: 'var(--color-on-surface-variant)' }}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
-        {mobileMenu && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="md:hidden border-t px-4 py-3" style={{ borderColor: 'var(--color-outline-variant)' }}>
-            <div className="flex flex-wrap gap-2">
-              {navItems.map(item => {
-                const active = page === item.key
-                return (
-                  <button key={item.key} onClick={() => { setPage(item.key); setMobileMenu(false) }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-                    style={{ background: active ? 'var(--accent-green-dim)' : 'transparent', color: active ? 'var(--accent-green)' : 'var(--color-on-surface-variant)' }}>
-                    <item.icon className="h-4 w-4" /> {item.label}
-                  </button>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
+        {mobileMenu && <nav id="admin-mobile-navigation" aria-label="管理员移动导航" className="max-h-[65vh] overflow-y-auto border-t p-4 lg:hidden" style={{ borderColor: 'var(--color-outline-variant)' }}>
+          <div className="mx-auto grid max-w-[1440px] gap-4 sm:grid-cols-2">
+            {adminGroups.map(item => <section key={item.key}>
+              <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold" style={{ color: 'var(--color-on-surface-variant)' }}><item.icon className="h-3.5 w-3.5" />{item.label}</p>
+              <div className="flex flex-wrap gap-1">{item.pages.map(key => { const entry = adminPages[key]; return <button key={key} aria-current={page === key ? 'page' : undefined} onClick={() => navigate(key)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: page === key ? 'var(--accent-green-dim)' : 'var(--color-surface-container)', color: page === key ? 'var(--accent-green)' : 'var(--color-on-surface)' }}><entry.icon className="h-3.5 w-3.5" />{entry.label}</button> })}</div>
+            </section>)}
+          </div>
+        </nav>}
+        <div className="border-t" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-3 md:px-6">
+            <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}><span>管理中心</span><ChevronRight className="h-3 w-3" /><span>{group.label}</span><ChevronRight className="h-3 w-3" /><span className="font-semibold" style={{ color: 'var(--color-on-surface)' }}>{current.label}</span></div>
+            <nav aria-label={`${group.label}功能导航`} className="flex flex-wrap gap-1">
+              {group.pages.map(key => { const entry = adminPages[key]; return <button key={key} onClick={() => navigate(key)} aria-current={page === key ? 'page' : undefined} title={entry.description} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-black/5" style={{ background: page === key ? 'var(--accent-green-dim)' : undefined, color: page === key ? 'var(--accent-green)' : 'var(--color-on-surface-variant)' }}><entry.icon className="h-3.5 w-3.5" />{entry.label}</button> })}
+            </nav>
+          </div>
+          <p className="mx-auto max-w-[1440px] px-4 pb-3 text-[11px] leading-5 md:px-6" style={{ color: 'var(--color-on-surface-variant)' }}>{current.description}</p>
+        </div>
       </header>
-      <main className="flex-1 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="max-w-[1440px] mx-auto">
           <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
-            <PageComp onNav={setPage} />
+            <PageComp onNav={navigate} />
           </Suspense>
         </div>
       </main>
