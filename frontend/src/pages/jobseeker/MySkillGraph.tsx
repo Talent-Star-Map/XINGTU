@@ -50,9 +50,9 @@ export default function MySkillGraph() {
   } as const
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-[1440px] mx-auto px-6 py-8">
       <div className="flex gap-8">
-        <ProfileSidebar />
+        <div className="hidden xl:block"><ProfileSidebar /></div>
 
         <div className="flex-1 min-w-0 space-y-6">
           {/* ── 3D 能力星系 ── */}
