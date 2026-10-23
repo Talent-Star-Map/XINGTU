@@ -1,5 +1,6 @@
 import MatchGauge from './MatchGauge'
 import DimensionBars from './DimensionBars'
+import MatchRadar from '../visuals/MatchRadar'
 
 interface Props {
   result: {
@@ -13,20 +14,20 @@ interface Props {
 
 export default function MatchScorePanel({ result }: Props) {
   return (
-    <div className="grid grid-cols-5 gap-6">
-      <div className="col-span-2">
+    <div className="space-y-5"><div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="md:col-span-2">
         <MatchGauge
           overall={result.overall}
           grade={result.grade}
           scoreVersion={result.score_version}
         />
       </div>
-      <div className="col-span-3">
+      <div className="md:col-span-3">
         <DimensionBars
           dims={result.dims}
           dimensions={result.dimension_formula}
         />
       </div>
-    </div>
+    </div><MatchRadar dims={result.dims} /></div>
   )
 }

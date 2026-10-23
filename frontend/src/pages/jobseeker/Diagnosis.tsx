@@ -4,6 +4,7 @@ import { ArrowLeft, Target, AlertCircle, BookOpen, Sparkles, LogIn, RefreshCw } 
 import { JSNav } from '../../lib/NavContext'
 import { SkeletonCard } from '../../components/match/Skeleton'
 import MatchScorePanel from '../../components/match/MatchScorePanel'
+import LearningGantt from '../../components/visuals/LearningGantt'
 import GapAnalysisList from '../../components/match/GapAnalysisList'
 import { groupMissingSkills, activePhases, estimateWeeks, totalWeeksOf, PHASE_TITLES } from '../../lib/learningPhases'
 
@@ -259,6 +260,7 @@ export default function Diagnosis() {
                   <BookOpen className="h-4 w-4" /> 进入学习
                 </button>
               </div>
+              <LearningGantt phases={phases.map((p, i) => ({ phase: i + 1, title: p.title, duration: p.duration, skills: p.skills }))} />
               <div className="space-y-3">
                 {phases.map((p, i) => (
                   <div key={p.phase} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--color-surface)' }}>

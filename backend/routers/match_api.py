@@ -387,6 +387,9 @@ def api_match_recommend(
             "job_skill_count": len(job.get("skills", [])),
             "top_missing": miss_high[:3],
             "recommend_reason": reason,
+            "matched_skills_full": have_skills,
+            "missing_skills_full": [s['skill'] for s in result['skills']['miss']],
+            "dimensions": result['dims'],
         })
 
     scores.sort(key=lambda x: x["overall"], reverse=True)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { BookOpen, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import LearningGantt from '../visuals/LearningGantt'
 
 interface LearningPhase {
   phase: number
@@ -49,6 +50,7 @@ export default function LearningTimeline({ phases, totalWeeks, targetJobTitle, s
         基于您与「{targetJobTitle}」的差距，为您生成分阶段提升路线：
       </p>
 
+      <LearningGantt phases={phases} />
       {/* 纵向时间轴 */}
       <div className="relative">
         <div className="absolute left-5 top-2 bottom-2 w-0.5" style={{ background: 'var(--color-outline-variant)' }} />

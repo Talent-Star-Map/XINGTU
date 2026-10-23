@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { TrendingUp, Plus, Minus, Edit3, Zap, BarChart3, LineChart, Activity, Database, Clock, AlertCircle } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line as ReLine, LineChart as ReLineChart } from 'recharts'
+import { TrendingUp, Plus, Minus, Edit3, Zap, BarChart3, LineChart, Activity, Database, Clock, AlertCircle, History } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import JobEvolutionTimeline from '../../components/kg/JobEvolutionTimeline'
+import JobseekerInsights from '../../components/visuals/JobseekerInsights'
+import SkillChangeRiver from '../../components/visuals/SkillChangeRiver'
 
 type TrendSkill = { name: string; type: string; hot_score: number; mention_count: number; aliases: string[] }
 type TrendConcept = { name: string; hot_score: number; mention_count: number }
@@ -31,13 +34,15 @@ type SkillChange = {
   source_count: number
   current_size: number
 }
-type GrowthRow = { month: string; count: number; cum_count: number }
+type GrowthRow = { month: string; count: number; cum_count: number; has_observations?: boolean }
 
-const FALLBACK_SKILL_HISTORY: Record<string, Record<string, number>> = {
-  Python: { '1月': 45, '2月': 48, '3月': 50, '4月': 52, '5月': 55, '6月': 58 },
-  LangChain: { '1月': 12, '2月': 20, '3月': 35, '4月': 48, '5月': 60, '6月': 72 },
-  RAG: { '1月': 8, '2月': 15, '3月': 28, '4月': 40, '5月': 55, '6月': 68 },
-  Agent: { '1月': 5, '2月': 10, '3月': 18, '4月': 30, '5月': 45, '6月': 60 },
+async function loadTrendData<T>(path: string): Promise<T> {
+  const token = localStorage.getItem('xingtu_token') || ''
+  const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` } })
+  if (!response.ok) throw new Error('趋势数据暂不可用，请稍后重试')
+  const result = await response.json()
+  if (!result.success) throw new Error('趋势数据暂不可用，请稍后重试')
+  return result.data
 }
 
 function formatSalary(min: number, max: number) {
@@ -46,13 +51,14 @@ function formatSalary(min: number, max: number) {
 }
 
 export default function Trend() {
-  const [tab, setTab] = useState<'trend' | 'discovery' | 'update'>('update')
+  const [tab, setTab] = useState<'visuals' | 'trend' | 'discovery' | 'update'>('visuals')
 
   const [skills, setSkills] = useState<TrendSkill[]>([])
   const [concepts, setConcepts] = useState<TrendConcept[]>([])
   const [salary, setSalary] = useState<SalaryRow[]>([])
   const [growth, setGrowth] = useState<GrowthRow[]>([])
   const [trendLoading, setTrendLoading] = useState(true)
+  const [trendError, setTrendError] = useState('')
 
   const [newJobs, setNewJobs] = useState<NewJob[]>([])
   const [newJobsLoading, setNewJobsLoading] = useState(true)
@@ -63,21 +69,27 @@ export default function Trend() {
   const [historyFor, setHistoryFor] = useState<{ jobId: number; jobTitle: string } | null>(null)
   const [history, setHistory] = useState<SkillChange[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  // 演化轨迹模态框(真实数据,接 JobEvolutionTimeline 组件)
+  const [evolutionFor, setEvolutionFor] = useState<{ jobId: number; jobTitle: string } | null>(null)
 
   useEffect(() => {
     if (tab !== 'trend') return
     setTrendLoading(true)
+    setTrendError('')
     Promise.all([
-      fetch('/api/trend/skills?limit=10').then(r => r.json()).then(d => d.data || []),
-      fetch('/api/trend/concepts?limit=8').then(r => r.json()).then(d => d.data || []),
-      fetch('/api/trend/salary?limit=6').then(r => r.json()).then(d => d.data || []),
-      fetch('/api/trend/growth?months=6').then(r => r.json()).then(d => d.data || []),
+      loadTrendData<TrendSkill[]>('/api/trend/skills?limit=10'),
+      loadTrendData<TrendConcept[]>('/api/trend/concepts?limit=8'),
+      loadTrendData<SalaryRow[]>('/api/trend/salary?limit=6'),
+      loadTrendData<GrowthRow[]>('/api/trend/growth?months=6'),
     ]).then(([sk, co, sa, gr]) => {
       setSkills(sk)
       setConcepts(co)
       setSalary(sa)
       setGrowth(gr)
-    }).catch(err => console.error('trend load err', err))
+    }).catch(() => {
+      setSkills([]); setConcepts([]); setSalary([]); setGrowth([])
+      setTrendError('趋势数据暂不可用，请稍后重试')
+    })
       .finally(() => setTrendLoading(false))
   }, [tab])
 
@@ -115,22 +127,12 @@ export default function Trend() {
       .finally(() => setHistoryLoading(false))
   }
 
-  const top5Skills = skills.slice(0, 5).map(s => s.name)
-  const months = ['1月', '2月', '3月', '4月', '5月', '6月']
-  const skillTrendData = months.map((m, idx) => {
-    const row: Record<string, number | string> = { m }
-    top5Skills.forEach(skillName => {
-      const hist = FALLBACK_SKILL_HISTORY[skillName]
-      if (hist) {
-        row[skillName] = hist[m]
-      } else {
-        const base = (skills.find(s => s.name === skillName)?.hot_score ?? 10) / 8
-        row[skillName] = Math.round(base * (0.4 + idx * 0.12))
-      }
-    })
-    return row
-  })
+  // 打开演化轨迹模态框(真实数据,JobEvolutionTimeline 走 /api/kg/*)
+  const openEvolution = (jobId: number, jobTitle: string) => {
+    setEvolutionFor({ jobId, jobTitle })
+  }
 
+  const top5Skills = skills.slice(0, 5)
   const growthData = growth.map(g => ({ n: g.month, v: g.count }))
 
   return (
@@ -138,17 +140,20 @@ export default function Trend() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold" style={{ color: 'var(--color-on-surface)' }}>趋势洞察</h1>
         <div className="flex gap-2">
-          {(['trend', 'discovery', 'update'] as const).map(t => (
+          {(['visuals', 'trend', 'discovery', 'update'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold"
               style={{ background: tab === t ? 'var(--color-primary)' : 'var(--color-surface)', color: tab === t ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)', border: tab === t ? 'none' : '1px solid var(--color-outline-variant)' }}>
-              {t === 'trend' ? '趋势' : t === 'discovery' ? '新岗位' : '更新'}
+              {t === 'visuals' ? '求职数据观察' : t === 'trend' ? '已有指标' : t === 'discovery' ? '新岗位候选' : '技能演化'}
             </button>
           ))}
         </div>
       </div>
 
+      {tab === 'visuals' && <JobseekerInsights />}
+
       {tab === 'trend' && (
         <div className="space-y-6">
+          {trendError && <div role="alert" className="text-sm" style={{ color: 'var(--accent-red)' }}>{trendError}</div>}
           {trendLoading && (
             <div className="text-sm text-center py-4" style={{ color: 'var(--color-on-surface-variant)' }}>
               正在拉取 Neo4j 热度图谱…
@@ -158,32 +163,24 @@ export default function Trend() {
             <div className="flex items-center gap-2 mb-6">
               <LineChart className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
               <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>
-                Top {top5Skills.length} 技能热度趋势（基于 Neo4j hot_score 估算）
+                Top {top5Skills.length} 技能当前热度（Neo4j hot_score）
               </h2>
             </div>
             {top5Skills.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <ReLineChart data={skillTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.4} />
-                    <XAxis dataKey="m" tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ background: 'var(--color-surface-container-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 8, fontSize: 12 }} />
-                    {top5Skills.map((name, i) => (
-                      <ReLine key={name} type="monotone" dataKey={name}
-                        stroke={['#38BDF8', '#2DD4BF', '#FBBF24', '#34D399', '#A78BFA'][i % 5]}
-                        strokeWidth={2} dot={false} />
-                    ))}
-                  </ReLineChart>
-                </ResponsiveContainer>
-                <div className="flex flex-wrap justify-center gap-4 mt-3 text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  {top5Skills.map((name, i) => (
-                    <span key={name} className="flex items-center gap-1.5">
-                      <span className="w-3 h-0.5 rounded" style={{ background: ['#38BDF8', '#2DD4BF', '#FBBF24', '#34D399', '#A78BFA'][i % 5], height: 3 }} />
-                      {name}
-                    </span>
+                <div className="space-y-3">
+                  {top5Skills.map((skill, i) => (
+                    <div key={skill.name} className="flex items-center gap-3 text-sm">
+                      <span className="w-5 text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>{i + 1}</span>
+                      <span className="w-32 truncate">{skill.name}</span>
+                      <div className="flex-1 h-2 rounded" style={{ background: 'var(--color-surface-container)' }}>
+                        <div className="h-2 rounded" style={{ width: `${Math.max(2, Math.min(100, skill.hot_score / Math.max(top5Skills[0]?.hot_score || 1, 1) * 100))}%`, background: 'var(--color-primary)' }} />
+                      </div>
+                      <span className="w-16 text-right tabular-nums">{skill.hot_score.toFixed(0)}</span>
+                    </div>
                   ))}
                 </div>
+                <p className="text-xs mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>这是当前图谱的热度排序，缺少按月观测时不绘制历史趋势。</p>
               </>
             ) : (
               <div className="text-sm py-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>
@@ -192,7 +189,7 @@ export default function Trend() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="h-5 w-5" style={{ color: 'var(--accent-purple)' }} />
@@ -216,7 +213,7 @@ export default function Trend() {
             <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center gap-2 mb-5">
                 <Activity className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>AI 新岗位发现(月度)</h2>
+                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>新兴岗位候选记录（月度）</h2>
               </div>
               {growthData.some(d => d.v > 0) ? (
                 <ResponsiveContainer width="100%" height={250}>
@@ -224,13 +221,17 @@ export default function Trend() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.4} />
                     <XAxis type="number" tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis dataKey="n" type="category" tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
-                    <Tooltip contentStyle={{ background: 'var(--color-surface-container-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 8, fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ background: 'var(--color-surface-container-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: any) => [v, '已记录候选数']}
+                    />
                     <Bar dataKey="v" fill="#00C8FF" radius={[0, 6, 6, 0]} maxBarSize={30} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-sm py-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>近 6 个月暂无 AI 新岗位</div>
+                <div className="text-sm py-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>近 6 个月暂无带采集时间的候选记录</div>
               )}
+              <p className="text-xs mt-2" style={{ color: 'var(--color-on-surface-variant)' }}>按已记录的采集月份统计；零值表示库内无记录，不能说明市场没有新岗位。缺少采集时间的记录不计入。</p>
             </div>
           </div>
 
@@ -263,12 +264,10 @@ export default function Trend() {
           {!newJobsLoading && newJobs.length === 0 && (
             <div className="rounded-2xl border p-8 text-center text-sm"
               style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', color: 'var(--color-on-surface-variant)' }}>
-              暂无 AI 发现的新岗位 — 等 04:30 cron 跑一轮 ai_features 就有
+              暂无新兴岗位候选记录，请在数据更新后查看
             </div>
           )}
           {newJobs.map(job => {
-            const mustSkills = job.skills.slice(0, Math.min(6, job.skills.length))
-            const niceSkills = job.skills.slice(mustSkills.length, mustSkills.length + 4)
             return (
               <div key={job.id} className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
                 <div className="flex items-start gap-4 mb-4">
@@ -279,7 +278,7 @@ export default function Trend() {
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h2 className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{job.title}</h2>
                       <span className="text-xs px-2 py-0.5 rounded font-semibold"
-                        style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)' }}>AI 发现</span>
+                        style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)' }}>AI 生成候选 · 未核验</span>
                       {job.salary_min_k > 0 && (
                         <span className="text-xs px-2 py-0.5 rounded"
                           style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
@@ -288,39 +287,33 @@ export default function Trend() {
                       )}
                     </div>
                     <p className="text-sm leading-relaxed" style={{ color: 'var(--color-on-surface-variant)' }}>
-                      {job.summary || '基于知识图谱热度自动识别的岗位候选,需人工 review 后正式发布'}
+                      {job.summary || '基于图谱热度生成的岗位候选，仍需原文证据与人工审核'}
                     </p>
                   </div>
                 </div>
                 {job.skills.length > 0 && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <div className="rounded-xl p-4" style={{ background: 'var(--accent-green-dim)' }}>
-                      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--accent-green)' }}>必备技能</p>
+                      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--accent-green)' }}>关联技能候选（未判定必备或加分）</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {mustSkills.map((s: string) => (
+                        {job.skills.map((s: string) => (
                           <span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
                             {s}
                           </span>
                         ))}
                       </div>
                     </div>
-                    {niceSkills.length > 0 ? (
-                      <div className="rounded-xl p-4" style={{ background: 'var(--accent-cyan-dim)' }}>
-                        <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-primary)' }}>加分技能</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {niceSkills.map((s: string) => (
-                            <span key={s} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)' }}>
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
                 )}
-                <div className="flex gap-4 text-xs mt-3" style={{ color: 'var(--color-on-surface-variant)' }}>
+                <div className="flex gap-4 text-xs mt-3 items-center" style={{ color: 'var(--color-on-surface-variant)' }}>
                   <span>📅 {job.crawl_time || '最近一轮 AI 抽取'}</span>
-                  <span>✅ 多源交叉验证(Neo4j hot_score)</span>
+                  <button onClick={() => openEvolution(job.id, job.title)}
+                    className="ml-auto text-xs px-3 py-1 rounded-lg flex items-center gap-1 font-semibold"
+                    style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)', border: '1px solid var(--accent-green)' }}
+                    title="查看该岗位真实数据演化轨迹">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    查看演化轨迹
+                  </button>
                 </div>
               </div>
             )
@@ -330,27 +323,17 @@ export default function Trend() {
 
       {tab === 'update' && (
         <div className="space-y-4">
+          <SkillChangeRiver />
           {changesLoading && (
             <div className="text-sm text-center py-4" style={{ color: 'var(--color-on-surface-variant)' }}>
               拉取能力 diff…
             </div>
           )}
 
-          {!changesLoading && skillChanges.length > 0 && (
-            <div className="rounded-xl p-3 flex items-start gap-2 text-xs"
-              style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-on-surface-variant)' }}>
-              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--color-primary)' }} />
-              <span>
-                基于多源实际招聘需求 vs 当前岗位描述对比,自动识别传统岗位(出现 ≥3 次)的能力演化。
-                每个岗位默认显示最新一次 diff,点击「演化时间线」查看历次变更。
-              </span>
-            </div>
-          )}
-
           {!changesLoading && skillChanges.length === 0 && (
             <div className="rounded-2xl border p-8 text-center text-sm"
               style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', color: 'var(--color-on-surface-variant)' }}>
-              暂无能力 diff 数据 — 跑 <code>python ai_features/skill_diff.py --once</code> 触发一次性 backfill,或等 cron
+              暂无技能差异候选记录
             </div>
           )}
 
@@ -404,6 +387,7 @@ export default function Trend() {
                 {selectedChange && (
                   <ChangeDetail
                     change={selectedChange}
+                    onOpenEvolution={() => openEvolution(selectedChange.job_id, selectedChange.job_title)}
                     onOpenHistory={() => openHistory(selectedChange.job_id, selectedChange.job_title)}
                   />
                 )}
@@ -424,10 +408,10 @@ export default function Trend() {
               <div>
                 <h2 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
                   <Clock className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
-                  演化时间线:{historyFor.jobTitle}
+                  历史差异候选:{historyFor.jobTitle}
                 </h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  岗位 ID: {historyFor.jobId} · {historyLoading ? '加载中…' : `${history.length} 次变更`}
+                  岗位 ID: {historyFor.jobId} · {historyLoading ? '加载中…' : `${history.length} 条候选`}
                 </p>
               </div>
               <button onClick={() => setHistoryFor(null)} className="text-xs px-3 py-1.5 rounded-lg"
@@ -465,7 +449,7 @@ export default function Trend() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="rounded-lg p-2" style={{ background: 'var(--accent-green-dim)' }}>
-                      <p className="font-semibold mb-1" style={{ color: 'var(--accent-green)' }}>+{h.added.length} 新增</p>
+                      <p className="font-semibold mb-1" style={{ color: 'var(--accent-green)' }}>+{h.added.length} 候选新增</p>
                       <div className="flex flex-wrap gap-1">
                         {h.added.slice(0, 4).map(s => (
                           <span key={s} className="px-1.5 py-0.5 rounded"
@@ -475,7 +459,7 @@ export default function Trend() {
                       </div>
                     </div>
                     <div className="rounded-lg p-2" style={{ background: 'var(--accent-red-dim)' }}>
-                      <p className="font-semibold mb-1" style={{ color: 'var(--accent-red)' }}>-{h.removed.length} 删除</p>
+                      <p className="font-semibold mb-1" style={{ color: 'var(--accent-red)' }}>-{h.removed.length} 候选缺失</p>
                       <div className="flex flex-wrap gap-1">
                         {h.removed.slice(0, 4).map(s => (
                           <span key={s} className="px-1.5 py-0.5 rounded"
@@ -503,11 +487,41 @@ export default function Trend() {
           </div>
         </div>
       )}
+
+      {/* ─── 演化轨迹模态框(真实数据,JobEvolutionTimeline) ─── */}
+      {evolutionFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={() => setEvolutionFor(null)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative w-[760px] max-w-[95vw] h-[640px] max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+               style={{ background: 'var(--color-surface-container-lowest)' }}
+               onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3 border-b flex items-center justify-between shrink-0"
+                 style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
+              <div>
+                <h2 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
+                  <TrendingUp className="h-4 w-4" style={{ color: 'var(--accent-green)' }} />
+                  演化轨迹 · {evolutionFor.jobTitle}
+                </h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  job_id={evolutionFor.jobId} · 数据来源 Neo4j /api/kg/*(真实)
+                </p>
+              </div>
+              <button onClick={() => setEvolutionFor(null)} className="text-xs px-3 py-1.5 rounded-lg"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-outline-variant)' }}>
+                关闭
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 p-3">
+              <JobEvolutionTimeline jobId={evolutionFor.jobId} jobTitle={evolutionFor.jobTitle} height={420} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHistory: () => void }) {
+function ChangeDetail({ change, onOpenEvolution, onOpenHistory }: { change: SkillChange; onOpenEvolution: () => void; onOpenHistory: () => void }) {
   const sources = change.data_sources || []
   const uniqueSources = Array.from(new Set(sources.map(s => s.source))).filter(Boolean)
   const uniqueCompanies = Array.from(new Set(sources.map(s => s.company))).filter(Boolean)
@@ -526,19 +540,29 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
             {change.company || '—'} · {change.created_at} · run: {change.run_id}
           </p>
         </div>
-        <button onClick={onOpenHistory}
-          className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
-          style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}>
-          <Clock className="h-3.5 w-3.5" />
-          演化时间线
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={onOpenEvolution}
+            className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold"
+            style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)', border: '1px solid var(--accent-green)' }}
+            title="查看该岗位的真实演化轨迹(技能/事件/薪资)">
+            <TrendingUp className="h-3.5 w-3.5" />
+            演化轨迹
+          </button>
+          <button onClick={onOpenHistory}
+            className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+            style={{ background: 'var(--accent-cyan-dim)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}
+            title="查看该岗位的旧 diff 历史记录">
+            <History className="h-3.5 w-3.5" />
+            diff 历史
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl p-3 mb-4" style={{ background: 'var(--color-surface-container-low)' }}>
         <div className="flex items-center gap-2 mb-2">
           <Database className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
           <p className="text-xs font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-            数据来源({sources.length} 条原始记录)
+            关联来源 ({sources.length})
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs">
@@ -576,15 +600,15 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
 
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="rounded-xl p-3" style={{ background: 'var(--accent-green-dim)' }}>
-          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-green)' }}>新增能力</p>
+          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-green)' }}>候选新增</p>
           <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>{change.added.length}</p>
         </div>
         <div className="rounded-xl p-3" style={{ background: 'var(--accent-red-dim)' }}>
-          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-red)' }}>删除能力</p>
+          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-red)' }}>候选缺失</p>
           <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>{change.removed.length}</p>
         </div>
         <div className="rounded-xl p-3" style={{ background: 'var(--accent-purple-dim)' }}>
-          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-purple)' }}>修改能力</p>
+          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent-purple)' }}>候选修改</p>
           <p className="text-xl font-bold" style={{ color: 'var(--accent-purple)' }}>{change.modified.length}</p>
         </div>
       </div>
@@ -612,7 +636,7 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--accent-green)' }}>
-              新增能力 ({change.added.length})
+              候选新增提及 ({change.added.length})
             </p>
             {change.added.length > 0 ? (
               <>
@@ -625,7 +649,7 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
                   ))}
                 </div>
                 <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  📌 基于 {sources.length} 条多源实际招聘数据,这些技能已在市场出现,建议加入岗位描述
+                  关联来源 {sources.length} 条
                 </p>
               </>
             ) : (
@@ -640,7 +664,7 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--accent-red)' }}>
-              删除能力 ({change.removed.length})
+              候选未提及 ({change.removed.length})
             </p>
             {change.removed.length > 0 ? (
               <>
@@ -653,7 +677,7 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
                   ))}
                 </div>
                 <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  📌 这些技能在多源实际需求中已不再出现,可能是过时技能,需评估
+                  未提及不能证明企业取消要求或技能过时；需要同一招聘版本的原文证据。
                 </p>
               </>
             ) : (
@@ -668,7 +692,7 @@ function ChangeDetail({ change, onOpenHistory }: { change: SkillChange; onOpenHi
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--accent-purple)' }}>
-              修改能力 ({change.modified.length})
+              候选表述变化 ({change.modified.length})
             </p>
             {change.modified.length > 0 ? (
               <ul className="space-y-1">

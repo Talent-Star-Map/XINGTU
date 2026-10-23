@@ -5,7 +5,7 @@
 - /api/trend/salary        薪资分布(按聚合的岗位标题,高薪优先 + 脏数据过滤)
 - /api/trend/new-jobs      AI 发现的新岗位(jobs.source='ai_discovered')
 - /api/trend/skill-changes 单个岗位的能力 diff(job_skill_changes)
-- /api/trend/growth        新岗位发现的时间序列(12 月 + 历史反推)
+- /api/trend/growth        新岗位发现的时间序列(仅统计已记录观测)
 - /api/trend/jobs          趋势页通用岗位列表(按热度,用于下钻)
 
 来源:
@@ -15,7 +15,7 @@
 @owner: 我和吴家（新岗位发现+求职端趋势+企业端市场洞察）
 """
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Query, HTTPException
@@ -25,6 +25,13 @@ from database import get_session, CrawledJob
 from database import get_neo4j_driver
 
 router = APIRouter(prefix='/api/trend', tags=['trend'])
+
+
+@router.get('/visuals')
+def jobseeker_visuals(family: str = Query('', max_length=80), experience: str = Query('', max_length=40),
+                      city: str = Query('', max_length=80), skill: str = Query('', max_length=100)):
+    from services.jobseeker_visuals import load_visuals
+    return _ok(load_visuals(family, experience, city, skill))
 
 
 def _ok(data, message: str = 'ok'):
@@ -212,60 +219,25 @@ def _format_ai_job(j: CrawledJob) -> Dict[str, Any]:
 
 @router.get('/growth')
 async def growth_trend(months: int = Query(12, ge=1, le=12)):
-    """最近 N 个月新岗位发现量(按月统计)。
+    """Recorded candidate counts by collection month, not market emergence counts.
 
-    返回:[{month, count, cum_count, is_real}, ...]
-    - 真实月份:crawl_time/update_time 命中的
-    - 其余月份:基于真实月份的"行业平均增速"反推(演示数据,前端会标注)
+    Zero means no dated records in this database. Collection coverage is unknown.
+    Undated records are excluded; reads never alter their provenance timestamps.
     """
-    import hashlib
+    from services.trend_observations import monthly_observations
+    from time_util import CST
     session = get_session()
     try:
-        session.execute(text("""
-            UPDATE jobs SET crawl_time = NOW(), update_time = NOW()
-            WHERE source = 'ai_discovered'
-              AND (crawl_time IS NULL OR update_time IS NULL)
-        """))
-        session.commit()
-
-        sql = text("""
-            SELECT DATE_FORMAT(COALESCE(crawl_time, update_time), '%Y-%m') AS m,
+        rows = session.execute(text("""
+            SELECT DATE_FORMAT(DATE_ADD(crawl_time, INTERVAL 8 HOUR), '%Y-%m') AS m,
                    COUNT(*) AS cnt
             FROM jobs
-            WHERE source = 'ai_discovered'
+            WHERE source = 'ai_discovered' AND crawl_time IS NOT NULL
+              AND crawl_time <= :now_utc
             GROUP BY m
-        """)
-        rows = session.execute(sql).fetchall()
-        real_bucket = {r[0]: int(r[1]) for r in rows}
-
-        now = datetime.now()
-        latest_real_month = max(real_bucket.keys()) if real_bucket else now.strftime('%Y-%m')
-        latest_real_cnt = real_bucket.get(latest_real_month, 0)
-
-        # 行业基准月度增长曲线(AIGC 行业整体趋势)
-        GROWTH_PATTERN = [0.05, 0.08, 0.12, 0.18, 0.28, 0.42, 0.55, 0.68, 0.78, 0.86, 0.93, 1.00]
-
-        result = []
-        cum_real = 0
-        for i in range(months - 1, -1, -1):
-            d = (now - timedelta(days=30 * i)).replace(day=1)
-            key = d.strftime('%Y-%m')
-            is_real = key in real_bucket
-            if is_real:
-                cnt = real_bucket[key]
-            else:
-                ratio = GROWTH_PATTERN[months - 1 - i] if months - 1 - i < len(GROWTH_PATTERN) else 0.1
-                base = max(1, int(latest_real_cnt * ratio))
-                seed = int(hashlib.md5(key.encode()).hexdigest(), 16) % 5
-                cnt = max(0, base + seed - 2)
-            cum_real += cnt
-            result.append({
-                'month': key,
-                'count': cnt,
-                'cum_count': cum_real,
-                'is_real': is_real,
-            })
-        return _ok(result)
+        """), {'now_utc': datetime.now(timezone.utc).replace(tzinfo=None)}).fetchall()
+        buckets = {r[0]: int(r[1]) for r in rows}
+        return _ok(monthly_observations(buckets, months, datetime.now(CST)))
     finally:
         session.close()
 
@@ -273,6 +245,23 @@ async def growth_trend(months: int = Query(12, ge=1, le=12)):
 # ────────────────────────────────────────────────────────────
 # 能力 diff(既有岗位技能更新)
 # ────────────────────────────────────────────────────────────
+
+@router.get('/skill-change-river')
+def skill_change_river(job_id: Optional[int] = Query(None, ge=1)):
+    from services.skill_change_river import aggregate_changes
+    session = get_session()
+    try:
+        clause = 'WHERE c.job_id = :job_id' if job_id is not None else ''
+        rows = session.execute(text('''
+            SELECT c.id, c.job_id, c.added_skills, c.removed_skills,
+                   c.modified_skills, c.data_sources, c.run_id, c.created_at,
+                   j.title AS job_title
+            FROM job_skill_changes c LEFT JOIN jobs j ON j.id = c.job_id
+        ''' + clause), {'job_id': job_id} if job_id is not None else {}).mappings().all()
+        return _ok(aggregate_changes(rows))
+    finally:
+        session.close()
+
 
 @router.get('/skill-changes')
 async def skill_changes(
