@@ -289,3 +289,31 @@ def test_connection(tier: LLMTier) -> dict:
         latency = int((time.time() - start) * 1000)
         return {'success': False, 'provider': provider.name, 'model': provider.model,
                 'mock': False, 'message': str(e), 'latency_ms': latency}
+
+
+def stream_complete(tier: LLMTier, system: str, messages: list[dict], max_tokens: int = 400):
+    """Stream visible text only using the same administrator-configured provider."""
+    if not is_global_enabled() or is_mock_mode():
+        raise LLMConfigError('真实 AI 服务尚未开启')
+    key, model, base = _get_api_key(tier), _get_model(tier), _get_base_url(tier)
+    if not key or not model:
+        raise LLMConfigError('模型配置缺失')
+    with httpx.Client(timeout=httpx.Timeout(60, connect=10)) as client:
+        with client.stream('POST', f"{base.rstrip('/')}/chat/completions",
+                           headers={'Authorization': f'Bearer {key}'},
+                           json={'model': model, 'messages': [{'role': 'system', 'content': system}] + messages,
+                                 'max_tokens': max_tokens, 'stream': True}) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if not line.startswith('data:'):
+                    continue
+                value = line[5:].strip()
+                if value == '[DONE]':
+                    break
+                data = json.loads(value)
+                if data.get('error'):
+                    raise LLMAPIError('流式模型返回错误')
+                choices = data.get('choices') or []
+                content = (choices[0].get('delta', {}).get('content') if choices else '') or ''
+                if isinstance(content, str) and content:
+                    yield content

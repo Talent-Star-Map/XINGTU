@@ -1,0 +1,315 @@
+[
+  {
+    "id": "xingtu-001",
+    "role": "Java 后端",
+    "tags": [
+      "Java",
+      "Spring",
+      "MySQL"
+    ],
+    "title": "你会如何排查一个接口突然变慢的问题？",
+    "answer": "分层定位、日志和指标、慢查询、验证改进",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-002",
+    "role": "Java 后端",
+    "tags": [
+      "Java",
+      "JVM"
+    ],
+    "title": "项目出现频繁垃圾回收时，你会收集哪些信息并如何定位？",
+    "answer": "GC日志、堆分析、对象生命周期、验证",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-003",
+    "role": "Java 后端",
+    "tags": [
+      "Java",
+      "并发"
+    ],
+    "title": "多个请求同时修改库存，你会怎样避免超卖？",
+    "answer": "事务、原子性、锁的边界、幂等与压测",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-004",
+    "role": "Java 后端",
+    "tags": [
+      "Spring",
+      "事务"
+    ],
+    "title": "你会怎样验证事务是否生效，并处理调用外部服务失败的情况？",
+    "answer": "事务边界、回滚、补偿、集成测试",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-005",
+    "role": "后端开发",
+    "tags": [
+      "Redis",
+      "缓存"
+    ],
+    "title": "缓存与数据库数据不一致时，你会怎样设计更新流程？",
+    "answer": "一致性目标、失效策略、并发竞态、补偿",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-006",
+    "role": "后端开发",
+    "tags": [
+      "MySQL",
+      "SQL"
+    ],
+    "title": "一条查询越来越慢，你会怎样判断是否该增加索引？",
+    "answer": "执行计划、选择性、回表、写入成本",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-007",
+    "role": "后端开发",
+    "tags": [
+      "接口",
+      "系统设计"
+    ],
+    "title": "同一个请求被重复发送时，怎样保证业务不会重复执行？",
+    "answer": "幂等键、唯一约束、并发与重试",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-008",
+    "role": "前端开发",
+    "tags": [
+      "JavaScript",
+      "React",
+      "Vue"
+    ],
+    "title": "页面首次加载很慢，你会如何定位瓶颈和验证优化效果？",
+    "answer": "网络瀑布、主线程、资源拆分、性能指标",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-009",
+    "role": "前端开发",
+    "tags": [
+      "React",
+      "状态管理"
+    ],
+    "title": "多个组件需要共享并更新状态时，你会怎样组织数据流？",
+    "answer": "状态归属、单向流、订阅范围、复杂度",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-010",
+    "role": "前端开发",
+    "tags": [
+      "JavaScript",
+      "异步"
+    ],
+    "title": "搜索框连续输入触发多个请求时，如何避免旧结果覆盖新结果？",
+    "answer": "防抖、请求取消、顺序校验、异常",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-011",
+    "role": "前端开发",
+    "tags": [
+      "TypeScript",
+      "测试"
+    ],
+    "title": "你会如何保证一个复杂表单在改动后仍然可靠？",
+    "answer": "类型边界、验证、交互测试、可访问性",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-012",
+    "role": "数据分析",
+    "tags": [
+      "SQL",
+      "数据分析"
+    ],
+    "title": "你发现转化率下降，怎样判断是数据问题还是业务问题？",
+    "answer": "口径、埋点、分群、对照与验证",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-013",
+    "role": "数据分析",
+    "tags": [
+      "SQL",
+      "统计"
+    ],
+    "title": "你会如何设计实验来判断新功能是否提升转化？",
+    "answer": "随机分组、指标、样本量、显著性与偏差",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-014",
+    "role": "数据分析",
+    "tags": [
+      "Python",
+      "数据清洗"
+    ],
+    "title": "合并多个来源的数据时，如何处理重复、缺失与口径差异？",
+    "answer": "主键、清洗规则、来源血缘、校验",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-015",
+    "role": "AI应用开发",
+    "tags": [
+      "RAG",
+      "检索",
+      "大模型"
+    ],
+    "title": "RAG回答引用正确但结论错误，你会如何评估和改进？",
+    "answer": "检索相关性、引用蕴含、拒答、人工评测",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-016",
+    "role": "AI应用开发",
+    "tags": [
+      "Agent",
+      "工具调用"
+    ],
+    "title": "智能体调用工具失败或重复操作时，你会如何控制风险？",
+    "answer": "参数验证、超时重试、幂等、执行权限",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-017",
+    "role": "AI应用开发",
+    "tags": [
+      "LLM",
+      "推理",
+      "性能"
+    ],
+    "title": "如何降低对话应用的首字和首段语音延迟？",
+    "answer": "分阶段计时、流式、流水线、并发与冷启动",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-018",
+    "role": "测试工程",
+    "tags": [
+      "测试",
+      "质量"
+    ],
+    "title": "时间有限时，你如何为一个新接口确定测试优先级？",
+    "answer": "核心路径、边界、异常、风险分层",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-019",
+    "role": "运维工程",
+    "tags": [
+      "Linux",
+      "监控",
+      "SRE"
+    ],
+    "title": "线上服务错误率突然上升时，你的处理顺序是什么？",
+    "answer": "止损、监控、变更回溯、复盘",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-020",
+    "role": "产品经理",
+    "tags": [
+      "产品",
+      "需求"
+    ],
+    "title": "多个用户提出相互冲突的需求时，你会如何做取舍？",
+    "answer": "目标用户、证据、收益成本、验证与复盘",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-021",
+    "role": "软件开发",
+    "tags": [
+      "网络",
+      "HTTP"
+    ],
+    "title": "网络超时和业务处理慢，你会如何区分？",
+    "answer": "链路分段、连接与读超时、追踪",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  },
+  {
+    "id": "xingtu-022",
+    "role": "软件开发",
+    "tags": [
+      "系统设计",
+      "可靠性"
+    ],
+    "title": "依赖服务不可用时，如何让核心业务继续运行？",
+    "answer": "超时、隔离、降级、恢复与观测",
+    "source": "星图自建练习题",
+    "source_url": "",
+    "license": "project-authored",
+    "review_status": "approved"
+  }
+]
