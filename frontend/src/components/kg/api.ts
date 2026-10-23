@@ -29,6 +29,17 @@ const withToken = (path: string) => `${path}${path.includes('?') ? '&' : '?'}tok
 
 export const kgApi = {
   overview: () => getJson(withToken('/api/kg/jobs/overview')),
+  catalog: (includeUnverified = false, techStack = '', level = '') => {
+    const p = new URLSearchParams({ include_unverified: String(includeUnverified) })
+    if (techStack) p.set('tech_stack', techStack)
+    if (level) p.set('level', level)
+    return getJson(withToken(`/api/kg/catalog?${p}`))
+  },
+  roleDefinition: (role: string, draft = false) => getJson(withToken(`/api/kg/roles/definition?role=${encodeURIComponent(role)}&draft=${draft}`)),
+  roleDefinitionHistory: (role: string) => getJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`)),
+  roleDefinitionEvidence: (role: string) => getJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/evidence`)),
+  saveRoleDefinition: (role: string, fields: Record<string, unknown>, publish: boolean, reviewNote: string) =>
+    postJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`), { fields, publish, review_note: reviewNote }),
   graph: (limitJobs = 200, limitSkills = 80, techStack?: string | null, level?: string | null) => {
     const p = new URLSearchParams({
       limit_jobs: String(limitJobs),
@@ -49,8 +60,8 @@ export const kgApi = {
   timelineAnchors: (bucket = 'month') => getJson(withToken(`/api/kg/snapshot/timeline?bucket=${bucket}`)),
   snapshotAt: (date: string, limit = 100) =>
     getJson(withToken(`/api/kg/snapshot/at?date=${date}&limit=${limit}`)),
-  semanticSearch: (query: string, topK = 20) =>
-    postJson(withToken('/api/kg/semantic-search'), { query, top_k: topK }),
+  semanticSearch: (query: string, topK = 20, asOf?: string) =>
+    postJson(withToken('/api/kg/semantic-search'), { query, top_k: topK, as_of: asOf }),
   personalRecommend: () => getJson(withToken('/api/kg/personal/recommend')),
   personalGap: (jobId: number) => getJson(withToken(`/api/kg/personal/gap?job_id=${jobId}`)),
   chatTools: () => getJson(withToken('/api/kg/chat/tools')),
@@ -78,11 +89,14 @@ export function streamChat(
 ) {
   const r = fetch('/api/kg/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${TOKEN()}`,
+    },
     body: JSON.stringify({ message, history, job_id: jobId }),
     signal,
   })
-  ;(async () => {
+  return (async () => {
     const resp = await r
     if (!resp.ok || !resp.body) {
       onEvent({ event: 'error', message: `chat endpoint ${resp.status}` })

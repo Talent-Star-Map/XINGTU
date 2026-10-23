@@ -2,12 +2,20 @@ import { createContext, useContext } from 'react'
 
 export type JSPage =
   | 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'job-detail' | 'diagnosis' | 'learning'
-  | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'messages'
+  | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'messages' | 'ai-chat'
+
+export interface JSNavParams {
+  selectedNodeId?: string
+  selectedJobId?: number
+  graphSources?: string[]
+}
 
 const NavContext = createContext<{
-  setPage: (p: JSPage) => void
+  setPage: (p: JSPage, params?: JSNavParams) => void
   page: JSPage
-}>({ setPage: () => {}, page: 'dashboard' })
+  params: JSNavParams
+  updateParams: (params: JSNavParams) => void
+}>({ setPage: () => {}, page: 'dashboard', params: {}, updateParams: () => {} })
 
 export const JSNav = {
   Provider: NavContext.Provider,
@@ -15,7 +23,7 @@ export const JSNav = {
 }
 
 // 企业端导航
-export type EPPage = 'dashboard' | 'board' | 'jobs' | 'talent' | 'market' | 'industry' | 'company' | 'messages'
+export type EPPage = 'dashboard' | 'board' | 'jobs' | 'talent' | 'market' | 'company' | 'messages'
 
 // 导航参数 — 用于页面间传递上下文
 export interface EPNavParams {

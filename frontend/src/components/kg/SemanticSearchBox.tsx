@@ -8,9 +8,11 @@ import { kgApi } from './api'
 
 interface Props {
   onPick: (jobId: number) => void
+  label?: string
+  enabled?: boolean
 }
 
-export default function SemanticSearchBox({ onPick }: Props) {
+export default function SemanticSearchBox({ onPick, label = '语义搜索', enabled = true }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
@@ -19,6 +21,10 @@ export default function SemanticSearchBox({ onPick }: Props) {
 
   // ⌘K / Ctrl+K 唤起
   useEffect(() => {
+    if (!enabled) {
+      setOpen(false)
+      return
+    }
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
@@ -29,7 +35,7 @@ export default function SemanticSearchBox({ onPick }: Props) {
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     if (open) setTimeout(() => inpRef.current?.focus(), 50)
@@ -60,7 +66,7 @@ export default function SemanticSearchBox({ onPick }: Props) {
         style={{ background: 'var(--color-surface-container)', color: 'var(--color-on-surface)' }}
       >
         <Search className="w-4 h-4" />
-        <span>语义搜索</span>
+        <span>{label}</span>
         <span className="text-xs px-1.5 py-0.5 rounded ml-2" style={{ background: 'var(--color-surface)' }}>⌘K</span>
       </button>
     )
@@ -70,7 +76,7 @@ export default function SemanticSearchBox({ onPick }: Props) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-24" style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={() => setOpen(false)}>
       <div
-        className="w-[600px] rounded-xl overflow-hidden shadow-2xl"
+        className="w-[600px] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden shadow-2xl"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-outline)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -99,7 +105,12 @@ export default function SemanticSearchBox({ onPick }: Props) {
               <div className="font-medium text-sm">{r.title}</div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
                 {r.company || r.company_name || ''} {r.source ? `· ${r.source}` : ''}
-                {typeof r.score === 'number' ? ` · 相似度 ${(r.score * 100).toFixed(1)}%` : ''}
+                {typeof r.score === 'number'
+                  ? r.retrieval_mode === 'keyword_fallback'
+                    ? ` · 关键词命中 ${(r.score * 100).toFixed(0)}%`
+                    : ` · 余弦相似度 ${r.score.toFixed(3)}`
+                  : ''}
+                {r.captured_at ? ` · 快照 ${String(r.captured_at).slice(0, 10)}` : ''}
               </div>
             </button>
           ))}

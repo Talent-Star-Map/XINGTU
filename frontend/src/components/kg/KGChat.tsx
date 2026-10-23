@@ -1,5 +1,5 @@
 /**
- * KGChat — 右栏智能问答(Plan-Execute-Report 多 Agent,SSE 流式)
+ * KGChat — 独立问答页中的对话面板(Plan-Execute-Report 多 Agent,SSE 流式)
  * 三个 Tab: 智能问答 / 决策建议 / 变化归因
  */
 import { useEffect, useRef, useState } from 'react'
@@ -12,6 +12,7 @@ type Tab = 'chat' | 'decision' | 'changes'
 interface Props {
   selectedJobId?: number
   onJobPick: (jobId: number) => void
+  active?: boolean
 }
 
 interface Trace {
@@ -20,7 +21,7 @@ interface Trace {
   result?: string
 }
 
-export default function KGChat({ selectedJobId, onJobPick }: Props) {
+export default function KGChat({ selectedJobId, onJobPick, active = true }: Props) {
   const [tab, setTab] = useState<Tab>('chat')
   const [input, setInput] = useState('')
   const [answer, setAnswer] = useState('')
@@ -33,22 +34,47 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
   const [showTrace, setShowTrace] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const decisionJobRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  useEffect(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setBusy(false)
+    setAnswer('')
+    setPlan([])
+    setTraces([])
+    setRefs([])
+    setChanges([])
+    setError(null)
+    decisionJobRef.current = undefined
+  }, [selectedJobId])
 
   // 切换到变化归因 tab 时,自动加载当前 Job 的变化
   useEffect(() => {
-    if (tab === 'changes' && selectedJobId) {
-      kgApi.jobChanges(selectedJobId).then(setChanges).catch(() => setChanges([]))
+    let current = true
+    if (active && tab === 'changes' && selectedJobId) {
+      kgApi.jobChanges(selectedJobId).then(data => {
+        if (current) setChanges(data)
+      }).catch(() => { if (current) setChanges([]) })
     }
-  }, [tab, selectedJobId])
+    return () => { current = false }
+  }, [tab, selectedJobId, active])
 
   // 决策建议 tab 触发一次分析
   useEffect(() => {
-    if (tab === 'decision' && selectedJobId) {
+    if (!active) return
+    setError(null)
+    if (tab !== 'decision') {
+      decisionJobRef.current = undefined
+    } else if (selectedJobId && decisionJobRef.current !== selectedJobId) {
+      decisionJobRef.current = selectedJobId
       handleSend('我当前适合这个岗位吗?差距在哪?')
     } else if (tab === 'decision' && !selectedJobId) {
-      setError('请先在左侧选中一个岗位')
+      setError('请先使用上方“选择岗位”关联一个具体岗位')
     }
-  }, [tab])
+  }, [tab, selectedJobId, active])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -56,17 +82,21 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
 
   const handleSend = async (msg?: string) => {
     const text = msg ?? input.trim()
-    if (!text || busy) return
+    if (!text) return
+    abortRef.current?.abort()
     setError(null)
     setAnswer('')
     setPlan([])
     setTraces([])
     setRefs([])
     setBusy(true)
-    abortRef.current = new AbortController()
+    setInput('')
+    const controller = new AbortController()
+    abortRef.current = controller
 
     try {
-      streamChat(text, (ev: KgEvent) => {
+      await streamChat(text, (ev: KgEvent) => {
+        if (abortRef.current !== controller) return
         if (ev.event === 'plan_ready') {
           setPlan(ev.tasks || [])
         } else if (ev.event === 'tool_call') {
@@ -88,11 +118,13 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
           setError(ev.message)
           setBusy(false)
         }
-      }, undefined, selectedJobId, abortRef.current.signal)
-      setInput('')
+      }, undefined, selectedJobId, controller.signal)
     } catch (e: any) {
-      setError(String(e?.message || e))
-      setBusy(false)
+      if (!controller.signal.aborted && abortRef.current === controller) {
+        setError(String(e?.message || e))
+      }
+    } finally {
+      if (abortRef.current === controller) setBusy(false)
     }
   }
 
@@ -103,7 +135,7 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
   ]
 
   return (
-    <div className="flex flex-col h-full" style={{ background: 'var(--color-surface)' }}>
+    <div className="flex min-h-0 flex-col h-full" style={{ background: 'var(--color-surface)' }}>
       <div className="flex border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
         {tabs.map((t) => {
           const Icon = t.icon
@@ -112,7 +144,7 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className="flex-1 py-2 text-xs flex items-center justify-center gap-1.5"
+              className="flex-1 py-3 text-sm flex items-center justify-center gap-1.5"
               style={{
                 color: active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
                 borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
@@ -129,7 +161,7 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
         {tab === 'changes' && selectedJobId ? (
           <ChangeExplanationCard changes={changes} />
         ) : tab === 'changes' && !selectedJobId ? (
-          <div className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>请先在左侧选中一个岗位</div>
+          <div className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>请先使用上方“选择岗位”关联一个具体岗位</div>
         ) : (
           <>
             {plan.length > 0 && (
@@ -211,15 +243,17 @@ export default function KGChat({ selectedJobId, onJobPick }: Props) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !busy && handleSend()}
           placeholder="向星图提问..."
           className="flex-1 px-2 py-1.5 rounded text-sm outline-none"
           style={{ background: 'var(--color-surface-container)' }}
           disabled={busy && tab === 'decision'}
+          aria-label="向星图提问"
         />
         <button
           onClick={() => handleSend()}
           disabled={busy || !input.trim()}
+          aria-label={busy ? '正在生成回答' : '发送消息'}
           className="px-3 py-1.5 rounded disabled:opacity-50"
           style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
         >

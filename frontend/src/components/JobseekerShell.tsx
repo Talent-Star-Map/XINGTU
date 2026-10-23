@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity, BrainCircuit } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
-import { JSNav, type JSPage } from '../lib/NavContext'
+import { JSNav, type JSPage, type JSNavParams } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
 import MessageBell from './MessageBell'
 
 const PAGE_KEYS: JSPage[] = [
   'dashboard', 'skill-graph', 'resume', 'resume-center', 'match', 'job-detail',
-  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality', 'messages',
+  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality', 'messages', 'ai-chat',
 ]
 
 const isPage = (v: string): v is JSPage => (PAGE_KEYS as string[]).includes(v)
@@ -21,6 +21,7 @@ const readHash = (): JSPage => {
 const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
+  { key: 'ai-chat', icon: BrainCircuit, label: '智能问答' },
   { key: 'match', icon: LineChart, label: '岗位' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
@@ -32,6 +33,7 @@ const navItems: { key: JSPage; icon: any; label: string }[] = [
 // 避免首屏一次性加载图谱(Three.js)/简历编辑器等重库
 const JSDashboard = lazy(() => import('../pages/jobseeker/Dashboard'))
 const JSJobGraphPage = lazy(() => import('../pages/jobseeker/JobGraphPage'))
+const JSAIChatPage = lazy(() => import('../pages/jobseeker/AIChatPage'))
 const JSResume = lazy(() => import('../pages/jobseeker/Resume'))
 const JSResumeCenter = lazy(() => import('../pages/jobseeker/ResumeCenter'))
 const JSMatch = lazy(() => import('../pages/jobseeker/JobMatch'))
@@ -48,6 +50,7 @@ const TutuChat = lazy(() => import('./TutuChat'))
 const pages: Record<JSPage, ComponentType> = {
   dashboard: JSDashboard,
   'skill-graph': JSJobGraphPage,
+  'ai-chat': JSAIChatPage,
   resume: JSResume,
   'resume-center': JSResumeCenter,
   match: JSMatch,
@@ -74,15 +77,26 @@ const menuItemStyle = { color: 'var(--color-on-surface-variant)' }
 export default function JobseekerShell({ onLogout }: Props) {
   // 页面状态与 URL hash 同步：刷新不回到首页，浏览器前进/后退可用
   const [page, setPageState] = useState<JSPage>(readHash)
+  const [params, setParams] = useState<JSNavParams>({})
+  const [chatVisited, setChatVisited] = useState(() => readHash() === 'ai-chat')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { theme, toggle } = useTheme()
 
-  const setPage = useCallback((p: JSPage) => {
+  const updateParams = useCallback((next: JSNavParams) => {
+    setParams(current => ({ ...current, ...next }))
+  }, [])
+
+  const setPage = useCallback((p: JSPage, next?: JSNavParams) => {
+    if (next) updateParams(next)
     setPageState(p)
     setMobileMenu(false)
     if (readHash() !== p) window.location.hash = `#/${p}`
-  }, [])
+  }, [updateParams])
+
+  useEffect(() => {
+    if (page === 'ai-chat') setChatVisited(true)
+  }, [page])
 
   useEffect(() => {
     const onHashChange = () => setPageState(readHash())
@@ -104,7 +118,7 @@ export default function JobseekerShell({ onLogout }: Props) {
     <div className="flex flex-col h-full w-full">
       <header className="shrink-0 border-b z-50" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
         <div className="flex items-center justify-between pl-5 pr-6 h-16 max-w-[1440px] mx-auto">
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2.5 pl-1">
               <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-primary-fixed)' }}
                 animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
@@ -113,12 +127,12 @@ export default function JobseekerShell({ onLogout }: Props) {
               <span className="text-xl font-extrabold gradient-text">星图</span>
               <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>求职者</span>
             </div>
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden xl:flex items-center gap-1">
               {navItems.map(item => {
                 const active = page === item.key
                 return (
                   <button key={item.key} onClick={() => setPage(item.key)}
-                    className="relative px-4 py-2 rounded-lg transition-all flex items-center gap-2"
+                    className="relative px-2 py-2 rounded-lg transition-all flex items-center gap-2"
                     style={{ color: active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)' }}>
                     {active && <motion.div layoutId="js-nav" className="absolute inset-0 rounded-lg" style={{ background: 'var(--color-primary-fixed)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />}
                     <item.icon className="h-5 w-5 relative z-10" />
@@ -171,7 +185,7 @@ export default function JobseekerShell({ onLogout }: Props) {
                 </motion.div>
               )}
             </div>
-            <button className="md:hidden p-2" onClick={() => setMobileMenu(!mobileMenu)}
+            <button className="xl:hidden p-2" onClick={() => setMobileMenu(!mobileMenu)}
               style={{ color: 'var(--color-on-surface-variant)' }} aria-label="菜单" aria-expanded={mobileMenu}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -180,7 +194,7 @@ export default function JobseekerShell({ onLogout }: Props) {
 
         {/* 移动端导航 — 之前 mobileMenu 开关存在却没有对应的面板 */}
         {mobileMenu && (
-          <nav className="md:hidden border-t px-4 py-2 flex flex-col"
+          <nav className="xl:hidden border-t px-4 py-2 flex flex-col"
             style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)' }}>
             {navItems.map(item => {
               const active = page === item.key
@@ -198,15 +212,24 @@ export default function JobseekerShell({ onLogout }: Props) {
       <main className="flex-1 overflow-y-auto min-h-0">
         <div className="max-w-[1440px] mx-auto h-full">
           <LearningProvider>
-            <JSNav.Provider value={{ setPage, page }}>
-              <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
-                <PageComp />
-              </Suspense>
+            <JSNav.Provider value={{ setPage, page, params, updateParams }}>
+              {(chatVisited || page === 'ai-chat') && (
+                <div hidden={page !== 'ai-chat'} className="h-full">
+                  <Suspense fallback={<div className="flex h-full items-center justify-center text-sm">页面加载中...</div>}>
+                    <JSAIChatPage />
+                  </Suspense>
+                </div>
+              )}
+              {page !== 'ai-chat' && (
+                <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>页面加载中...</div>}>
+                  <PageComp />
+                </Suspense>
+              )}
             </JSNav.Provider>
           </LearningProvider>
         </div>
       </main>
-      <TutuChat />
+      {page !== 'ai-chat' && <TutuChat />}
     </div>
   )
 }

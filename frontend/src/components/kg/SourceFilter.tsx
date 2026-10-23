@@ -15,7 +15,7 @@ export default function SourceFilter({ sources, active, onChange }: Props) {
   const [open, setOpen] = useState(false)
 
   const toggle = (s: string) => {
-    const next = new Set(active)
+    const next = active.size === 0 ? new Set(sources.map(item => item.source)) : new Set(active)
     if (next.has(s)) next.delete(s)
     else next.add(s)
     onChange(next)
@@ -25,11 +25,12 @@ export default function SourceFilter({ sources, active, onChange }: Props) {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm"
         style={{ background: 'var(--color-surface-container)' }}
       >
         <Filter className="w-3.5 h-3.5" />
-        来源 ({active.size || 'all'})
+        {active.size ? `已选 ${active.size} 个来源` : '全部来源'}
       </button>
       {open && (
         <div
@@ -44,10 +45,11 @@ export default function SourceFilter({ sources, active, onChange }: Props) {
               className="text-xs underline"
               style={{ color: 'var(--color-primary)' }}
             >
-              全选
+              重置为全部
             </button>
           </div>
           <div className="max-h-72 overflow-auto">
+            {sources.length === 0 && <p className="px-3 py-4 text-xs">暂无可筛选来源</p>}
             {sources.map((s) => {
               const on = active.size === 0 || active.has(s.source)
               return (

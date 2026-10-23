@@ -71,11 +71,18 @@ export default function TutuChat() {
 
       const r = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('xingtu_token') || ''}`,
+        },
         body: JSON.stringify({ message: text, diagnosis: diagnosisContext, history }),
         cache: 'no-store',
       })
       const d = await r.json()
+      if (r.status === 401 || r.status === 403) {
+        setChatLog((prev) => [...prev.slice(0, -1), { role: 'tutu', text: '请先登录，登录过期后请重新登录。' }])
+        return
+      }
       const reply = d?.answer ? d.answer : getLocalReply(text)
       setChatLog((prev) => [...prev.slice(0, -1), { role: 'tutu', text: reply }])
     } catch {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader2, Briefcase, Users, TrendingUp, MessageSquare, BarChart3, Rocket, Search, FileText } from 'lucide-react'
+import { ArrowRight, Loader2, Briefcase, Users, TrendingUp, MessageSquare, BarChart3, Rocket, Search } from 'lucide-react'
 import { EPNav } from '../../lib/NavContext'
 import { withToken } from '../../lib/authFetch'
 
@@ -97,8 +97,6 @@ export default function Dashboard() {
     { label: '岗位管理', desc: '发布与编辑岗位', page: 'jobs' as const, icon: Briefcase, color: '#8b5cf6' },
     { label: '岗位图谱', desc: '本企业岗位—技能关系', page: 'market' as const, icon: TrendingUp, color: '#10b981' },
     { label: '市场洞察', desc: '城市、薪资与技能结构', page: 'board' as const, icon: BarChart3, color: '#f97316' },
-    // 行业报告页面在 EnterpriseShell 里注册的 key 是 industry，不是 report
-    { label: '行业报告', desc: '行业人才分布', page: 'industry' as const, icon: FileText, color: '#f59e0b' },
   ]
 
   return (

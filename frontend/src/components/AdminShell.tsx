@@ -11,6 +11,7 @@ const AdminJobManage = lazy(() => import('../pages/admin/AdminJobManage'))
 const AdminResourceManage = lazy(() => import('../pages/admin/AdminResourceManage'))
 const AdminModelConfig = lazy(() => import('../pages/admin/AdminModelConfig'))
 const AdminClassificationReview = lazy(() => import('../pages/admin/AdminClassificationReview'))
+const AdminRoleDefinitions = lazy(() => import('../pages/admin/AdminRoleDefinitions'))
 const AdminDataBoard = lazy(() => import('../pages/admin/AdminDataBoard'))
 
 // 管理员端功能模块：
@@ -22,7 +23,7 @@ const AdminDataBoard = lazy(() => import('../pages/admin/AdminDataBoard'))
 //   resources   — 学习资源管理
 //   models      — 模型配置(LLM 路由层 + Mock 开关)
 //   databoard   — 数据大屏(全平台指标与图表,答辩演示用)
-type Page = 'dashboard' | 'databoard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models' | 'classification-review'
+type Page = 'dashboard' | 'databoard' | 'quality' | 'jobseekers' | 'enterprises' | 'jobs' | 'resources' | 'models' | 'role-definitions' | 'classification-review'
 
 const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
@@ -31,6 +32,7 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'enterprises', icon: Building2, label: '企业' },
   { key: 'jobs', icon: Briefcase, label: '职位' },
   { key: 'classification-review', icon: GitBranch, label: '岗位分类审核' },
+  { key: 'role-definitions', icon: GitBranch, label: '岗位定义' },
   { key: 'resources', icon: BookOpen, label: '学习资源' },
   { key: 'models', icon: Cpu, label: '模型配置' },
   { key: 'quality', icon: Shield, label: '质检' },
@@ -56,6 +58,7 @@ const pages: Record<Page, ComponentType<{ onNav?: (p: Page) => void }>> = {
   resources: AdminResourceManage,
   models: AdminModelConfig,
   quality: QualityDashboard,
+  'role-definitions': AdminRoleDefinitions,
   'classification-review': AdminClassificationReview,
 }
 

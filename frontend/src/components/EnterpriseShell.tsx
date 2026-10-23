@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Users, TrendingUp, FileText, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, TrendingUp, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star, BarChart3 } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
 import './enterprise/ent-theme.css'
@@ -16,7 +16,6 @@ const navItems: { key: Page; icon: any; label: string }[] = [
   { key: 'talent', icon: Users, label: '人才星' },
   { key: 'messages', icon: MessageSquare, label: '消息' },
   { key: 'market', icon: TrendingUp, label: '岗位图谱' },
-  { key: 'industry', icon: FileText, label: '行业报告' },
 ]
 
 // 页面按需加载，避免首屏一次性加载全部业务代码
@@ -26,12 +25,11 @@ const EPJobs = lazy(() => import('../pages/enterprise/JobManage'))
 const EPTalent = lazy(() => import('../pages/enterprise/TalentSearch'))
 const EPMessages = lazy(() => import('../pages/enterprise/Conversations'))
 const EPMarket = lazy(() => import('../pages/enterprise/MarketInsight'))
-const EPIndustry = lazy(() => import('../pages/enterprise/IndustryReport'))
 const EPCompany = lazy(() => import('../pages/enterprise/CompanyProfile'))
 
 const pages: Record<Page, ComponentType> = {
   dashboard: EPDashboard, board: EPBoard, jobs: EPJobs, talent: EPTalent, messages: EPMessages,
-  market: EPMarket, industry: EPIndustry, company: EPCompany,
+  market: EPMarket, company: EPCompany,
 }
 
 interface Props { onLogout: () => void }
