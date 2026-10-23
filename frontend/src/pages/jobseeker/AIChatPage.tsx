@@ -9,14 +9,16 @@ export default function AIChatPage() {
   const { setPage, page, params, updateParams } = JSNav.use()
   const jobId = params.selectedJobId
   const [jobTitle, setJobTitle] = useState('')
+  const [jobError, setJobError] = useState(false)
 
   useEffect(() => {
     let active = true
     setJobTitle('')
+    setJobError(false)
     if (jobId) {
       kgApi.jobDetail(jobId).then(job => {
         if (active) setJobTitle(job?.title || '')
-      }).catch(() => {})
+      }).catch(() => { if (active) setJobError(true) })
     }
     return () => { active = false }
   }, [jobId])
@@ -50,7 +52,7 @@ export default function AIChatPage() {
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium">{jobId ? (jobTitle || `已关联岗位 #${jobId}`) : '通用岗位问答'}</div>
             <p className="mt-1 text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-              {jobId ? '决策建议和变化归因将围绕此岗位展开。' : '可直接提问；选择具体岗位后，还可查看决策建议与变化归因。'}
+              {jobError ? '岗位详情暂未读取成功，可更换岗位后重试。' : jobId ? '围绕此岗位分析要求、技能差距与已记录变化；切换岗位会开启新对话。' : '可直接提问，也可选择岗位，获得更明确的技能与求职建议。'}
             </p>
           </div>
           <SemanticSearchBox onPick={selectJob} label={jobId ? '更换岗位' : '选择岗位'} enabled={page === 'ai-chat'} />

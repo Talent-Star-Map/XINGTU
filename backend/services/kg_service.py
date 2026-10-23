@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -446,10 +447,66 @@ def semantic_search_jobs(query: str, top_k: int = 20,
     return rank_snapshots(rows, query, top_k, cutoff, vector)
 
 
+def _query_terms(query: str) -> List[str]:
+    return sorted(set(re.findall(r"[a-z0-9_+#.]+|[\u4e00-\u9fff]+", query.lower())))
+
+
+def search_job_catalog(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
+    """当前岗位目录检索。快照缺少向量或招聘身份时，选择岗位仍能命中 Job 节点。"""
+    terms = _query_terms(query)
+    if not terms:
+        return []
+    k = max(1, min(int(top_k), 100))
+    rows = _query(
+        """
+        MATCH (j:Job)
+        WHERE j.title IS NOT NULL AND trim(j.title) <> ''
+        OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill)
+        WITH j, collect(DISTINCT sk.canonical_name)[0..12] AS skills
+        WHERE any(term IN $terms WHERE
+              toLower(coalesce(j.title, '')) CONTAINS term
+              OR toLower(coalesce(j.job_description, '')) CONTAINS term
+              OR any(name IN skills WHERE toLower(coalesce(name, '')) CONTAINS term))
+        RETURN j.id AS id, j.title AS title, j.company_name AS company,
+               j.source AS source, skills
+        LIMIT 400
+        """,
+        {"terms": terms},
+    )
+    scored = []
+    for row in rows:
+        if row.get("id") is None or not row.get("title"):
+            continue
+        title = str(row.get("title") or "").lower()
+        skills = " ".join(str(name) for name in (row.get("skills") or [])).lower()
+        hit = 0.0
+        for term in terms:
+            if term in title:
+                hit += 2
+            elif term in skills:
+                hit += 1
+            else:
+                hit += 0.5
+        scored.append((hit / (2 * len(terms)), row))
+    scored.sort(key=lambda pair: (-pair[0], str(pair[1].get("id"))))
+    return [{
+        "id": row["id"],
+        "title": row["title"],
+        "company": row.get("company") or "",
+        "company_name": row.get("company") or "",
+        "source": row.get("source") or "",
+        "score": round(score, 4),
+        "retrieval_mode": "keyword_fallback",
+    } for score, row in scored[:k]]
+
+
 def fallback_keyword_search(query: str, top_k: int = 20,
                             as_of: Optional[str] = None) -> List[Dict[str, Any]]:
     cutoff = cutoff_iso(as_of)
-    return rank_snapshots(_latest_snapshot_rows(cutoff), query, top_k, cutoff)
+    ranked = rank_snapshots(_latest_snapshot_rows(cutoff), query, top_k, cutoff)
+    if ranked or as_of:
+        return ranked
+    return search_job_catalog(query, top_k)
 
 
 # ────────────────────────────────────────────────────────────

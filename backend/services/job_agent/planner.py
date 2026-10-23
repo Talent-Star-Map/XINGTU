@@ -63,6 +63,41 @@ PLANNER_PROMPT = """你是星图(XINGTU)平台的任务规划助手,基于岗位
 5. 如果查询模糊,直接挑最合理的工具先做,不要追问
 """
 
+_CHAT_EXACT = re.compile(
+    r"^(?:你好|您好|嗨|hi|hello|hey|在吗|在不在|谢谢|感谢|多谢|再见|拜拜|你是谁|你叫什么|"
+    r"你能做什么|你会什么|早上好|晚上好|中午好|哈哈|呵呵|好的|嗯+|哦|ok|okay)"
+    r"[!！。.~～?？\s]*$",
+    re.I,
+)
+_EVIDENCE_HINTS = (
+    "搜索", "查找", "检索", "列出", "在招", "有哪些岗位", "有没有岗位", "帮我找",
+    "趋势", "演化", "薪资", "时序", "走势", "变化", "为什么变", "变化原因",
+    "这个岗位", "该岗位", "已选岗位", "差距", "适合我", "推荐岗位", "推荐我",
+    "匹配度", "缺口",
+)
+_GENERAL_HINTS = (
+    "需要哪些", "核心技能", "要会", "要掌握", "怎么学", "如何学", "如何准备", "怎么准备",
+    "是什么", "什么是", "区别", "建议", "入门", "常见", "通常", "一般", "聊聊",
+    "学习路径", "学习重点", "下一步", "怎么入门", "如何入门",
+)
+
+
+def answer_mode(query: str, job_id: Optional[int] = None) -> str:
+    """闲聊和通用职业问题不走岗位检索；选定岗位或核对事实时仍查证据。"""
+    text = (query or "").strip()
+    if job_id:
+        return "evidence"
+    if not text or _CHAT_EXACT.match(text):
+        return "chat"
+    if any(hint in text for hint in _EVIDENCE_HINTS):
+        return "evidence"
+    if any(hint in text for hint in _GENERAL_HINTS):
+        return "general"
+    if not re.search(r"岗位|技能|薪|面试|简历|求职|招聘|工作|公司", text):
+        return "chat"
+    return "evidence"
+
+
 CLARIFIER_KEYWORDS = {
     "适合": "personal",
     "我": "personal",

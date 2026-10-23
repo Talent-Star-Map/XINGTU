@@ -106,9 +106,9 @@ export default function SemanticSearchBox({ onPick, label = '语义搜索', enab
               <div className="text-xs mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>
                 {r.company || r.company_name || ''} {r.source ? `· ${r.source}` : ''}
                 {typeof r.score === 'number'
-                  ? r.retrieval_mode === 'keyword_fallback'
-                    ? ` · 关键词命中 ${(r.score * 100).toFixed(0)}%`
-                    : ` · 余弦相似度 ${r.score.toFixed(3)}`
+                  ? r.retrieval_mode === 'semantic_exact'
+                    ? ` · 余弦相似度 ${r.score.toFixed(3)}`
+                    : ` · 关键词命中 ${(r.score * 100).toFixed(0)}%`
                   : ''}
                 {r.captured_at ? ` · 快照 ${String(r.captured_at).slice(0, 10)}` : ''}
               </div>

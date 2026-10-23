@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from auth_dependencies import require_login
 from services.job_agent import get_job_agent
@@ -27,15 +27,21 @@ from services.job_agent.tools import list_tools
 router = APIRouter(prefix='/api/kg/chat', tags=['chat'])
 
 
+class HistoryTurn(BaseModel):
+    role: Literal['user', 'assistant']
+    content: str = Field(min_length=1, max_length=4000)
+
+
 class ChatBody(BaseModel):
-    message: str
-    history: Optional[List[dict]] = None
-    job_id: Optional[int] = None
+    message: str = Field(min_length=1, max_length=2000)
+    history: Optional[List[HistoryTurn]] = Field(default=None, max_length=12)
+    job_id: Optional[int] = Field(default=None, ge=1)
 
 
 @router.post("")
 async def chat(body: ChatBody, payload=Depends(require_login)):
-    user_id = int(payload['user_id'])
+    # Enterprise/admin IDs may collide with jobseeker IDs; do not cross roles.
+    user_id = int(payload['user_id']) if payload.get('role') == 'jobseeker' else None
 
     async def event_gen():
         # 注入 job_id 上下文
@@ -47,7 +53,7 @@ async def chat(body: ChatBody, payload=Depends(require_login)):
         try:
             agent = get_job_agent()
             async for ev in agent.astream(augmented, user_id=user_id,
-                                          history=body.history,
+                                          history=[turn.model_dump() for turn in body.history] if body.history else None,
                                           job_id=body.job_id):
                 yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0.005)

@@ -68,6 +68,7 @@ export const kgApi = {
 }
 
 export type KgEvent =
+  | { event: 'profile_ready'; status: 'ready' | 'empty' | 'unavailable'; sources: string[] }
   | { event: 'plan_started'; step: string }
   | { event: 'plan_ready'; plan_id: string; tasks: any[]; execution_mode: string }
   | { event: 'executor_step'; task_id: string; status: string; tool: string; description: string }
@@ -80,14 +81,14 @@ export type KgEvent =
 /**
  * 流式调用 /api/kg/chat,逐个回调事件。
  */
-export function streamChat(
+export async function streamChat(
   message: string,
   onEvent: (ev: KgEvent) => void,
   history?: any[],
   jobId?: number,
   signal?: AbortSignal,
 ) {
-  const r = fetch('/api/kg/chat', {
+  const resp = await fetch('/api/kg/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -96,34 +97,41 @@ export function streamChat(
     body: JSON.stringify({ message, history, job_id: jobId }),
     signal,
   })
-  return (async () => {
-    const resp = await r
-    if (!resp.ok || !resp.body) {
-      onEvent({ event: 'error', message: `chat endpoint ${resp.status}` })
-      return
-    }
+  if (!resp.ok || !resp.body) {
+    throw new Error(resp.status === 401 ? '登录已失效，请重新登录' : resp.status === 422 ? '问题或对话过长，请缩短后重试' : '智能问答暂不可用，请稍后重试')
+  }
     const reader = resp.body.getReader()
     const decoder = new TextDecoder()
     let buf = ''
+    let completed = false
+    try {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
       buf += decoder.decode(value, { stream: true })
+      buf = buf.replace(/\r\n/g, '\n')
       let nl
       while ((nl = buf.indexOf('\n\n')) !== -1) {
         const chunk = buf.slice(0, nl)
         buf = buf.slice(nl + 2)
-        const line = chunk.split('\n').find((l) => l.startsWith('data: '))
-        if (!line) continue
-        const payload = line.slice(6).trim()
-        if (payload === '[DONE]') return
+        const payload = chunk.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trimStart()).join('\n').trim()
+        if (!payload) continue
+        if (payload === '[DONE]') {
+          if (!completed) throw new Error('回答未完成，请重试')
+          return
+        }
         try {
           const ev: KgEvent = JSON.parse(payload)
+          if (ev.event === 'report_done' || ev.event === 'error') completed = true
           onEvent(ev)
         } catch {
           /* ignore */
         }
       }
     }
-  })()
+    if (!completed && !signal?.aborted) throw new Error('连接已中断，已保留收到的内容，请重试')
+    } finally {
+      await reader.cancel().catch(() => {})
+      reader.releaseLock()
+    }
 }

@@ -61,27 +61,15 @@ async def get_skill_co_occurrence(args: Dict[str, Any], user_id: Optional[int] =
 
 
 async def get_user_profile(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
-    """取用户技能 + target_position;如果未登录则返回 None。"""
+    """Identity comes only from the authenticated caller, never tool arguments."""
     if not user_id:
-        return {"logged_in": False}
-    # 简单从 MySQL 取
-    from database import SessionLocal, Jobseeker
-    s = SessionLocal()
+        return {'status': 'empty', 'profile': {}, 'sources': [], 'missing': ['personal_profile']}
+    import asyncio
+    from services.chat_profile import load_chat_profile
     try:
-        u = s.query(Jobseeker).filter(Jobseeker.id == user_id).first()
-        if not u:
-            return {"logged_in": False}
-        return {
-            "logged_in": True,
-            "id": u.id,
-            "username": u.username,
-            "target_position": u.target_position or "",
-            "skills": [x.strip() for x in (u.skills or "").split(",") if x.strip()],
-            "experience": u.experience or "",
-            "education": u.education or "",
-        }
-    finally:
-        s.close()
+        return await asyncio.to_thread(load_chat_profile, user_id)
+    except Exception:
+        return {'status': 'unavailable', 'profile': {}, 'sources': [], 'missing': ['personal_profile']}
 
 
 async def get_gap_analysis(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
