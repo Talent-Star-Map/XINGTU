@@ -3,7 +3,7 @@
 覆盖范围（企业端 + 求职端）：
 1. 未带 token 调私有接口 → 401
 2. 角色不符（求职者调企业接口、企业调求职者接口）→ 403
-3. 越权访问他人数据 → 403/404，且不可通过 query/body 伪造身份
+3. 越权访问他人数据 → 404（不泄露资源存在性），且不可通过 query/body 伪造身份
 4. 私有简历附件下载 → 只有上传者本人能取
 
 运行（需要能连库，与 test_api_contract.py 一样不走离线路径）：
@@ -16,6 +16,9 @@ import os
 import sys
 import uuid
 import traceback
+from datetime import datetime, timedelta, timezone
+
+import jwt
 
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BACKEND_ROOT)
@@ -28,8 +31,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from main import app  # noqa: E402
 from database import (  # noqa: E402
-    get_session, create_token,
-    Jobseeker, Enterprise, Job, MatchRecord, Message, Resume, ResumeSection,
+    get_session, create_token, JWT_ALGO, JWT_SECRET,
+    Jobseeker, Enterprise, Job, CrawledJob, MatchRecord, Message, Resume, ResumeSection,
 )
 
 client = TestClient(app)
@@ -68,7 +71,8 @@ def is_biz_error(resp):
 
 # ── 造数据 ──────────────────────────────────────────────────────────
 tag = uuid.uuid4().hex[:6]
-created = {'seekers': [], 'enterprises': [], 'jobs': [], 'records': [], 'resumes': [], 'file': None}
+created = {'seekers': [], 'enterprises': [], 'jobs': [], 'crawled_jobs': [],
+           'records': [], 'resumes': [], 'file': None}
 
 
 def build_fixtures():
@@ -102,7 +106,13 @@ def build_fixtures():
 
         session.add(Message(match_record_id=mr.id, sender_type='enterprise',
                             sender_id=e1.id, content='您好，方便聊聊吗？', is_read=0))
+
+        # 投递夹具：爬虫岗位的公司名与甲企业一致，投递时会镜像进 enterprise_jobs
+        crawled = CrawledJob(data_type=1, title=f'甲的直招岗位{tag}', company_name=e1.company_name,
+                             city='上海', salary_min=20000, salary_max=30000, source='Boss直聘')
+        session.add(crawled)
         session.commit()
+        session.refresh(crawled)
 
         resume = Resume(user_id=a.id, title='甲的私有简历', template_key='classic')
         session.add(resume)
@@ -115,11 +125,12 @@ def build_fixtures():
 
         created.update({
             'seekers': [a.id, b.id], 'enterprises': [e1.id, e2.id],
-            'jobs': [job1.id], 'records': [mr.id], 'resumes': [resume.id],
+            'jobs': [job1.id], 'crawled_jobs': [crawled.id],
+            'records': [mr.id], 'resumes': [resume.id],
         })
         return {
             'a': a, 'b': b, 'e1': e1, 'e2': e2,
-            'job1': job1, 'mr': mr, 'resume': resume,
+            'job1': job1, 'crawled': crawled, 'mr': mr, 'resume': resume,
             'ta': create_token(a.id, 'jobseeker'),
             'tb': create_token(b.id, 'jobseeker'),
             't1': create_token(e1.id, 'enterprise'),
@@ -132,14 +143,25 @@ def build_fixtures():
 def cleanup():
     session = get_session()
     try:
-        for rid in created['records']:
-            session.query(Message).filter(Message.match_record_id == rid).delete()
-        session.query(MatchRecord).filter(MatchRecord.id.in_(created['records'] or [-1])).delete()
+        enterprise_ids = created['enterprises'] or [-1]
+        # 投递用例会镜像出新的企业岗位 + match_record + 消息，一并按租户清掉
+        job_ids = list(created['jobs'])
+        job_ids += [jid for (jid,) in session.query(Job.id)
+                    .filter(Job.enterprise_id.in_(enterprise_ids)).all()]
+        record_ids = list(created['records'])
+        if job_ids:
+            record_ids += [rid for (rid,) in session.query(MatchRecord.id)
+                           .filter(MatchRecord.job_id.in_(job_ids)).all()]
+        if record_ids:
+            session.query(Message).filter(Message.match_record_id.in_(record_ids)).delete()
+            session.query(MatchRecord).filter(MatchRecord.id.in_(record_ids)).delete()
+        if job_ids:
+            session.query(Job).filter(Job.id.in_(job_ids)).delete()
+        session.query(CrawledJob).filter(CrawledJob.id.in_(created['crawled_jobs'] or [-1])).delete()
         for resid in created['resumes']:
             session.query(ResumeSection).filter(ResumeSection.resume_id == resid).delete()
         session.query(Resume).filter(Resume.id.in_(created['resumes'] or [-1])).delete()
-        session.query(Job).filter(Job.id.in_(created['jobs'] or [-1])).delete()
-        session.query(Enterprise).filter(Enterprise.id.in_(created['enterprises'] or [-1])).delete()
+        session.query(Enterprise).filter(Enterprise.id.in_(enterprise_ids)).delete()
         session.query(Jobseeker).filter(Jobseeker.id.in_(created['seekers'] or [-1])).delete()
         session.commit()
     finally:
@@ -189,13 +211,13 @@ def test_seeker_idor(f):
     tb = f['tb']
 
     r = client.get(f'/api/jobseeker/messages/{mr_id}?token={tb}')
-    check('乙读甲的会话消息 → 403', status(r) == 403, str(body(r))[:120])
+    check('乙读甲的会话消息 → 404', status(r) == 404, str(body(r))[:120])
 
     r = client.post(f'/api/jobseeker/messages?token={tb}', json={'match_record_id': mr_id, 'content': '越权'})
-    check('乙往甲的会话发消息 → 403', status(r) == 403, str(body(r))[:120])
+    check('乙往甲的会话发消息 → 404', status(r) == 404, str(body(r))[:120])
 
     r = client.post(f'/api/jobseeker/messages/read?match_record_id={mr_id}&token={tb}')
-    check('乙标记甲的会话已读 → 403', status(r) == 403, str(body(r))[:120])
+    check('乙标记甲的会话已读 → 404', status(r) == 404, str(body(r))[:120])
 
     # 伪造 jobseeker_id 不再生效：接口已不接受该参数
     r = client.get(f"/api/jobseeker/unread-total?token={tb}&jobseeker_id={f['a'].id}")
@@ -276,6 +298,80 @@ def test_enterprise_idor(f):
     check('甲企业读自己的会话 → 200', status(r) == 200)
 
 
+def test_token_semantics(f):
+    print('\n[5] token 语义：过期 / 换密钥 / 空 / 自报 ID')
+    now = datetime.now(timezone.utc)
+    expired = jwt.encode(
+        {'user_id': f['a'].id, 'role': 'jobseeker',
+         'exp': now - timedelta(minutes=1), 'iat': now - timedelta(days=1)},
+        JWT_SECRET, algorithm=JWT_ALGO)
+    check('过期 token → 401',
+          status(client.get(f'/api/jobseeker/conversations?token={expired}')) == 401)
+
+    forged = jwt.encode(
+        {'user_id': f['a'].id, 'role': 'jobseeker',
+         'exp': now + timedelta(hours=1), 'iat': now},
+        'a-completely-different-secret-32b!', algorithm=JWT_ALGO)
+    check('换密钥 token → 401',
+          status(client.get(f'/api/jobseeker/conversations?token={forged}')) == 401)
+
+    check('空 token → 401',
+          status(client.get('/api/jobseeker/conversations?token=')) == 401)
+
+    # 身份只认签名：query 里自报 jobseeker_id 必须被忽略
+    r = client.get(f"/api/jobseeker/unread-total?token={f['tb']}"
+                   f"&jobseeker_id={f['a'].id}&user_id={f['a'].id}")
+    check('自报 jobseeker_id 被忽略',
+          status(r) == 200 and body(r).get('data', {}).get('unread_total') == 0,
+          str(body(r))[:120])
+
+
+def test_apply_identity(f):
+    print('\n[6] 投递身份只认 token')
+    cj = f['crawled']
+    r = client.post(f"/api/apply/{cj.id}?token={f['ta']}",
+                    json={'jobseeker_id': f['b'].id, 'message': 'A 的投递附言'})
+    check('A 投递成功（请求体自报 B 的 id）',
+          status(r) == 200 and body(r).get('success') is True, str(body(r))[:120])
+
+    session = get_session()
+    try:
+        ent_job = (session.query(Job)
+                   .filter(Job.enterprise_id == f['e1'].id, Job.title == cj.title).first())
+        check('爬虫岗位已镜像到企业岗位', ent_job is not None)
+        if ent_job:
+            mine = (session.query(MatchRecord)
+                    .filter(MatchRecord.job_id == ent_job.id,
+                            MatchRecord.jobseeker_id == f['a'].id).count())
+            hijack = (session.query(MatchRecord)
+                      .filter(MatchRecord.job_id == ent_job.id,
+                              MatchRecord.jobseeker_id == f['b'].id).count())
+            first = (session.query(Message)
+                     .join(MatchRecord, Message.match_record_id == MatchRecord.id)
+                     .filter(MatchRecord.job_id == ent_job.id)
+                     .order_by(Message.id).first())
+            first_sender = (first.sender_type, first.sender_id) if first else None
+        else:
+            mine = hijack = 0
+            first_sender = None
+    finally:
+        session.close()
+
+    check('归属落在 token 用户 A', mine == 1 and hijack == 0, f'mine={mine} hijack={hijack}')
+    check('首条消息发送者是 A',
+          first_sender == ('jobseeker', f['a'].id), str(first_sender))
+
+    r_b = client.get(f"/api/apply/status?job_id={cj.id}"
+                     f"&jobseeker_id={f['a'].id}&token={f['tb']}")
+    check('B 借入参看不到 A 的投递状态',
+          status(r_b) == 200 and body(r_b).get('data', {}).get('applied') is False,
+          str(body(r_b))[:120])
+    r_a = client.get(f"/api/apply/status?job_id={cj.id}&token={f['ta']}")
+    check('A 能查到自己的投递状态',
+          status(r_a) == 200 and body(r_a).get('data', {}).get('applied') is True,
+          str(body(r_a))[:120])
+
+
 def main():
     f = None
     try:
@@ -289,6 +385,8 @@ def main():
         test_wrong_role(f)
         test_seeker_idor(f)
         test_enterprise_idor(f)
+        test_token_semantics(f)
+        test_apply_identity(f)
     except Exception:
         traceback.print_exc()
         print('\n[ERROR] 测试执行异常')
