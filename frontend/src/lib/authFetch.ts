@@ -12,7 +12,7 @@ export const withToken = (url: string): string => {
 
 /** Attach identity only to this application's API, never external services. */
 export function createAuthenticatedFetch(fetcher: typeof fetch, origin: string, readToken = getToken): typeof fetch {
-  return (input, init) => {
+  return async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString(), origin)
     const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
     const publicPath = (method === 'POST' && /^\/api\/auth\/(?:login|admin\/login|register|send-code)\/?$/.test(url.pathname))
@@ -26,7 +26,13 @@ export function createAuthenticatedFetch(fetcher: typeof fetch, origin: string, 
     if (!token) return fetcher(input, init)
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
     if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`)
-    return fetcher(input, { ...init, headers })
+    const response = await fetcher(input, { ...init, headers })
+    // token 失效时必须可见地退回登录页：只让请求失败会让页面显示空数据，
+    // 用户以为“没有消息”，实际是掉线。
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('xingtu:unauthorized'))
+    }
+    return response
   }
 }
 
