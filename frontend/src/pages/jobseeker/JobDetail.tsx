@@ -142,6 +142,7 @@ export default function JobDetail() {
         {/* 侧边栏 */}
         <div className="space-y-4">
           {/* 投递/联系 — 入驻企业站内沟通，未入驻跳原网站 */}
+          <button onClick={() => setPage('interview', { interviewRole: job.title, interviewContext: (job.description || '').slice(0, 6000) })} className="mb-3 w-full rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>开始 AI 模拟面试</button>
           <ApplyJobCard job={{ id: job.id, title: job.title, company: job.company || '' }} />
 
           {/* 匹配诊断卡片 */}

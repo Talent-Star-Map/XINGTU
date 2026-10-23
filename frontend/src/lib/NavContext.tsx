@@ -2,12 +2,14 @@ import { createContext, useContext } from 'react'
 
 export type JSPage =
   | 'dashboard' | 'skill-graph' | 'resume' | 'resume-center' | 'match' | 'job-detail' | 'diagnosis' | 'learning'
-  | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'messages' | 'ai-chat'
+  | 'trend' | 'profile-home' | 'my-skill-graph' | 'quality' | 'messages' | 'ai-chat' | 'interview'
 
 export interface JSNavParams {
   selectedNodeId?: string
   selectedJobId?: number
   graphSources?: string[]
+  interviewRole?: string
+  interviewContext?: string
 }
 
 const NavContext = createContext<{

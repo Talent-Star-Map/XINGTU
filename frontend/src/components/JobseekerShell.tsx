@@ -8,7 +8,7 @@ import MessageBell from './MessageBell'
 
 const PAGE_KEYS: JSPage[] = [
   'dashboard', 'skill-graph', 'resume', 'resume-center', 'match', 'job-detail',
-  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality', 'messages', 'ai-chat',
+  'diagnosis', 'learning', 'trend', 'profile-home', 'my-skill-graph', 'quality', 'messages', 'ai-chat', 'interview',
 ]
 
 const isPage = (v: string): v is JSPage => (PAGE_KEYS as string[]).includes(v)
@@ -34,6 +34,7 @@ const navItems: { key: JSPage; icon: any; label: string }[] = [
 const JSDashboard = lazy(() => import('../pages/jobseeker/Dashboard'))
 const JSJobGraphPage = lazy(() => import('../pages/jobseeker/JobGraphPage'))
 const JSAIChatPage = lazy(() => import('../pages/jobseeker/AIChatPage'))
+const JSInterview = lazy(() => import('../pages/jobseeker/Interview'))
 const JSResume = lazy(() => import('../pages/jobseeker/Resume'))
 const JSResumeCenter = lazy(() => import('../pages/jobseeker/ResumeCenter'))
 const JSMatch = lazy(() => import('../pages/jobseeker/JobMatch'))
@@ -51,6 +52,7 @@ const pages: Record<JSPage, ComponentType> = {
   dashboard: JSDashboard,
   'skill-graph': JSJobGraphPage,
   'ai-chat': JSAIChatPage,
+  interview: JSInterview,
   resume: JSResume,
   'resume-center': JSResumeCenter,
   match: JSMatch,
@@ -229,7 +231,7 @@ export default function JobseekerShell({ onLogout }: Props) {
           </LearningProvider>
         </div>
       </main>
-      {page !== 'ai-chat' && <TutuChat />}
+      {page !== 'ai-chat' && page !== 'interview' && <TutuChat />}
     </div>
   )
 }

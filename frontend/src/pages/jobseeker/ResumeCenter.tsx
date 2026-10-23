@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Loader2, Sparkles, FileText, X, Upload, Copy } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Wand2, Pencil, Trash2, Share2, Loader2, Sparkles, FileText, X, Upload, Copy, Video } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ResumeEditor from '../../components/resume/editor/ResumeEditor'
 import ImportResumeDialog from '../../components/resume/ImportResumeDialog'
 import ShareResumeDialog from '../../components/resume/ShareResumeDialog'
 import GenerateResumeDialog from '../../components/resume/GenerateResumeDialog'
+import { JSNav } from '../../lib/NavContext'
 import { templateName as tplName } from '../../lib/resumeTemplateNames'
 import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
@@ -143,6 +144,7 @@ function TemplateThumb({ template }: { template: string }) {
 }
 
 export default function ResumeCenter() {
+  const { setPage } = JSNav.use()
   const [templates, setTemplates] = useState<Template[]>([])
   const [resumes, setResumes] = useState<ResumeItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -401,7 +403,7 @@ export default function ResumeCenter() {
     <div className="h-full flex flex-col">
       {/* ── 顶部操作栏 ── */}
       <header className="shrink-0 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-        <div className="max-w-[1400px] mx-auto px-8 py-5 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <FileText className="h-5 w-5" style={{ color: 'var(--accent-blue)' }} />
             <h1 className="text-lg font-semibold" style={{ color: 'var(--color-on-surface)' }}>简历工作台</h1>
@@ -410,7 +412,12 @@ export default function ResumeCenter() {
               共 {resumes.length} 份
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setPage('interview')}
+              className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5 border"
+              style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--accent-blue)' }}>
+              <Video className="h-4 w-4" /> AI 视频模拟面试
+            </button>
             <button onClick={() => setGenOpen(true)} data-tour="dash-ai-generate"
               className="h-9 px-4 rounded-lg text-sm font-medium flex items-center gap-1.5"
               style={{ background: 'var(--accent-blue)', color: '#fff' }}>

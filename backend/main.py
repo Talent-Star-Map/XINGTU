@@ -88,6 +88,8 @@ app.include_router(job_graph_explorer_router)
 from routers.classification_review import router as classification_review_router
 app.include_router(classification_review_router)
 
+from routers.interview import router as interview_router
+app.include_router(interview_router)
 
 @app.get('/api/health')
 def health():
