@@ -40,9 +40,17 @@ from database import get_neo4j_driver, DATABASE_URL
 # (pattern, canonical_name, tech_stack)
 # tech_stack 对齐 _TECH_STACK_KEYWORDS(kg_service.py)
 CLUSTER_RULES: List[Tuple[str, str, str]] = [
-    # AI 类(细分匹配,优先级最高)
-    (r'(大模型|llm|agent|rag|nlp|机器学习|深度学习|ai算法|算法工程师|大模型算法|推荐算法|搜索算法|ai开发)',         'AI/算法工程师',            'ai'),
-    (r'(数据分析师|数据分析)',                                                                                  '数据分析师',              'ai'),
+    # AI 类 — 细分匹配(放最前,优先级最高),让不同 AI 角色各自成 cluster
+    (r'(预训练|大模型.{0,2}算法|大模型.{0,2}研究员|大模型.{0,2}训练|大模型.{0,2}推理|大模型.{0,4}推理优化|大模型.{0,2}研究员)',   '大模型算法工程师',         'ai'),
+    (r'(多模态|视觉.{0,2}算法|语音.{0,2}算法|视频.{0,2}算法|视觉理解|cv算法|nlp算法|自然语言)',                              'AI算法工程师(视觉/语音/NLP)', 'ai'),
+    (r'(推荐.{0,4}算法|搜索.{0,4}算法|广告.{0,4}算法|召回|排序算法)',                                                       '推荐/搜索/广告算法工程师',   'ai'),
+    (r'(rlhf|强化学习|aigc|diffusion|生成式)',                                                                          'AIGC/RL算法工程师',         'ai'),
+    (r'(agent|rag|prompt|大模型.{0,2}应用|llm.{0,2}应用|ai.{0,2}应用|ai.{0,2}开发|ai.{0,2}架构)',                          'AI应用工程师',             'ai'),
+    (r'(mlops|ai.{0,2}平台|ai.{0,2}infra|推理平台|分布式训练|训练平台|向量数据库|vector.{0,2}db|gpu.{0,2}kernel|ai.{0,2}编译)',  'AI Infra工程师',          'ai'),
+    (r'(ai.{0,2}产品|aigc.{0,2}产品|ai.{0,2}方案|ai.{0,2}架构师|ai.{0,2}解决)',                                            'AI产品/架构师',           'ai'),
+    (r'(自动驾驶|无人驾驶|具身智能|机器人.{0,2}算法|数字人)',                                                              '自动驾驶/机器人/数字人',     'ai'),
+    (r'(大模型|llm|agent|rag|nlp|机器学习|深度学习|ai算法|算法工程师|大模型算法|推荐算法|搜索算法|ai开发)',                     'AI/算法工程师',            'ai'),
+    (r'(数据分析师|数据分析)',                                                                                            '数据分析师',              'ai'),
     # Java
     (r'(java|jvm)',                                                                                            'Java开发工程师',          'java'),
     # Python

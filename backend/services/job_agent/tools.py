@@ -16,16 +16,16 @@ from services import kg_service
 async def semantic_search(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
     q = args.get("query", "")
     k = int(args.get("top_k", 10))
-    results = kg_service.semantic_search_jobs(q, k)
+    results = kg_service.semantic_search_jobs(q, k, args.get("as_of"))
     if not results:
-        results = kg_service.fallback_keyword_search(q, k)
+        results = kg_service.fallback_keyword_search(q, k, args.get("as_of"))
     return results
 
 
 async def keyword_search(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
     q = args.get("query", "")
     k = int(args.get("top_k", 10))
-    return kg_service.fallback_keyword_search(q, k)
+    return kg_service.fallback_keyword_search(q, k, args.get("as_of"))
 
 
 async def get_job_details(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
@@ -48,6 +48,10 @@ async def get_job_evolution(args: Dict[str, Any], user_id: Optional[int] = None)
 async def get_job_changes(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
     jid = int(args.get("job_id", 0))
     return kg_service.get_job_changes(jid)
+
+
+async def get_job_skill_deltas(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
+    return kg_service.get_job_skill_deltas(int(args["job_id"]))
 
 
 async def get_skill_co_occurrence(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
@@ -99,7 +103,9 @@ async def get_overview(args: Dict[str, Any], user_id: Optional[int] = None) -> A
 
 
 async def snapshot_at(args: Dict[str, Any], user_id: Optional[int] = None) -> Any:
-    date = args.get("date", "2026-08-01")
+    date = args.get("date")
+    if not date:
+        return {"error": "snapshot_at requires an explicit ISO date"}
     limit = int(args.get("limit", 100))
     return kg_service.get_snapshot_at(date, limit)
 
@@ -121,6 +127,7 @@ TOOLS = {
     "get_job_details":         get_job_details,
     "get_job_evolution":       get_job_evolution,
     "get_job_changes":         get_job_changes,
+    "get_job_skill_deltas":     get_job_skill_deltas,
     "get_skill_co_occurrence": get_skill_co_occurrence,
     "get_user_profile":        get_user_profile,
     "get_gap_analysis":        get_gap_analysis,

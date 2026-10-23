@@ -17,7 +17,6 @@ import re
 import uuid
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import HumanMessage, SystemMessage
 
 from database import get_llm_fast
 from .core import TASK_TYPES, PlanSpec, TaskNode
@@ -27,6 +26,9 @@ PLANNER_PROMPT = """你是星图(XINGTU)平台的任务规划助手,基于岗位
 
 你的任务:把用户的查询分解为可执行的子任务序列。严格使用以下工具之一:
 {tools}
+
+上下文提示:
+{context_hint}
 
 判断规则:
 - "薪资/趋势/演化" → get_job_evolution(需要先 semantic_search 或 get_job_details 拿 job_id)
@@ -57,7 +59,8 @@ PLANNER_PROMPT = """你是星图(XINGTU)平台的任务规划助手,基于岗位
 1. 子任务原子化(每个 tool 只做一件事)
 2. depends_on 写清顺序
 3. 任务数控制在 1-5 个
-4. 如果查询模糊,直接挑最合理的工具先做,不要追问
+4. job_id must be a positive ID or {{"$ref":"t1","path":[0,"id"]}}. Never guess an ID. Historical searches use args.as_of in ISO 8601 UTC; snapshot_at requires args.date.
+5. 如果查询模糊,直接挑最合理的工具先做,不要追问
 """
 
 CLARIFIER_KEYWORDS = {
@@ -78,9 +81,63 @@ CLARIFIER_KEYWORDS = {
 }
 
 
-def _heuristic_plan(query: str, user_id: Optional[int]) -> Optional[List[Dict[str, Any]]]:
-    """不调 LLM 的快速兜底规划 — 用关键词路由。"""
-    q = query.lower()
+def _heuristic_plan(query: str, user_id: Optional[int],
+                     job_id: Optional[int] = None) -> Optional[List[Dict[str, Any]]]:
+    """不调 LLM 的快速兜底规划 — 用关键词路由。
+
+    job_id 上下文:前端已选中某个岗位(节点聚焦)时,
+    **任何**查询都应该先读取该岗位的详情,后续 follow-up
+    (薪资时序/技能变化/差距分析等)再视情况追加。
+    原因:semantic_search 在短查询上准确度差,容易返回空集。
+    """
+    q = query.lower().strip()
+    if job_id:
+        tasks: List[Dict[str, Any]] = [{
+            "task_id": "t1",
+            "description": f"读取已选岗位(#{job_id})的详情",
+            "tool": "get_job_details",
+            "args": {"job_id": job_id},
+            "depends_on": [],
+            "priority": 1,
+        }]
+        # 追加 follow-up
+        if any(k in query for k in ["趋势", "演化", "薪资变化", "时序", "走势", "薪资"]):
+            tasks.append({
+                "task_id": "t2",
+                "description": "查询该岗位的薪资/时序证据",
+                "tool": "get_job_evolution",
+                "args": {"job_id": job_id, "metric": "salary_avg"},
+                "depends_on": ["t1"],
+                "priority": 2,
+            })
+        elif any(k in query for k in ["变化", "为什么", "原因", "改了", "不一样", "差异"]):
+            tasks.append({
+                "task_id": "t2",
+                "description": "查询该岗位的变化事件",
+                "tool": "get_job_changes",
+                "args": {"job_id": job_id},
+                "depends_on": ["t1"],
+                "priority": 2,
+            })
+        elif any(k in query for k in ["技能", "技能变化", "多了", "少了"]):
+            tasks.append({
+                "task_id": "t2",
+                "description": "查询该岗位的技能变化",
+                "tool": "get_job_skill_deltas",
+                "args": {"job_id": job_id},
+                "depends_on": ["t1"],
+                "priority": 2,
+            })
+        elif any(k in query for k in ["差距", "适合", "我能", "匹配", "缺什么"]):
+            tasks.append({
+                "task_id": "t2",
+                "description": "对当前用户做岗位差距分析",
+                "tool": "get_gap_analysis",
+                "args": {"job_id": job_id, "user_id": user_id},
+                "depends_on": ["t1"],
+                "priority": 2,
+            })
+        return tasks
     tasks = []
     if any(k in query for k in ["适合", "推荐", "差距", "我能", "我该"]):
         tasks.append({
@@ -119,27 +176,16 @@ def _heuristic_plan(query: str, user_id: Optional[int]) -> Optional[List[Dict[st
             })
         return tasks
 
-    if any(k in query for k in ["趋势", "演化", "薪资变化", "时序", "走势"]):
-        tasks.append({
-            "task_id": "t1",
-            "description": "语义搜索定位岗位",
-            "tool": "semantic_search",
-            "args": {"query": query, "top_k": 3},
-            "depends_on": [],
-            "priority": 1,
-        })
-        return tasks
-
-    if any(k in query for k in ["为什么", "原因", "变化"]):
-        tasks.append({
-            "task_id": "t1",
-            "description": "语义搜索定位岗位",
-            "tool": "semantic_search",
-            "args": {"query": query, "top_k": 3},
-            "depends_on": [],
-            "priority": 1,
-        })
-        return tasks
+    if any(k in query for k in ["趋势", "演化", "薪资变化", "时序", "走势", "为什么", "原因", "变化"]):
+        tool = "get_job_evolution" if any(k in query for k in ["趋势", "演化", "薪资", "时序", "走势"]) else "get_job_changes"
+        if "技能" in query:
+            tool = "get_job_skill_deltas"
+        return [
+            {"task_id": "t1", "description": "搜索最相关岗位", "tool": "semantic_search",
+             "args": {"query": query, "top_k": 1}, "depends_on": [], "priority": 1},
+            {"task_id": "t2", "description": "查询该岗位的时序证据", "tool": tool,
+             "args": {"job_id": {"$ref": "t1", "path": [0, "id"]}}, "depends_on": ["t1"], "priority": 2},
+        ]
 
     if any(k in query for k in ["搭配", "组合", "共现", "邻近"]):
         tasks.append({
@@ -164,19 +210,40 @@ def _heuristic_plan(query: str, user_id: Optional[int]) -> Optional[List[Dict[st
     return tasks
 
 
-async def make_plan(query: str, user_id: Optional[int] = None) -> PlanSpec:
+async def make_plan(query: str, user_id: Optional[int] = None,
+                   job_id: Optional[int] = None) -> PlanSpec:
     """主入口:返回 PlanSpec。"""
     tools_desc = "\n".join(f"- {k}: {v}" for k, v in TASK_TYPES.items())
     plan_id = f"plan-{uuid.uuid4().hex[:8]}"
     user_hint = f"用户已登录(user_id={user_id})。" if user_id else "用户未登录。"
+    if job_id:
+        user_hint += (
+            f"\n【关键上下文】用户已在前端选中了 job_id={job_id} 的节点。"
+            "此时:1) 不要再调用 semantic_search(它对这个 job_id 没有帮助);"
+            "2) 第一个任务必须是 get_job_details({job_id: <该id>});"
+            "3) 后续任务根据查询意图追加 get_job_evolution / get_job_changes / get_gap_analysis 等。"
+        )
 
     # 1. 启发式先出兜底方案(快、稳)
-    heuristic_tasks = _heuristic_plan(query, user_id)
+    heuristic_tasks = _heuristic_plan(query, user_id, job_id)
+
+    # ★ 关键:job_id 已选 + 启发式给出了 get_job_details 的计划时,
+    # 直接采用启发式,不再让 LLM 覆盖(LLM 经常误选 semantic_search)。
+    if job_id and heuristic_tasks and heuristic_tasks[0].get("tool") == "get_job_details":
+        return PlanSpec(
+            plan_id=plan_id,
+            user_query=query,
+            tasks=[_coerce_task(t) for t in heuristic_tasks],
+            execution_mode="sequential",
+        )
 
     # 2. 尝试调 LLM 改进(若可用)
     try:
+        from langchain_core.messages import HumanMessage, SystemMessage
         llm = get_llm_fast()
-        prompt = PLANNER_PROMPT.format(tools=tools_desc) + (
+        # 注意:user_hint 里含 {} 会被 str.format 误解析,所以要双重转义
+        safe_hint = user_hint.replace("{", "{{").replace("}", "}}")
+        prompt = PLANNER_PROMPT.format(tools=tools_desc, context_hint=safe_hint) + (
             f"\n\n用户查询: {query}\n{user_hint}\n兜底方案(可改):\n"
             f"{json.dumps(heuristic_tasks, ensure_ascii=False, indent=2)}\n\n"
             "请生成最终 PlanSpec JSON。"

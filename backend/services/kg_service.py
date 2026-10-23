@@ -26,6 +26,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from database import get_neo4j_driver, get_openai_embeddings
+from services.temporal_graph import cutoff_iso, latest_snapshots, rank_snapshots, snapshot_graph, snapshot_delta, utc_instant
 
 # NEO4J_MOCK 兜底分支移到文件末尾(否则 def 会覆盖 override)
 
@@ -167,7 +168,9 @@ def get_job_detail(job_id: int) -> Optional[Dict[str, Any]]:
     return {
         "id": j.get("id"),
         "title": j.get("title"),
-        "source": j.get("source"),
+        "evidence_scope": "role_group_aggregate",
+        "evidence_warning": "字段可能汇集不同企业招聘；不能据此断言单个招聘或时序变化",
+            "source": j.get("source"),
         "source_url": j.get("source_url"),
         "company_name": r.get("company") or j.get("company_name"),
         "city": j.get("city"),
@@ -255,7 +258,11 @@ def get_job_evolution(
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """给定 Job,按 snapshot 时间序列返回某项 metric 的轨迹。"""
+    """Return labelled listing observations, never a role-wide time series.
+
+    Only a verified source/company/URL identity may form a longitudinal chain.
+    Multiple advertisements in the same title group remain separate series.
+    """
     metric_map = {
         "salary_avg": "s.salary_avg",
         "salary_max": "s.salary_max",
@@ -273,59 +280,55 @@ def get_job_evolution(
         params["to"] = to_date
     cypher = (
         f"MATCH (j:Job {{id: $id}})-[:HAS_SNAPSHOT]->(s:JobSnapshot) "
-        f"WHERE true {where} "
+        f"WHERE s.source_url IS NOT NULL AND s.company_name IS NOT NULL {where} "
         f"WITH s, {field} AS val "
         f"RETURN s.captured_at AS date, "
-        f"       coalesce(val, 0) AS value, "
-        f"       s.title AS title, s.source AS source "
-        f"ORDER BY s.captured_at ASC"
+        f"       val AS value, "
+        f"       s.title AS title, s.source AS source, s.snapshot_id AS snapshot_id, "
+        f"       s.source_url AS source_url, s.company_name AS company_name, "
+        f"       s.source_job_id AS source_job_id "
+        f"ORDER BY s.captured_at ASC, s.snapshot_id ASC"
     )
     rows = _query(cypher, params)
     out = []
     for r in rows:
+        from services.posting_evolution import posting_identity
+        identity = posting_identity(r)
+        if identity is None:
+            continue
         out.append({
             "date": str(r["date"]) if r.get("date") else None,
-            "value": float(r["value"]) if r.get("value") is not None else 0.0,
+            "value": float(r["value"]) if r.get("value") is not None else None,
             "title": r.get("title"),
             "source": r.get("source"),
+            "snapshot_id": r.get("snapshot_id"),
+            "source_url": r.get("source_url"),
+            "company_name": r.get("company_name"),
+            "source_job_id": r.get("source_job_id"),
+            "series_key": "|".join(identity),
+            "comparison_scope": "same_posting_observations",
         })
     return out
 
 
+def _latest_snapshot_rows(as_of: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    # Select by advertisement identity BEFORE similarity ranking. Never join
+    # current REQUIRES edges or current title/company into historical evidence.
+    cypher = """
+        MATCH (j:Job)-[:HAS_SNAPSHOT]->(snap:JobSnapshot)
+        WHERE snap.captured_at <= datetime($as_of)
+        RETURN properties(snap) AS snapshot, j.id AS job_id
+    """
+    params = {"as_of": as_of}
+    rows = _query(cypher, params)
+    selected = latest_snapshots([{**r["snapshot"], "job_id_ref": r["job_id"]} for r in rows], as_of)
+    return selected[:max(1, min(int(limit), 300))] if limit is not None else selected
+
+
 def get_snapshot_at(date: str, limit: int = 100) -> Dict[str, Any]:
-    """在指定日期,当时的 Job + Skill 关系子图。"""
-    rows = _query(
-        """
-        MATCH (s:JobSnapshot)
-        WHERE s.captured_at <= datetime($date)
-        WITH s
-        ORDER BY s.captured_at DESC
-        WITH s.job_id_ref AS job_id, collect(s)[0] AS latest
-        MATCH (j:Job {id: job_id})-[:REQUIRES]->(sk:Skill)
-        WITH j, latest, collect(distinct sk) AS skills
-        RETURN j, latest, skills LIMIT $limit
-        """,
-        {"date": date, "limit": limit},
-    )
-    nodes = []
-    links = []
-    seen = set()
-    for r in rows:
-        j = _record_to_dict(r["j"])
-        jid = f"Job:{j.get('id')}"
-        if jid not in seen:
-            seen.add(jid)
-            nodes.append({"id": jid, "label": "Job", "name": j.get("title"),
-                          "source": j.get("source")})
-        for sk in r["skills"]:
-            sn = _record_to_dict(sk)
-            sid = f"Skill:{sn.get('canonical_name')}"
-            if sid not in seen:
-                seen.add(sid)
-                nodes.append({"id": sid, "label": "Skill",
-                              "name": sn.get("display_name")})
-            links.append({"source": jid, "target": sid, "type": "REQUIRES"})
-    return {"nodes": nodes, "links": links}
+    """Snapshot skills at a UTC cutoff; unknown skill lists remain unknown."""
+    as_of = cutoff_iso(date)
+    return snapshot_graph(_latest_snapshot_rows(as_of, limit), as_of)
 
 
 def get_timeline_anchors(from_date: Optional[str] = None, to_date: Optional[str] = None,
@@ -366,49 +369,57 @@ def get_timeline_anchors(from_date: Optional[str] = None, to_date: Optional[str]
 # 变化事件
 # ────────────────────────────────────────────────────────────
 
+def get_job_skill_deltas(job_id: int) -> List[Dict[str, Any]]:
+    """Derive changes only within a confirmed advertisement identity.
+
+    Historical ChangeEvent annotations remain in storage, but are not treated
+    as verified causes by this read path. Equal-time observations are not trends.
+    """
+    if globals().get("__mocked__"):
+        return []  # Demo graph has no verified snapshot history.
+    rows = _query("""
+        MATCH (:Job {id: $id})-[:HAS_SNAPSHOT]->(s:JobSnapshot)
+        RETURN properties(s) AS snapshot
+        ORDER BY s.captured_at, s.snapshot_id
+    """, {"id": job_id})
+    from services.posting_evolution import posting_identity
+    previous, out, observations = {}, [], {}
+    for row in rows:
+        snap = {**row["snapshot"], "job_id_ref": job_id}
+        identity = posting_identity(snap)
+        if not snap.get("captured_at") or identity is None:
+            continue
+        key = (identity, utc_instant(snap["captured_at"]))
+        current = observations.get(key)
+        if current is None or str(snap.get("snapshot_id") or "") > str(current.get("snapshot_id") or ""):
+            observations[key] = snap
+    for snap in sorted(observations.values(), key=lambda item: utc_instant(item["captured_at"])):
+        identity = posting_identity(snap)
+        old = previous.get(identity)
+        if old and utc_instant(old["captured_at"]) < utc_instant(snap["captured_at"]):
+            delta = snapshot_delta(old, snap)
+            # Preserve fields consumed by existing change-event UI.
+            out.append({**delta, "change_id": f"{old.get('snapshot_id')}->{snap.get('snapshot_id')}",
+                        "date": str(snap["captured_at"]), "type": "skill_observation",
+                        "magnitude": delta["skill_distance"], "source": snap.get("source"),
+                        "before": {"skills": old.get("skills_required")},
+                        "after": {"skills": snap.get("skills_required")},
+                        "reason": None, "reason_source": None})
+        previous[identity] = snap
+    return sorted(out, key=lambda item: utc_instant(item["date"]), reverse=True)
+
+
 def get_job_changes(job_id: int) -> List[Dict[str, Any]]:
-    rows = _query(
-        """
-        MATCH (j:Job {id: $id})-[:HAS_CHANGE]->(c:ChangeEvent)
-        RETURN c.change_id AS change_id,
-               c.date AS date,
-               c.type AS type,
-               c.magnitude AS magnitude,
-               c.before AS before,
-               c.after AS after,
-               c.reason AS reason,
-               c.reason_source AS reason_source,
-               c.source AS source
-        ORDER BY c.date DESC
-        """,
-        {"id": job_id},
-    )
-    out = []
-    for r in rows:
-        before = r.get("before")
-        after = r.get("after")
-        if isinstance(before, str):
-            try: before = json.loads(before)
-            except: pass
-        if isinstance(after, str):
-            try: after = json.loads(after)
-            except: pass
-        out.append({
-            "change_id": r["change_id"],
-            "date": str(r["date"]) if r.get("date") else None,
-            "type": r["type"],
-            "magnitude": r["magnitude"],
-            "before": before,
-            "after": after,
-            "reason": r["reason"],
-            "reason_source": r["reason_source"],
-            "source": r["source"],
-        })
-    return out
+    """Expose only differences with a verified source advertisement identity.
+
+    Historical ChangeEvent nodes built by title-only comparisons are retained in
+    storage for audit, but must not be presented as factual role evolution.
+    """
+    return get_job_skill_deltas(job_id)
 
 
 def get_pending_change_count() -> int:
-    rows = _query("MATCH (c:ChangeEvent) WHERE c.reason IS NULL RETURN count(c) AS c")
+    rows = _query("MATCH (c:ChangeEvent) WHERE c.reason IS NULL AND c.source_url IS NOT NULL RETURN count(c) AS c")
     return rows[0]["c"] if rows else 0
 
 
@@ -416,44 +427,29 @@ def get_pending_change_count() -> int:
 # 语义搜索(向量)
 # ────────────────────────────────────────────────────────────
 
-def semantic_search_jobs(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
-    """用 OpenAI embedding + Neo4j 向量索引检索最相关的 Job。"""
-    try:
-        embeddings = get_openai_embeddings()
-    except RuntimeError:
+def semantic_search_jobs(query: str, top_k: int = 20,
+                         as_of: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Time-consistent exact semantic retrieval with explicit lexical fallback.
+
+    O(J*d) scoring is intentional for the current small graph. This trades ANN
+    throughput for complete temporal filtering; benchmark before scaling up.
+    """
+    cutoff = cutoff_iso(as_of)
+    rows = _latest_snapshot_rows(cutoff)
+    if not query.strip() or not rows:
         return []
-
-    vec = embeddings.embed_query(query)
-
-    rows = _query(
-        """
-        CALL db.index.vector.queryNodes('snapshot_vec', $k, $vec)
-        YIELD node AS snap, score
-        MATCH (j:Job)-[:HAS_SNAPSHOT]->(snap)
-        RETURN j.id AS id, j.title AS title, j.source AS source,
-               j.company_name AS company, snap.title AS snap_title,
-               score
-        ORDER BY score DESC LIMIT $k
-        """,
-        {"k": top_k, "vec": vec},
-    )
-    return rows
+    try:
+        vector = get_openai_embeddings().embed_query(query)
+    except Exception:
+        # Do not expose provider errors/credentials. DB errors still propagate.
+        vector = None
+    return rank_snapshots(rows, query, top_k, cutoff, vector)
 
 
-def fallback_keyword_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
-    """向量索引不可用时的降级:模糊匹配 title + job_description。"""
-    rows = _query(
-        """
-        MATCH (j:Job)
-        WHERE (j.title CONTAINS $q
-               OR coalesce(j.job_description, '') CONTAINS $q)
-        RETURN j.id AS id, j.title AS title, j.source AS source,
-               j.company_name AS company
-        LIMIT $k
-        """,
-        {"q": query, "k": top_k},
-    )
-    return rows
+def fallback_keyword_search(query: str, top_k: int = 20,
+                            as_of: Optional[str] = None) -> List[Dict[str, Any]]:
+    cutoff = cutoff_iso(as_of)
+    return rank_snapshots(_latest_snapshot_rows(cutoff), query, top_k, cutoff)
 
 
 # ────────────────────────────────────────────────────────────

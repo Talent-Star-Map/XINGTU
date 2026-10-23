@@ -23,6 +23,7 @@ import json
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from .planner import make_plan
+from .execution import ordered_tasks, resolve_args
 from .tools import TOOLS, list_tools
 from .reporter import stream_report, collect_references
 
@@ -39,17 +40,19 @@ class JobAgent:
         query: str,
         user_id: Optional[int] = None,
         history: Optional[List[Dict[str, str]]] = None,
+        job_id: Optional[int] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
         """生成事件流。每条事件是一个 dict,前端 SSE 渲染。"""
         yield {"event": "plan_started", "step": "clarifier"}
 
         try:
-            plan = await self._plan(query, user_id)
+            plan = await self._plan(query, user_id, job_id)
+            tasks = ordered_tasks(plan.tasks)
             yield {
                 "event": "plan_ready",
                 "plan_id": plan.plan_id,
                 "tasks": [t.model_dump() for t in plan.tasks],
-                "execution_mode": plan.execution_mode,
+                "execution_mode": "sequential",
             }
         except Exception as e:
             yield {"event": "error", "message": f"规划失败: {e}"}
@@ -57,7 +60,16 @@ class JobAgent:
 
         # 2. Execute — 按 plan.tasks 顺序(或并行)执行
         executions: List[Dict[str, Any]] = []
-        for task in plan.tasks:
+        completed = {}
+        for task in tasks:
+            try:
+                args = resolve_args(task, completed)
+            except ValueError as exc:
+                result = {"error": str(exc)}
+                completed[task.task_id] = result
+                executions.append({"task_id": task.task_id, "tool": task.tool, "args": task.args, "result": result})
+                yield {"event": "tool_result", "task_id": task.task_id, "result": str(exc), "full_result": result}
+                continue
             yield {"event": "executor_step",
                    "task_id": task.task_id,
                    "status": "running",
@@ -66,17 +78,19 @@ class JobAgent:
             yield {"event": "tool_call",
                    "task_id": task.task_id,
                    "tool": task.tool,
-                   "args": task.args}
+                   "args": args}
             fn = self._executor.get(task.tool)
             if fn is None:
+                completed[task.task_id] = {"error": "unknown tool"}
                 yield {"event": "tool_result",
                        "task_id": task.task_id,
                        "result": f"未知工具: {task.tool}"}
                 continue
             try:
-                result = await fn(task.args, user_id)
+                result = await fn(args, user_id)
             except Exception as e:
                 result = {"error": str(e)[:200]}
+            completed[task.task_id] = result
             # 把 result 简化成短串给前端展示
             short = _short(result)
             yield {"event": "tool_result",
@@ -86,7 +100,7 @@ class JobAgent:
             executions.append({
                 "task_id": task.task_id,
                 "tool": task.tool,
-                "args": task.args,
+                "args": args,
                 "result": result,
             })
 

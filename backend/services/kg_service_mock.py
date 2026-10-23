@@ -488,7 +488,7 @@ def get_co_occurring(skill: str, limit: int) -> List[Dict[str, Any]]:
     return [{"skill": sk, "weight": w} for sk, w in items]
 
 
-def semantic_search_jobs(query: str, top_k: int) -> List[Dict[str, Any]]:
+def semantic_search_jobs(query: str, top_k: int, as_of=None) -> List[Dict[str, Any]]:
     """无 embedding, 用关键词 LIKE。"""
     s = _store()
     q = query.lower()
@@ -512,7 +512,7 @@ def semantic_search_jobs(query: str, top_k: int) -> List[Dict[str, Any]]:
     } for sc, j in out[:top_k]]
 
 
-def fallback_keyword_search(query: str, top_k: int) -> List[Dict[str, Any]]:
+def fallback_keyword_search(query: str, top_k: int, as_of=None) -> List[Dict[str, Any]]:
     return semantic_search_jobs(query, top_k)
 
 

@@ -1,6 +1,6 @@
 import os, uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, func, Text, DECIMAL
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, func, Text, DECIMAL, UniqueConstraint, Index
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
@@ -19,6 +19,27 @@ else:
                            connect_args={"charset": "utf8mb4", "connect_timeout": 10})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+class JobObservation(Base):
+    """Append-only collector observation, including unchanged recrawls."""
+    __tablename__ = 'job_observations'
+    __table_args__ = (
+        UniqueConstraint('observation_key', name='uq_job_observation_key'),
+        Index('ix_job_observation_history', 'source', 'source_job_id', 'observed_at'),
+    )
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    observation_key = Column(String(64), nullable=False)
+    source = Column(String(80), nullable=False)
+    source_job_id = Column(String(200), nullable=False)
+    source_url = Column(String(1000))
+    company_name = Column(String(255))
+    title = Column(String(255))
+    observed_at = Column(DateTime(timezone=False), nullable=False)
+    content_hash = Column(String(64), nullable=False)
+    raw_text = Column(LONGTEXT, nullable=False)
+    skill_tags = Column(JSON)
+    extraction = Column(JSON)
+    ingested_at = Column(DateTime, default=func.now(), nullable=False)
 
 class Jobseeker(Base):
     __tablename__ = 'jobseekers'
@@ -96,6 +117,20 @@ class ReviewTask(Base):
     review_comment = Column(Text)
     created_at = Column(DateTime, default=func.now())
     reviewed_at = Column(DateTime)
+
+
+class RoleDefinitionVersion(Base):
+    """Append-only reviewed definition; source spans stay in the JSON fields."""
+    __tablename__ = 'role_definition_versions'
+    __table_args__ = (UniqueConstraint('role_name', 'version', name='uq_role_definition_version'),)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    role_name = Column(String(100), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    fields = Column(JSON, nullable=False)
+    state = Column(String(20), nullable=False)  # draft | published | withdrawn
+    reviewer_id = Column(Integer, nullable=False)
+    review_note = Column(Text)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
 
 class VerifyCode(Base):
     __tablename__ = 'verify_codes'
@@ -501,19 +536,21 @@ _OPENAI_EMBED = None
 
 
 def get_llm_strong():
-    """强档 LLM（归因 / Reporter / 决策建议）。优先 DeepSeek，fallback OpenAI。"""
+    """强档 LLM（归因 / Reporter / 决策建议）。
+
+    优先级与 services.llm 一致:llm_configs 表 → .env → 报错。
+    """
     global _LLM_STRONG
     if _LLM_STRONG is None:
         from langchain_openai import ChatOpenAI
-        api_key = os.getenv('DEEPSEEK_API_KEY') or os.getenv('OPENAI_API_KEY')
-        base_url = os.getenv('DEEPSEEK_BASE_URL') or os.getenv('OPENAI_BASE_URL')
-        model = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
+        from services.llm import _get_api_key, _get_model, _get_base_url, LLMTier
+        api_key = _get_api_key(LLMTier.STRONG)
         if not api_key or api_key.startswith('你的'):
-            raise RuntimeError('LLM 未配置：请在 .env 设置 DEEPSEEK_API_KEY 或 OPENAI_API_KEY')
+            raise RuntimeError('LLM 未配置：请在管理员端「模型配置」或 .env 设置 API Key')
         _LLM_STRONG = ChatOpenAI(
-            model=model,
+            model=_get_model(LLMTier.STRONG),
             api_key=api_key,
-            base_url=base_url,
+            base_url=_get_base_url(LLMTier.STRONG),
             temperature=0.3,
             streaming=True,
         )
@@ -521,19 +558,21 @@ def get_llm_strong():
 
 
 def get_llm_fast():
-    """快档 LLM（clarifier / task decomposer 等短推理）。"""
+    """快档 LLM（clarifier / task decomposer 等短推理）。
+
+    优先级与 services.llm 一致:llm_configs 表 → .env → 报错。
+    """
     global _LLM_FAST
     if _LLM_FAST is None:
         from langchain_openai import ChatOpenAI
-        api_key = os.getenv('DEEPSEEK_API_KEY') or os.getenv('OPENAI_API_KEY')
-        base_url = os.getenv('DEEPSEEK_BASE_URL') or os.getenv('OPENAI_BASE_URL')
-        model = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
+        from services.llm import _get_api_key, _get_model, _get_base_url, LLMTier
+        api_key = _get_api_key(LLMTier.FAST)
         if not api_key or api_key.startswith('你的'):
-            raise RuntimeError('LLM 未配置：请在 .env 设置 DEEPSEEK_API_KEY 或 OPENAI_API_KEY')
+            raise RuntimeError('LLM 未配置：请在管理员端「模型配置」或 .env 设置 API Key')
         _LLM_FAST = ChatOpenAI(
-            model=model,
+            model=_get_model(LLMTier.FAST),
             api_key=api_key,
-            base_url=base_url,
+            base_url=_get_base_url(LLMTier.FAST),
             temperature=0.0,
             streaming=False,
         )

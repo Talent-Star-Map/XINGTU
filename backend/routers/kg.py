@@ -11,12 +11,15 @@ routers/kg.py — 岗位图谱 API 层
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request, HTTPException
+from fastapi import APIRouter, Query, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from database import verify_token
+from database import CrawledJob, SessionLocal, verify_token, RoleDefinitionVersion
+from time_util import fmt
 from services import kg_service
+from services.role_catalog import build_public_catalog, filter_catalog_rows
+from auth_dependencies import require_admin
 
 router = APIRouter(prefix='/api/kg', tags=['kg'])
 
@@ -46,6 +49,41 @@ def _current_user_id(request: Request) -> Optional[int]:
 # 公共端点
 # ────────────────────────────────────────────────────────────
 
+@router.get('/evidence/search')
+def evidence_search(q: str = Query(..., min_length=1, max_length=500),
+                    as_of: Optional[str] = None, limit: int = Query(8, ge=1, le=30)):
+    from services.evidence_store import load_current_evidence
+    from services.evidence_graph import retrieve
+    from services.temporal_graph import cutoff_iso
+    try:
+        cutoff=cutoff_iso(as_of)
+    except (ValueError,TypeError):
+        raise HTTPException(422,'时间格式无效')
+    hits=retrieve(load_current_evidence(),q,cutoff,limit)
+    for hit in hits:
+        hit.pop('crawl_time',None)
+    return _ok({'hits':hits,'as_of':cutoff,'scope_note':'仅返回已核验来源的技术岗位当前观测；不重建采集前的历史。'})
+
+
+class EvidenceQuestion(BaseModel):
+    question: str
+    as_of: Optional[str] = None
+
+
+@router.post('/evidence/answer')
+def evidence_answer(payload: EvidenceQuestion, request: Request):
+    if _current_user_id(request) is None:
+        raise HTTPException(401,'请先登录')
+    if not 1 <= len(payload.question.strip()) <= 500:
+        raise HTTPException(422,'问题长度须为 1 至 500 字')
+    from services.evidence_qa import answer_from_evidence
+    data=evidence_search(payload.question,payload.as_of,8)['data']
+    try:
+        result=answer_from_evidence(payload.question,data['hits'])
+    except Exception:
+        raise HTTPException(503,'证据生成暂不可用，请查看原文检索结果')
+    return _ok({**result,'as_of':data['as_of']})
+
 @router.get("/jobs/overview")
 async def jobs_overview():
     return _ok({
@@ -53,6 +91,129 @@ async def jobs_overview():
         "sources": kg_service.get_sources_overview(),
         "pending_changes": kg_service.get_pending_change_count(),
     })
+
+
+@router.get("/catalog")
+def role_catalog(include_unverified: bool = Query(False),
+                 tech_stack: Optional[str] = Query(None, max_length=80),
+                 level: Optional[str] = None):
+    """Build a live catalog; default to postings with a traceable source URL."""
+    with SessionLocal() as session:
+        records = (session.query(CrawledJob.id, CrawledJob.title, CrawledJob.skill_tags,
+                                 CrawledJob.company_name, CrawledJob.source,
+                                 CrawledJob.source_url)
+                   .filter(CrawledJob.data_type == 1, CrawledJob.title.isnot(None))
+                   .order_by(CrawledJob.id.desc())
+                   .all())
+        rows = [dict(row._mapping) for row in records]
+    try:
+        filtered = filter_catalog_rows(rows, tech_stack, level)
+    except ValueError:
+        raise HTTPException(422, '级别参数无效')
+    result = build_public_catalog(filtered, include_unverified)
+    result['scope_note'] += ' 级别按标题明确表述筛选，未注明级别不推断为初级。'
+    result['filters'] = {'tech_stack': tech_stack, 'level': level}
+    return _ok(result)
+
+
+@router.get('/roles/definition')
+def role_definition(role: str = Query(..., min_length=1, max_length=100),
+                    draft: bool = Query(False)):
+    from services.evidence_store import load_current_evidence
+    from services.role_discovery import definition_draft
+    rows = [r for r in load_current_evidence() if r['scope']['role'] == role]
+    if not rows:
+        raise HTTPException(404, '该岗位方向暂无可核验正文')
+    with SessionLocal() as session:
+        published = (session.query(RoleDefinitionVersion)
+                     .filter_by(role_name=role, state='published')
+                     .order_by(RoleDefinitionVersion.version.desc()).first())
+        if published and not draft:
+            return _ok({'fields': published.fields, 'role': role,
+                        'version': published.version, 'published_at': fmt(published.created_at),
+                        'reviewer_id': published.reviewer_id,
+                        'scope': '人工审核发布的岗位定义；引用可返回原始招聘'})
+    return _ok({**definition_draft(rows), 'role': role, 'evidence_postings': len(rows),
+                'scope': '当前岗位样本的定义草稿，不表示发现了新职业'})
+
+
+class RoleDefinitionRevision(BaseModel):
+    fields: dict
+    publish: bool = False
+    review_note: str = ''
+
+
+@router.get('/admin/roles/{role}/evidence')
+def role_definition_sources(role: str, request: Request):
+    token = request.query_params.get('token') or request.headers.get('authorization', '').removeprefix('Bearer ')
+    try:
+        admin = verify_token(token) if token else {}
+    except ValueError:
+        raise HTTPException(401, '管理员认证失败')
+    if admin.get('role') != 'admin':
+        raise HTTPException(403, '需要管理员权限')
+    from services.evidence_store import load_current_evidence
+    rows = [r for r in load_current_evidence() if r['scope']['role'] == role]
+    return _ok([{'snapshot_id': r['snapshot_id'], 'title': r['title'],
+                 'source_url': r['source_url'], 'captured_at': r['captured_at'],
+                 'job_description': str(r['job_description'])[:6000]}
+                for r in rows[:100]])
+
+
+@router.post('/admin/roles/{role}/versions')
+def save_role_definition(role: str, body: RoleDefinitionRevision, request: Request):
+    token = request.query_params.get('token') or request.headers.get('authorization', '').removeprefix('Bearer ')
+    try:
+        admin = verify_token(token) if token else {}
+    except ValueError:
+        raise HTTPException(401, '管理员认证失败')
+    if admin.get('role') != 'admin':
+        raise HTTPException(403, '需要管理员权限')
+    if not 1 <= len(role) <= 100 or len(body.review_note) > 2000:
+        raise HTTPException(422, '岗位名称或审核说明长度无效')
+    from services.evidence_store import load_current_evidence
+    from services.role_definition_review import validate_version
+    evidence = [r for r in load_current_evidence() if r['scope']['role'] == role]
+    if not evidence:
+        raise HTTPException(404, '该岗位方向暂无可核验正文')
+    try:
+        fields = validate_version(body.fields, evidence, body.publish)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    with SessionLocal() as session:
+        last = (session.query(RoleDefinitionVersion)
+                .filter_by(role_name=role)
+                .order_by(RoleDefinitionVersion.version.desc()).first())
+        version = last.version + 1 if last else 1
+        item = RoleDefinitionVersion(role_name=role, version=version, fields=fields,
+                    state='published' if body.publish else 'draft',
+                    reviewer_id=int(admin['user_id']), review_note=body.review_note)
+        session.add(item)
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise HTTPException(409, '版本冲突，请刷新后重试')
+        session.refresh(item)
+        return _ok({'role': role, 'version': version, 'state': item.state,
+                    'created_at': fmt(item.created_at)})
+
+
+@router.get('/admin/roles/{role}/versions')
+def role_definition_history(role: str, request: Request):
+    token = request.query_params.get('token') or request.headers.get('authorization', '').removeprefix('Bearer ')
+    try:
+        admin = verify_token(token) if token else {}
+    except ValueError:
+        raise HTTPException(401, '管理员认证失败')
+    if admin.get('role') != 'admin':
+        raise HTTPException(403, '需要管理员权限')
+    with SessionLocal() as session:
+        versions = (session.query(RoleDefinitionVersion).filter_by(role_name=role)
+                    .order_by(RoleDefinitionVersion.version.desc()).limit(100).all())
+        return _ok([{'version': v.version, 'state': v.state, 'fields': v.fields,
+                     'reviewer_id': v.reviewer_id, 'review_note': v.review_note,
+                     'created_at': fmt(v.created_at)} for v in versions])
 
 
 @router.get("/jobs/graph")
@@ -142,16 +303,20 @@ async def skill_co_occurring(skill_name: str, limit: int = Query(20)):
 class SemanticSearchBody(BaseModel):
     query: str
     top_k: int = 20
+    as_of: Optional[str] = None
 
 
 @router.post("/semantic-search")
 async def semantic_search(body: SemanticSearchBody):
     if not body.query.strip():
         raise HTTPException(400, "query 不能为空")
-    results = kg_service.semantic_search_jobs(body.query, body.top_k)
+    try:
+        results = kg_service.semantic_search_jobs(body.query, body.top_k, body.as_of)
+    except ValueError:
+        raise HTTPException(400, "as_of must be an ISO 8601 date/time")
     if not results:
         # 降级:关键词
-        results = kg_service.fallback_keyword_search(body.query, body.top_k)
+        results = kg_service.fallback_keyword_search(body.query, body.top_k, body.as_of)
     return _ok(results)
 
 
@@ -179,7 +344,7 @@ async def personal_gap(request: Request, job_id: int = Query(...)):
 # 管理员
 # ────────────────────────────────────────────────────────────
 
-@router.post("/admin/rebuild")
+@router.post("/admin/rebuild", dependencies=[Depends(require_admin)])
 async def admin_rebuild():
     """触发全量重建(异步,这里只放占位)。"""
     import subprocess, sys, os
@@ -193,7 +358,7 @@ async def admin_rebuild():
     return _ok({"status": "started"}, "ETL 已启动,查看 logs/build_kg.log")
 
 
-@router.post("/admin/sync")
+@router.post("/admin/sync", dependencies=[Depends(require_admin)])
 async def admin_sync(since: Optional[str] = None):
     import subprocess, sys, os
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -209,7 +374,7 @@ async def admin_sync(since: Optional[str] = None):
     return _ok({"status": "started"}, "增量已启动")
 
 
-@router.post("/admin/attribute")
+@router.post("/admin/attribute", dependencies=[Depends(require_admin)])
 async def admin_attribute(limit: int = 50):
     import subprocess, sys, os
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

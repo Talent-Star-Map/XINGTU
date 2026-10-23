@@ -100,6 +100,7 @@ def extract_jobs(conn):
             if r.get(k) is not None:
                 try: r[k] = float(r[k])
                 except Exception: r[k] = None
+        r["_skill_tags_known"] = r.get("skill_tags") is not None
         r["skill_tags"] = _safe_json_loads(r.get("skill_tags"))
         out.append(r)
     print(f"   抽取 {len(out)} 行 (data_type=1 岗位 {sum(1 for r in out if r.get('data_type')==1)})")
@@ -180,112 +181,40 @@ def aggregate_by_title(jobs: List[Dict[str, Any]]):
 
 
 def build_snapshots_and_changes(agg_jobs: List[Dict[str, Any]]):
-    """对每个聚合 Job:
-       - 按 crawl_time 建 snapshot(每次抓取一个)
-       - 两两 diff 出 ChangeEvent
+    """Keep all source observations; emit changes only for repeat observations
+    of the *same advertisement* (source, company and source URL).
+
+    A normalized title is a role group. Distinct companies' advertisements in
+    that group are cross-sectional observations and cannot form a time series.
     """
-    print("[3/6] 建 JobSnapshot + ChangeEvent ...")
-    snapshots = []
-    changes = []
+    from services.posting_evolution import observed_posting_changes
 
-    for aj in agg_jobs:
-        rows = aj["_raw_rows"]
-        # 按 crawl_time 排序 (None 用 publish_time 兜底)
-        def sort_key(r):
-            t = r.get("crawl_time") or r.get("publish_time") or ""
-            return t
-        rows_sorted = sorted(rows, key=sort_key)
-
-        job_id = aj["id"]
-        for idx, r in enumerate(rows_sorted):
-            cap = sort_key(r)
-            snap_id = f"snap-{job_id}-{idx}-{cap[:10] if cap else 'no-date'}"
+    snapshots, changes = [], []
+    for role in agg_jobs:
+        rows = role["_raw_rows"]
+        role_id = role["id"]
+        for row in rows:
+            captured = row.get("crawl_time") or row.get("publish_time") or ""
             snapshots.append({
-                "snapshot_id": snap_id,
-                "job_id_ref": job_id,
-                "captured_at": cap,
-                "source": r.get("source") or "unknown",
-                "title": r.get("title"),
-                "salary_min": r.get("salary_min"),
-                "salary_max": r.get("salary_max"),
-                "salary_avg": ((r.get("salary_min") or 0) + (r.get("salary_max") or 0)) / 2.0
-                              if r.get("salary_min") and r.get("salary_max") else None,
-                "education": r.get("education"),
-                "experience": r.get("experience"),
-                "skills_required": r.get("skill_tags") or [],
-                "job_description": (r.get("job_description") or "")[:1000],
-                "crawl_time_raw": cap,
+                "snapshot_id": f"snap-{role_id}-{row['id']}-{captured[:10] if captured else 'no-date'}",
+                "job_id_ref": role_id,
+                "source_job_id": row["id"],
+                "captured_at": captured,
+                "source": row.get("source") or "unknown",
+                "source_url": row.get("source_url"),
+                "company_name": row.get("company_name"),
+                "title": row.get("title"),
+                "salary_min": row.get("salary_min"),
+                "salary_max": row.get("salary_max"),
+                "salary_avg": ((row.get("salary_min") or 0) + (row.get("salary_max") or 0)) / 2.0
+                              if row.get("salary_min") and row.get("salary_max") else None,
+                "education": row.get("education"),
+                "experience": row.get("experience"),
+                "skills_required": row.get("skill_tags") if row.get("_skill_tags_known", True) else None,
+                "job_description": (row.get("job_description") or "")[:1000],
             })
-
-        # 两两 diff
-        for i in range(1, len(rows_sorted)):
-            prev, curr = rows_sorted[i - 1], rows_sorted[i]
-            prev_t = sort_key(prev)
-            curr_t = sort_key(curr)
-            if not prev_t or not curr_t:
-                continue
-
-            # salary 变化
-            pm = prev.get("salary_max")
-            cm = curr.get("salary_max")
-            if pm and cm:
-                delta = (cm - pm) / max(pm, 1)
-                if abs(delta) >= 0.05:  # 5% 阈值(同 title 通常涨幅小,放宽)
-                    changes.append({
-                        "change_id": f"ch-{job_id}-{i}-{curr_t[:10]}-salary",
-                        "job_id_ref": job_id,
-                        "date": curr_t,
-                        "type": "salary_increase" if delta > 0 else "salary_decrease",
-                        "magnitude": round(delta, 3),
-                        "before": json.dumps({"salary_max": pm}, ensure_ascii=False),
-                        "after": json.dumps({"salary_max": cm}, ensure_ascii=False),
-                        "source": curr.get("source"),
-                    })
-
-            # skill 增减
-            prev_sk = set(prev.get("skill_tags") or [])
-            curr_sk = set(curr.get("skill_tags") or [])
-            added = list(curr_sk - prev_sk)
-            removed = list(prev_sk - curr_sk)
-            if added:
-                changes.append({
-                    "change_id": f"ch-{job_id}-{i}-{curr_t[:10]}-skill_added",
-                    "job_id_ref": job_id,
-                    "date": curr_t,
-                    "type": "skill_added",
-                    "magnitude": len(added),
-                    "before": json.dumps({"skills": sorted(prev_sk)}, ensure_ascii=False),
-                    "after": json.dumps({"added_skills": sorted(added)}, ensure_ascii=False),
-                    "source": curr.get("source"),
-                })
-            if removed:
-                changes.append({
-                    "change_id": f"ch-{job_id}-{i}-{curr_t[:10]}-skill_removed",
-                    "job_id_ref": job_id,
-                    "date": curr_t,
-                    "type": "skill_removed",
-                    "magnitude": len(removed),
-                    "before": json.dumps({"skills": sorted(prev_sk)}, ensure_ascii=False),
-                    "after": json.dumps({"removed_skills": sorted(removed)}, ensure_ascii=False),
-                    "source": curr.get("source"),
-                })
-
-            # 学历要求变化
-            pe = prev.get("education")
-            ce = curr.get("education")
-            if pe and ce and pe != ce:
-                changes.append({
-                    "change_id": f"ch-{job_id}-{i}-{curr_t[:10]}-education",
-                    "job_id_ref": job_id,
-                    "date": curr_t,
-                    "type": "education_change",
-                    "magnitude": 1,
-                    "before": json.dumps({"education": pe}, ensure_ascii=False),
-                    "after": json.dumps({"education": ce}, ensure_ascii=False),
-                    "source": curr.get("source"),
-                })
-
-    print(f"   快照 {len(snapshots)} | 纵向 ChangeEvent {len(changes)}")
+        changes.extend(observed_posting_changes(rows, role_id))
+    print(f"   Observations {len(snapshots)} | same-posting changes {len(changes)}")
     return snapshots, changes
 
 
@@ -536,8 +465,11 @@ def ingest_snapshots_and_changes(driver, snapshots, changes):
                 MATCH (j:Job {id: snap.job_id_ref})
                 MERGE (s:JobSnapshot {snapshot_id: snap.snapshot_id})
                 SET s.job_id_ref = snap.job_id_ref,
+                    s.source_job_id = snap.source_job_id,
                     s.captured_at = CASE WHEN snap.captured_at <> '' THEN datetime(snap.captured_at) ELSE null END,
                     s.source = snap.source,
+                    s.source_url = snap.source_url,
+                    s.company_name = snap.company_name,
                     s.title = snap.title,
                     s.salary_min = snap.salary_min,
                     s.salary_max = snap.salary_max,
@@ -552,16 +484,8 @@ def ingest_snapshots_and_changes(driver, snapshots, changes):
                 """,
                 batch=batch,
             )
-        # 标记最近一个快照 is_current
-        s.run(
-            """
-            MATCH (j:Job)-[r:HAS_SNAPSHOT]->(s:JobSnapshot)
-            WITH j, s, r
-            ORDER BY j.id, s.captured_at DESC
-            WITH j, collect({s: s, r: r})[0] AS latest
-            SET latest.r.is_current = true
-            """
-        )
+        # Job is a role/title group: it has no single "current" advertisement.
+        # Current observations must be selected per source posting and cutoff.
         # 写 ChangeEvent
         for batch in _chunks(changes, 300):
             s.run(
@@ -576,6 +500,7 @@ def ingest_snapshots_and_changes(driver, snapshots, changes):
                     c.before = ch.before,
                     c.after = ch.after,
                     c.source = ch.source,
+                    c.source_url = ch.source_url,
                     c.reason = null,
                     c.reason_source = null,
                     c.ingested_at = datetime()

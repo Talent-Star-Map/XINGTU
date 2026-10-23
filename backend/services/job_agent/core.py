@@ -32,6 +32,7 @@ TASK_TYPES = {
     "keyword_search":    "关键词/模糊搜索 jobs",
     "get_job_details":   "取单个 Job 的详情",
     "get_job_evolution": "取 Job 的时序数据",
+    "get_job_skill_deltas": "Compute same-source snapshot skill additions/removals and Jaccard distance",
     "get_job_changes":   "取 Job 的变化事件列表",
     "get_skill_co_occurrence": "取技能的共现技能",
     "get_user_profile":  "取当前用户的画像",
