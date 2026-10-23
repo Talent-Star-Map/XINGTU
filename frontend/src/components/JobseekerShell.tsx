@@ -22,7 +22,7 @@ const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
   { key: 'ai-chat', icon: BrainCircuit, label: '智能问答' },
-  { key: 'match', icon: LineChart, label: '岗位' },
+  { key: 'match', icon: LineChart, label: '匹配' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },
   { key: 'resume-center', icon: FileText, label: '简历中心' },

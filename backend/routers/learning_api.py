@@ -163,34 +163,70 @@ def get_history(token: str = Depends(request_token), limit: int = Query(20)):
         session.close()
 
 
-@router.post('/history')
-def add_history(req: HistoryReq, token: str = Depends(request_token)):
-    uid, role = _get_uid(token)
+def _clip(value, limit: int) -> str:
+    return str(value or '')[:limit]
+
+
+def record_diagnosis(user_id: int, *, job_id: int, job_title: str = '', job_company: str = '',
+                     job_location: str = '', job_salary: str = '', overall: float = 0, grade: str = '',
+                     have_count: int = 0, miss_count: int = 0, skills=None, phases=None,
+                     recommendations=None) -> int:
+    """写入一条诊断历史。供诊断接口和学习历史接口共用。"""
     session = get_session()
     try:
-        session.execute(
+        # 同一次诊断可能被页面重复提交。两分钟内完全相同的结果复用已有记录。
+        existing = session.execute(
+            text('SELECT id FROM diagnosis_history '
+                 'WHERE user_id = :uid AND job_id = :jid AND grade = :grade AND overall = :overall '
+                 'AND have_count = :have AND miss_count = :miss '
+                 'AND created_at >= NOW() - INTERVAL 2 MINUTE '
+                 'ORDER BY id DESC LIMIT 1'),
+            {
+                'uid': user_id, 'jid': job_id, 'grade': _clip(grade, 16), 'overall': overall,
+                'have': have_count, 'miss': miss_count,
+            }
+        ).scalar()
+        if existing:
+            return int(existing)
+        result = session.execute(
             text('INSERT INTO diagnosis_history '
                  '(user_id, job_id, job_title, job_company, job_location, job_salary, '
                  'overall, grade, have_count, miss_count, skills, phases, recommendations) '
                  'VALUES (:uid, :jid, :title, :company, :loc, :salary, '
                  ':overall, :grade, :have, :miss, :skills, :phases, :recs)'),
             {
-                'uid': uid, 'jid': req.job_id, 'title': req.job_title,
-                'company': req.job_company, 'loc': req.job_location, 'salary': req.job_salary,
-                'overall': req.overall, 'grade': req.grade,
-                'have': req.have_count, 'miss': req.miss_count,
-                'skills': json.dumps(req.skills or {}, ensure_ascii=False),
-                'phases': json.dumps(req.phases or [], ensure_ascii=False),
-                'recs': json.dumps(req.recommendations or [], ensure_ascii=False),
+                'uid': user_id, 'jid': job_id, 'title': _clip(job_title, 255),
+                'company': _clip(job_company, 255), 'loc': _clip(job_location, 255),
+                'salary': _clip(job_salary, 64),
+                'overall': overall, 'grade': _clip(grade, 16),
+                'have': have_count, 'miss': miss_count,
+                'skills': json.dumps(skills or {}, ensure_ascii=False),
+                'phases': json.dumps(phases or [], ensure_ascii=False),
+                'recs': json.dumps(recommendations or [], ensure_ascii=False),
             }
         )
         session.commit()
-        return {'success': True, 'message': '已保存'}
-    except Exception as e:
+        return int(result.lastrowid or 0)
+    except Exception:
         session.rollback()
-        raise HTTPException(500, str(e))
+        raise
     finally:
         session.close()
+
+
+@router.post('/history')
+def add_history(req: HistoryReq, token: str = Depends(request_token)):
+    uid, role = _get_uid(token)
+    try:
+        record_diagnosis(
+            uid, job_id=req.job_id, job_title=req.job_title, job_company=req.job_company,
+            job_location=req.job_location, job_salary=req.job_salary, overall=req.overall,
+            grade=req.grade, have_count=req.have_count, miss_count=req.miss_count,
+            skills=req.skills, phases=req.phases, recommendations=req.recommendations,
+        )
+        return {'success': True, 'message': '已保存'}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 # ─── 学习进度 ────────────────────────────────────

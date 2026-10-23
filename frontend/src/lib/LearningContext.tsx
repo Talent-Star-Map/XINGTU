@@ -2,6 +2,67 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import { latestResume, resolveUserSkills, type UserSkillCategory } from './userSkills'
 
 const getToken = () => localStorage.getItem('xingtu_token') || ''
+const DIAGNOSIS_HISTORY_KEY = 'jt_diagnosis_history'
+
+function readLocalDiagnoses(): any[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(DIAGNOSIS_HISTORY_KEY) || '[]')
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
+
+function diagnosisPayload(item: any) {
+  const jobId = Number(item?.jobId ?? item?.job_id)
+  if (!Number.isInteger(jobId) || jobId <= 0) return null
+  const skills = item?.skills && typeof item.skills === 'object' ? item.skills : { have: [], miss: [], extra: [] }
+  return {
+    job_id: jobId,
+    job_title: String(item.jobTitle || item.job_title || ''),
+    job_company: String(item.jobCompany || item.job_company || ''),
+    job_location: String(item.jobLocation || item.job_location || ''),
+    job_salary: String(item.jobSalary || item.job_salary || ''),
+    overall: Number(item.overall) || 0,
+    grade: String(item.grade || ''),
+    have_count: Number(item.haveCount ?? item.have_count ?? skills.have?.length ?? 0) || 0,
+    miss_count: Number(item.missCount ?? item.miss_count ?? skills.miss?.length ?? 0) || 0,
+    skills,
+    phases: Array.isArray(item.phases) ? item.phases : [],
+    recommendations: Array.isArray(item.recommendations) ? item.recommendations : [],
+  }
+}
+
+// 放在组件外，避免开发模式重复挂载时两条请求同时补传同一条本地诊断。
+let historyChain: Promise<void> = Promise.resolve()
+
+/** 把还没进服务端的本地诊断补传上去。能力图谱只读 diagnosis_history。 */
+async function uploadLocalDiagnoses(token: string) {
+  const list = readLocalDiagnoses()
+  let changed = false
+  for (const item of list) {
+    if (item?.synced) continue
+    const payload = diagnosisPayload(item)
+    if (!payload) {
+      item.synced = true
+      changed = true
+      continue
+    }
+    try {
+      const response = await fetch(`/api/learning/history?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (response.ok && result.success) {
+        item.synced = true
+        changed = true
+      }
+    } catch { /* 下次进入页面再补传 */ }
+  }
+  if (changed) localStorage.setItem(DIAGNOSIS_HISTORY_KEY, JSON.stringify(list))
+}
 
 interface DiagnosisRecord {
   id: number; job_id: number; job_title: string; job_company: string
@@ -111,26 +172,32 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
 
   // ─── 诊断历史 ───────────────────────────
   const refreshHistory = useCallback(async () => {
-    const t = getToken()
-    if (!t) return
-    try {
+    const run = historyChain.then(async () => {
+      const t = getToken()
+      if (!t) {
+        setDiagnosisHistory([])
+        return
+      }
+      await uploadLocalDiagnoses(t)
       const r = await fetch(`/api/learning/history?token=${t}&limit=20`)
       const d = await r.json()
-      if (d.success) setDiagnosisHistory(d.data)
-    } catch { /* ignore */ }
+      if (r.ok && d.success && Array.isArray(d.data)) setDiagnosisHistory(d.data)
+    }).catch(() => { /* 保留上一次成功读到的记录 */ })
+    historyChain = run
+    await run
   }, [])
 
   const addDiagnosis = useCallback(async (record: Omit<DiagnosisRecord, 'id' | 'created_at'>) => {
     const t = getToken()
     if (!t) return
-    try {
-      await fetch(`/api/learning/history?token=${t}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(record),
-      })
-      await refreshHistory()
-    } catch { /* ignore */ }
+    const response = await fetch(`/api/learning/history?token=${t}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+    })
+    const result = await response.json()
+    if (!response.ok || !result.success) throw new Error('诊断记录保存失败')
+    await refreshHistory()
   }, [refreshHistory])
 
   // ─── 学习进度 ───────────────────────────
@@ -158,10 +225,10 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
     } catch { /* ignore */ }
   }, [refreshProgress])
 
-  // 初始化加载
+  // 切页时重新拉取。诊断当时只写在本地，进入能力图谱前先补传到服务端。
   useEffect(() => {
-    refreshHistory()
-  }, [refreshHistory])
+    void refreshHistory()
+  }, [refreshHistory, refreshKey])
 
   useEffect(() => { void fetchSkills() }, [fetchSkills, refreshKey])
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Target, BookOpen, AlertCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
 import { useLearning } from '../../lib/LearningContext'
@@ -31,7 +32,8 @@ function formatDate(iso: string) {
 
 export default function MySkillGraph() {
   const { setPage } = JSNav.use()
-  const { masteredSkills, diagnosisHistory, skillsLoading: loading, skillsError, profileName: username, refreshSkills } = useLearning()
+  const { masteredSkills, diagnosisHistory, skillsLoading: loading, skillsError, profileName: username, refreshSkills, refreshHistory } = useLearning()
+  useEffect(() => { void refreshHistory() }, [refreshHistory])
   const allSkills = Array.from(masteredSkills).sort()
   const skillCount = loading || skillsError ? '—' : allSkills.length
   const latest = diagnosisHistory[0]

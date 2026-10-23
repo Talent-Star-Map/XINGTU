@@ -15,7 +15,7 @@ from auth_guard import request_token
 from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
-import os, re, json, glob, hashlib
+import os, re, json, glob, hashlib, logging
 from collections import defaultdict
 
 from database import get_session, get_user_model_by_role
@@ -25,6 +25,7 @@ from services.match_analyzer import compute_match_score, extract_profile_feature
 from services.quality_checker import cross_validate
 
 router = APIRouter(prefix='/api/match', tags=['match'])
+logger = logging.getLogger(__name__)
 
 # uploads 目录在 backend/ 根，不在 routers/，需向上跳一层
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
@@ -52,6 +53,34 @@ def _cleanup_old_cache():
             pass
 
 _cleanup_old_cache()
+
+
+def _remember_diagnosis(user_id: int, job: dict, result: dict) -> None:
+    """诊断成功后写入 diagnosis_history，供能力图谱读取。写入失败不阻断诊断结果。"""
+    skills = result.get('skills') or {}
+    have = skills.get('have') or []
+    miss = skills.get('miss') or []
+    try:
+        from routers.learning_api import record_diagnosis
+        history_id = record_diagnosis(
+            user_id,
+            job_id=int(job['id']),
+            job_title=job.get('title') or '',
+            job_company=job.get('company') or '',
+            job_location=job.get('location') or '',
+            job_salary=job.get('salary') or '',
+            overall=float(result.get('overall') or 0),
+            grade=str(result.get('grade') or ''),
+            have_count=len(have),
+            miss_count=len(miss),
+            skills=skills,
+            phases=result.get('phases') or [],
+            recommendations=result.get('recommendations') or [],
+        )
+        if history_id:
+            result['history_id'] = history_id
+    except Exception:
+        logger.exception('保存诊断历史失败')
 
 
 # ──────────────────────────────────────────────
@@ -204,6 +233,7 @@ def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
                     cached_result = cached.get("result", {})
                     cached_result["cache_hit"] = True
                     cached_result["computed_at"] = cached.get("created_at")
+                    _remember_diagnosis(user_id, job, cached_result)
                     return {'success': True, 'data': cached_result}
     except Exception:
         pass
@@ -214,13 +244,15 @@ def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
     result["has_profile"] = True
     result["cache_hit"] = False
     result["computed_at"] = computed_at
+    _remember_diagnosis(user_id, job, result)
 
-    # 8. 写入缓存
+    # 8. 写入缓存。history_id 是这次诊断的落库编号，不放进缓存，避免下次命中复用旧编号。
     try:
+        cached_body = {key: value for key, value in result.items() if key != 'history_id'}
         with open(match_cache_path, 'w', encoding='utf-8') as f:
             json.dump({
                 "created_at": computed_at,
-                "result": result,
+                "result": cached_body,
             }, f, ensure_ascii=False)
     except Exception:
         pass

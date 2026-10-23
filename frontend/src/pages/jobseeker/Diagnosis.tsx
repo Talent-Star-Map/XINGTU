@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Target, AlertCircle, BookOpen, Sparkles, LogIn, RefreshCw } from 'lucide-react'
 import { JSNav } from '../../lib/NavContext'
+import { useLearning } from '../../lib/LearningContext'
 import { SkeletonCard } from '../../components/match/Skeleton'
 import MatchScorePanel from '../../components/match/MatchScorePanel'
 import LearningGantt from '../../components/visuals/LearningGantt'
@@ -34,6 +35,7 @@ function formatTime(ts?: number) {
 
 export default function Diagnosis() {
   const { setPage } = JSNav.use()
+  const { refreshHistory } = useLearning()
   const [job, setJob] = useState<any>(null)
   const [result, setResult] = useState<MatchResult | null>(null)
   const [resultAt, setResultAt] = useState<number | undefined>()
@@ -69,12 +71,14 @@ export default function Diagnosis() {
       recommendations: matchResult.recommendations,
       skills: matchResult.skills,
       dims: matchResult.dims || null,
+      synced: Number((matchResult as MatchResult & { history_id?: number }).history_id) > 0,
     }
     const history = JSON.parse(localStorage.getItem('jt_diagnosis_history') || '[]')
     history.unshift(report)
     localStorage.setItem('jt_diagnosis_history', JSON.stringify(history))
     setResultAt(timestamp)
-  }, [])
+    void refreshHistory()
+  }, [refreshHistory])
 
   const runAnalyze = useCallback(async (jobData: any, skills: string[]) => {
     const token = localStorage.getItem('xingtu_token')
