@@ -8,7 +8,7 @@ GitHub维护前main为`9983f6e46e7f224be8c081a5343165eeb3806dc2`，采集及队�
 
 三库只读连通，SQL jobs=5590，最近普通采集成功；AI timer仍禁用。IP证书受信任，当前有效至`Oct 30 05:47:36 2026 GMT`（UTC），续签timer active，最近检查退出0、尚未到自动续签时间，未强制换证。
 
-今日03:30备份COMPLETE，四份远端SHA256匹配；本机副本`本机备份_20261026_033013`四文件SHA256与完整gzip CRC通过。系统盘已用8.3%，数据盘已用13.3%、可用125.52GiB；Docker/containerd根均在/data。详细记录见[本轮记录](records/20261026_github_daily_recovery.md)。
+今日03:30备份COMPLETE，四份远端SHA256匹配；本机副本`本机备份_20261026_033013`四文件SHA256与完整gzip CRC通过。系统盘已用8.3%，数据盘已用13.3%、可用125.52GiB；Docker/containerd根均在/data。
 
 未核云控制台账单、介质或云快照；未做全量恢复演练、全业务写入或本轮三角色登录验收。本机备份为手动镜像。
 
