@@ -40,6 +40,8 @@ defineProps({ open: Boolean })
 defineEmits(['close', 'change-page', 'logout'])
 
 const profileItems = [
+  { key: 'graph-chat', icon: 'share-2', label: 'AI 图谱问答' },
+  { key: 'interview', icon: 'briefcase', label: 'AI 模拟面试' },
   { key: 'profile-home', icon: 'user', label: '个人主页' },
   { key: 'resume', icon: 'upload', label: '简历管理' },
   { key: 'my-skill-graph', icon: 'activity', label: '我的图谱' }

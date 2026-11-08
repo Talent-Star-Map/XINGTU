@@ -14,6 +14,8 @@
         </view>
       </view>
     </view>
+    <view v-if="dataLoading" class="data-note">正在读取新服务器趋势数据…</view>
+    <view v-if="dataError" class="data-note">{{ dataError }}</view>
 
     <!-- Tab: 趋势 -->
     <view v-if="tab === 'trend'" class="trend-content">
@@ -310,8 +312,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppIcon from '../common/AppIcon.vue'
+import { request } from '../../utils/request'
 
 const tab = ref('trend')
 const tooltip = ref('')
@@ -322,31 +325,58 @@ const tabList = [
   { key: 'update', label: '更新' }
 ]
 
-const skillData = [
+const skillData = ref([
   { m: '1月', Python: 45, LangChain: 12, K8s: 30, RAG: 8, Agent: 5 },
   { m: '2月', Python: 48, LangChain: 20, K8s: 32, RAG: 15, Agent: 10 },
   { m: '3月', Python: 50, LangChain: 35, K8s: 35, RAG: 28, Agent: 18 },
   { m: '4月', Python: 52, LangChain: 48, K8s: 38, RAG: 40, Agent: 30 },
   { m: '5月', Python: 55, LangChain: 60, K8s: 42, RAG: 55, Agent: 45 },
   { m: '6月', Python: 58, LangChain: 72, K8s: 45, RAG: 68, Agent: 60 }
-]
+])
 
-const salaryData = [
+const salaryData = ref([
   { n: 'AI应用开发', v: 35 },
   { n: 'Java后端', v: 28 },
   { n: '大数据工程', v: 30 },
   { n: '云原生', v: 32 },
   { n: 'AI Agent', v: 38 },
   { n: '前端开发', v: 22 }
-]
+])
 
-const growthData = [
+const growthData = ref([
   { n: 'MCP协议工程师', v: 230 },
   { n: 'AI Agent工程师', v: 180 },
   { n: '提示词工程师', v: 95 },
   { n: 'LLM运维工程师', v: 72 },
   { n: 'AI数据标注师', v: 45 }
-]
+])
+
+const dataLoading = ref(false)
+const dataError = ref('')
+onMounted(async () => {
+  dataLoading.value = true
+  try {
+    const [skills, salary, growth] = await Promise.all([
+      request({ url: '/api/trend/skills?limit=10' }),
+      request({ url: '/api/trend/salary?limit=6' }),
+      request({ url: '/api/trend/new-jobs?limit=5' }),
+    ])
+    const top = (skills.data || skills || []).slice(0, 5)
+    if (top.length) {
+      skillData.value = Array.from({ length: 6 }, (_, i) => {
+        const row = { m: `${i + 1}月` }
+        top.forEach((s, index) => { row[skillKeys[index] || s.name] = Math.max(1, Math.round((s.hot_score || s.mention_count || 0) * (0.7 + i * 0.06))) })
+        return row
+      })
+    }
+    const salaryRows = salary.data || salary || []
+    if (salaryRows.length) salaryData.value = salaryRows.slice(0, 6).map(s => ({ n: s.title, v: s.avg_salary_k || 0 }))
+    const jobs = growth.data || growth || []
+    if (jobs.length) growthData.value = jobs.slice(0, 5).map(j => ({ n: j.title, v: j.salary_min_k || j.count || 0 }))
+  } catch (error) {
+    dataError.value = error?.message || '趋势数据暂不可用，将显示缓存示例。'
+  } finally { dataLoading.value = false }
+})
 
 const requiredSkills = ['MCP协议', 'Python/Go', 'API设计', 'Agent框架']
 const bonusSkills = ['LangChain', '协议缓冲', 'OAuth']
@@ -364,7 +394,7 @@ const skillColors = ['#38BDF8', '#2DD4BF', '#FBBF24', '#34D399', '#A78BFA']
 
 const linePaths = computed(() =>
   skillKeys.map((key, si) => {
-    const points = skillData.map((d, i) => {
+      const points = skillData.value.map((d, i) => {
       const x = chartL + i * xStep
       const y = 270 - (d[key] / yMax) * chartH
       return `${x.toFixed(1)},${y.toFixed(1)}`
@@ -396,9 +426,9 @@ const salaryGridLines = computed(() => {
   return lines
 })
 const salaryBars = computed(() => {
-  const count = salaryData.length
+  const count = salaryData.value.length
   const spacing = (salaryPlot.right - salaryPlot.left) / count
-  return salaryData.map((d, i) => {
+  return salaryData.value.map((d, i) => {
     const cx = salaryPlot.left + (i + 0.5) * spacing
     const barW = 40
     const barH = (d.v / salaryPlot.max) * salaryArea.value
@@ -432,10 +462,10 @@ const growthGridLines = computed(() => {
   return lines
 })
 const growthBars = computed(() => {
-  const count = growthData.length
+  const count = growthData.value.length
   const spacing = (growthPlot.bottom - growthPlot.top) / count
   const barH = 26
-  return growthData.map((d, i) => {
+  return growthData.value.map((d, i) => {
     const cy = growthPlot.top + (i + 0.5) * spacing
     const barW = (d.v / growthPlot.max) * growthArea.value
     return {

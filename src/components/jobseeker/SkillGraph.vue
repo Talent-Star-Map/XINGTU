@@ -25,7 +25,7 @@
         </view>
 
         <view class="sg-hint">
-          <text>拖动旋转 · 双指缩放 · 点击聚焦</text>
+          <text>拖动平移 · 双指缩放 · 点击聚焦</text>
         </view>
       </view>
 
@@ -138,14 +138,9 @@ function initPositions() {
   })
 }
 
-function project3D(pos, angle) {
-  const cosA = Math.cos(angle)
-  const sinA = Math.sin(angle)
-  const rx = pos.x * cosA - pos.z * sinA
-  const rz = pos.x * sinA + pos.z * cosA
-  const ry = pos.y
-  const scale = focalLength / (focalLength + rz * zoom)
-  return { sx: rx * scale, sy: ry * scale, sz: rz, scale }
+function project3D(pos) {
+  // Flat mobile graph: keep the same node/edge data, without perspective or 3D rotation.
+  return { sx: pos.x * zoom, sy: pos.z * zoom, sz: 0, scale: 1 }
 }
 
 function getNodeColor(node) {
@@ -163,7 +158,7 @@ function drawGraph() {
   const cy = h / 2 + offsetY
 
   const projected = graphNodes.map((n, i) => {
-    const p = project3D(nodePositions[i], rotationAngle)
+    const p = project3D(nodePositions[i])
     return { ...p, node: n, idx: i }
   })
 
@@ -249,9 +244,6 @@ function drawGraph() {
 }
 
 function renderLoop() {
-  if (autoRotate) {
-    rotationAngle += 0.005
-  }
   drawGraph()
   animId = requestAnimationFrame(renderLoop)
 }
@@ -333,7 +325,7 @@ function onTouchMove(e) {
   if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
     isDragging = true
     autoRotate = false
-    rotationAngle = dragStartAngle + dx * 0.01
+      offsetX += dx
     // Also allow vertical offset for pan effect
     offsetX = dx * 0.3
     offsetY = dy * 0.3

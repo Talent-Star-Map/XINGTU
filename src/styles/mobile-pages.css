@@ -1,0 +1,8 @@
+.mobile-page { padding: 28rpx; display: flex; flex-direction: column; gap: 20rpx; overflow-wrap: anywhere; }
+.mobile-title { font-size: 38rpx; font-weight: 700; }
+.mobile-card { border: 1px solid #8794a566; border-radius: 16rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; white-space: pre-wrap; }
+.mobile-actions { display: flex; flex-wrap: wrap; gap: 10rpx; }
+.mobile-actions button { margin: 0; }
+.mobile-page input, .mobile-page textarea { box-sizing: border-box; width: 100%; padding: 14rpx; border: 1px solid #8794a566; border-radius: 12rpx; }
+.mobile-page input { min-height: 70rpx; }
+.mobile-error { color: #bf4435; }

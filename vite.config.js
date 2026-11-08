@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
+const previewApi = 'https://47.120.76.16'
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
@@ -7,8 +8,8 @@ export default defineConfig({
     port: 5174,
     strictPort: true,
     proxy: {
-      '/api': { target: 'http://180.76.227.159:8081', changeOrigin: true },
-      '/uploads': { target: 'http://180.76.227.159:8081', changeOrigin: true },
+      '/api': { target: previewApi, changeOrigin: true },
+      '/uploads': { target: previewApi, changeOrigin: true },
     },
   },
   plugins: [

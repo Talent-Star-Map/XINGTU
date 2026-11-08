@@ -36,8 +36,10 @@
         <ProfileEdit v-else-if="currentPage === 'profile-edit'" />
         <Resume v-else-if="currentPage === 'resume'" />
         <SkillGraph v-else-if="currentPage === 'skill-graph'" />
-        <MySkillGraphPage v-else-if="currentPage === 'my-skill-graph'" />
+        <ExperienceEvidence v-else-if="currentPage === 'my-skill-graph'" />
+        <MobileGraphChat v-else-if="currentPage === 'graph-chat'" />
         <ResumeCenterPage v-else-if="currentPage === 'resume-center'" />
+        <InterviewPractice v-else-if="currentPage === 'interview'" />
         <Trend v-else-if="currentPage === 'trend'" />
         <FeaturePlaceholder
           v-else
@@ -84,8 +86,10 @@ import ProfileHome from './ProfileHome.vue'
 import ProfileEdit from './ProfileEdit.vue'
 import Resume from './Resume.vue'
 import SkillGraph from './SkillGraph.vue'
-import MySkillGraphPage from './MySkillGraphPage.vue'
+import ExperienceEvidence from './ExperienceEvidence.vue'
+import MobileGraphChat from './MobileGraphChat.vue'
 import ResumeCenterPage from './ResumeCenterPage.vue'
+import InterviewPractice from './InterviewPractice.vue'
 import Trend from './Trend.vue'
 import FeaturePlaceholder from './FeaturePlaceholder.vue'
 import TutuChat from './TutuChat.vue'
@@ -142,6 +146,8 @@ const bottomNavItems = [
 ]
 
 const pageMeta = {
+  'graph-chat': ['AI 图谱问答', 'share-2'],
+  interview: ['AI 模拟面试', 'briefcase'],
   'skill-graph': ['岗位图谱', 'share-2'],
   match: ['岗位', 'briefcase'],
   learning: ['学习', 'book'],

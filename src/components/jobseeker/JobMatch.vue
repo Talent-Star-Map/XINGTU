@@ -34,7 +34,11 @@
       />
 
       <!-- 加载骨架屏 -->
-      <view v-if="analyzing" class="skeleton-list">
+      <view v-if="jobsError" class="error-card">
+        <text class="error-msg">{{ jobsError }}</text>
+        <button size="mini" @tap="loadJobs">重新加载岗位</button>
+      </view>
+      <view v-else-if="analyzing || jobsLoading" class="skeleton-list">
         <SkeletonCard v-for="i in 3" :key="i" />
       </view>
 
@@ -116,6 +120,8 @@ const recommendations = ref([])
 const selSkills = ref([])
 const page = ref(1)
 const error = ref('')
+const jobsError = ref('')
+const jobsLoading = ref(false)
 const inputPage = ref('')
 
 const hasProfile = computed(() => selSkills.value.length > 0)
@@ -149,20 +155,32 @@ watch(selSkills, (val) => {
   uni.setStorageSync('jt_selected_skills', JSON.stringify(val))
 }, { deep: true })
 
-// 加载全部岗位数据
-function loadJobs() {
-  request({ url: '/api/jobs?size=500', auth: false })
-    .then(d => {
-      if (d.success && d.data?.length) {
-        const mapped = d.data.map(j => ({
-          id: j.id, title: j.title, company: j.company,
-          salary: j.salary, location: j.location, skills: j.skills || []
-        }))
-        allJobs.value = mapped
-        filtered.value = mapped
-      }
-    })
-    .catch(() => {})
+// Preserve the 500-job browsing window within the API's 100-item page limit.
+async function loadJobs() {
+  if (jobsLoading.value) return
+  jobsLoading.value = true
+  jobsError.value = ''
+  try {
+    const fetchPage = async page => {
+      const result = await request({ url: '/api/jobs', data: { size: 100, page } })
+      if (!result.success || !Array.isArray(result.data)) throw new Error('岗位数据暂不可用')
+      return result
+    }
+    const first = await fetchPage(1)
+    const pages = Math.min(5, Math.ceil(Number(first.total || 0) / 100))
+    const rest = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, i) => fetchPage(i + 2)))
+    const mapped = [first, ...rest].flatMap(result => result.data).map(j => ({
+      id: j.id, title: j.title, company: j.company,
+      salary: j.salary, location: j.location, skills: j.skills || []
+    }))
+    allJobs.value = mapped
+    filtered.value = mapped
+    page.value = 1
+  } catch (e) {
+    jobsError.value = e.statusCode === 401 ? '登录已失效，请退出后重新登录。' : (e.message || '岗位加载失败，请重试。')
+  } finally {
+    jobsLoading.value = false
+  }
 }
 
 // 从 profile 恢复技能

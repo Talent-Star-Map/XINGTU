@@ -1,9 +1,9 @@
 // H5 uses the local Vite proxy; mini-programs require an absolute API URL.
-let defaultBaseUrl = 'http://180.76.227.159:8081'
+let baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://47.120.76.16'
 // #ifdef H5
-defaultBaseUrl = ''
+if (import.meta.env.DEV) baseUrl = ''
 // #endif
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? defaultBaseUrl).replace(/\/$/, '')
+export const API_BASE_URL = baseUrl.replace(/\/$/, '')
 
 export function withToken(url) {
   const token = uni.getStorageSync('xingtu_token') || ''
@@ -41,17 +41,24 @@ export function uploadFile({ url, filePath, name = 'file', auth = true }) {
   })
 }
 
-export function request({ url, method = 'GET', data, auth = true }) {
+export function request({ url, method = 'GET', data, auth = true, timeout = 15000, dataType = 'json' }) {
   return new Promise((resolve, reject) => {
     uni.request({
       url: `${API_BASE_URL}${auth ? withToken(url) : url}`,
       method,
       data,
       header: { 'Content-Type': 'application/json' },
-      timeout: 15000,
+      timeout,
+      dataType,
       success: (response) => {
         if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data)
-        else reject(new Error(`请求失败：${response.statusCode}`))
+        else {
+          let body = response.data
+          if (typeof body === 'string') { try { body = JSON.parse(body) } catch { body = null } }
+          const error = new Error(typeof body?.detail === 'string' ? body.detail : `请求失败：${response.statusCode}`)
+          error.statusCode = response.statusCode
+          reject(error)
+        }
       },
       fail: (error) => reject(new Error(buildErrorMessage(error))),
     })

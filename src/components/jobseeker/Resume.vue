@@ -1,5 +1,6 @@
 <template>
-  <view class="resume-page">
+  <MobileAttachment v-if="attachment" :filename="attachment" @close="attachment=''" />
+  <view v-else class="resume-page">
     <view class="page-header">
       <view>
         <text class="page-title">简历管理</text>
@@ -50,7 +51,7 @@
           </view>
         </view>
         <view class="history-actions">
-          <view class="ha-btn" @tap="previewHistory(item.path)">
+          <view class="ha-btn" @tap="attachment = item.path">
             <AppIcon name="eye" class="ha-icon" />
           </view>
           <view class="ha-btn" @tap="reparseHistory(item.path)">
@@ -216,6 +217,8 @@
 </template>
 
 <script setup>
+import MobileAttachment from './MobileAttachment.vue'
+const attachment = ref('')
 import { ref, computed, onMounted, inject } from 'vue'
 import AppIcon from '../common/AppIcon.vue'
 import FieldCard from './match/FieldCard.vue'
