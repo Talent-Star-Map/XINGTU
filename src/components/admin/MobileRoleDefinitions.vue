@@ -1,0 +1,17 @@
+<template><view class="mobile-page"><text class="mobile-title">岗位定义审核</text><picker :range="roles" :disabled="busy" @change="choose"><view class="mobile-card">{{ role || '选择岗位' }}</view></picker><text v-if="message">{{ message }}</text><template v-if="fields"><view v-for="(label,key) in labels" :key="key" class="mobile-card"><text>{{ label }}</text><view v-for="(item,i) in fields[key]" :key="i" class="mobile-card"><input v-model="item.text" placeholder="定义内容" :disabled="busy"/><textarea v-model="item.quote" placeholder="招聘原文引文" :disabled="busy"/><picker :range="sources" range-key="title" :disabled="busy" @change="source(item,$event)"><view>{{ item.snapshot_id ? '依据：'+item.snapshot_id : '选择原文来源' }}</view></picker><text v-if="sources.find(s=>s.snapshot_id===item.snapshot_id)" selectable>{{ sources.find(s=>s.snapshot_id===item.snapshot_id).job_description }}</text><button size="mini" :disabled="busy" @tap="fields[key].splice(i,1)">删除条目</button></view><button size="mini" :disabled="busy" @tap="add(key)">新增条目</button></view><textarea v-model="note" placeholder="审核说明" :disabled="busy"/><view class="mobile-actions"><button size="mini" :disabled="busy" @tap="save(false)">保存草稿</button><button size="mini" :disabled="busy" @tap="confirmPublish">审核发布</button></view><text>历史版本</text><text v-for="v in versions" :key="v.version" class="mobile-card">版本 {{ v.version }} · {{ v.state }} · {{ v.review_note }}</text></template></view></template>
+<script setup>
+import {ref,onMounted} from 'vue'
+import {request} from '../../utils/request'
+const labels={name:'岗位名称',duties:'核心职责',required_skills:'必备技能',preferred_skills:'加分技能',applications:'典型行业应用'}
+const roles=ref([]),role=ref(''),fields=ref(null),sources=ref([]),versions=ref([]),note=ref(''),message=ref(''),busy=ref(false)
+const api=async(url,data)=>{const r=await request({url,method:data?'POST':'GET',data});if(r.success===false) throw new Error(r.message||'请求失败');return r.data??r}
+const base=()=>'/api/kg/admin/roles/'+encodeURIComponent(role.value)
+onMounted(async()=>{try{const r=await api('/api/kg/catalog?include_unverified=false');roles.value=[...new Set(r.roles.map(x=>x.name))].sort();if(roles.value.length) await load(roles.value[0])}catch(e){message.value=e.message}})
+function choose(e){return load(roles.value[Number(e.detail.value)])}
+async function load(value){if(busy.value)return;busy.value=true;role.value=value;fields.value=null;note.value='';message.value='';try{const [d,v,s]=await Promise.all([api('/api/kg/roles/definition?draft=true&role='+encodeURIComponent(value)),api(base()+'/versions'),api(base()+'/evidence')]);fields.value=Object.fromEntries(Object.keys(labels).map(k=>[k,d.fields?.[k]||[]]));versions.value=v;sources.value=s}catch(e){message.value=e.message}finally{busy.value=false}}
+function add(key){fields.value[key].push({text:'',quote:'',snapshot_id:'',source_url:''})}
+function source(item,e){const s=sources.value[Number(e.detail.value)];if(s){item.snapshot_id=s.snapshot_id;item.source_url=s.source_url}}
+function confirmPublish(){uni.showModal({title:'审核发布',content:'确认发布当前岗位定义？',success:r=>{if(r.confirm)save(true)}})}
+async function save(publish){if(busy.value||!fields.value)return;busy.value=true;try{const r=await api(base()+'/versions',{fields:fields.value,publish,review_note:note.value});message.value='版本 '+r.version+(publish?' 已发布':' 已保存为草稿');versions.value=await api(base()+'/versions')}catch(e){message.value=e.message}finally{busy.value=false}}
+</script>
+<style scoped src="../../styles/mobile-pages.css"></style>

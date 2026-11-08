@@ -251,8 +251,14 @@
 
       <!-- ==================== 数据 ==================== -->
       <view v-else-if="activeTab === 'data'" class="sub-page">
+        <view v-if="activeDataPage === 'role-definitions' || activeDataPage === 'classification'" class="data-sub-page">
+          <view class="sub-page-header"><view class="back-btn" @tap="closeDataPage"><AppIcon name="chevron-left" /><text class="back-btn-text">数据管理</text></view></view>
+          <MobileRoleDefinitions v-if="activeDataPage === 'role-definitions'" />
+          <MobileClassification v-else />
+        </view>
         <!-- 数据子页面：求职者管理 -->
-        <view v-if="activeDataPage === 'jobseekers'" class="data-sub-page">
+        <view v-else-if="activeDataPage === 'analytics'" class="data-sub-page"><MobileDataBoard /></view>
+        <view v-else-if="activeDataPage === 'jobseekers'" class="data-sub-page">
           <view class="sub-page-header">
             <view class="back-btn" @tap="closeDataPage">
               <AppIcon name="chevron-left" />
@@ -297,6 +303,9 @@
           </view>
 
           <view class="data-grid">
+            <view class="data-card" @tap="openDataPage('analytics')"><view class="data-card-icon data-icon-blue"><AppIcon name="bar-chart" /></view><text class="data-card-title">数据大屏</text><text class="data-card-description">用户、岗位、简历和业务漏斗统计</text><view class="data-card-link"><text>查看大屏</text><AppIcon name="arrow-right" /></view></view>
+            <view class="data-card" @tap="openDataPage('role-definitions')"><view class="data-card-icon data-icon-purple"><AppIcon name="file-text" /></view><text class="data-card-title">岗位定义审核</text><text class="data-card-description">编辑岗位定义、证据与发布版本</text><view class="data-card-link"><text>进入审核</text><AppIcon name="arrow-right" /></view></view>
+            <view class="data-card" @tap="openDataPage('classification')"><view class="data-card-icon data-icon-orange"><AppIcon name="target" /></view><text class="data-card-title">岗位分类审核</text><text class="data-card-description">查看 Agent 建议并人工审核</text><view class="data-card-link"><text>进入审核</text><AppIcon name="arrow-right" /></view></view>
             <view class="data-card" @tap="openDataPage('jobseekers')">
               <view class="data-card-icon data-icon-green">
                 <AppIcon name="users" />
@@ -396,6 +405,15 @@
 
       <view
         class="bottom-nav-item"
+        :class="{ 'bottom-nav-item--active': activeTab === 'data' && activeDataPage === 'analytics' }"
+        @tap="activeTab = 'data'; activeDataPage = 'analytics'"
+      >
+        <view class="bottom-nav-icon"><AppIcon name="bar-chart" /></view>
+        <text class="bottom-nav-label">大屏</text>
+      </view>
+
+      <view
+        class="bottom-nav-item"
         :class="{ 'bottom-nav-item--active': activeTab === 'quality' }"
         @tap="switchTab('quality')"
       >
@@ -416,6 +434,9 @@ import AdminModelConfig from '@/components/admin/AdminModelConfig.vue'
 import AdminResourceManage from '@/components/admin/AdminResourceManage.vue'
 import AdminJobManage from '@/components/admin/AdminJobManage.vue'
 import AdminQuality from '@/components/admin/AdminQuality.vue'
+import MobileRoleDefinitions from './MobileRoleDefinitions.vue'
+import MobileClassification from './MobileClassification.vue'
+import MobileDataBoard from './MobileDataBoard.vue'
 
 const activeTab = ref('home')
 const activeDataPage = ref('')
@@ -603,10 +624,10 @@ function closeDataPage() {
 /* ==================== 内容区域 ==================== */
 
 .admin-content {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   box-sizing: border-box;
-  padding: 32rpx 28rpx 48rpx;
+  padding: 32rpx 28rpx 150rpx;
   background:
     radial-gradient(circle at 100% 0%, rgba(5, 150, 105, 0.05), transparent 32%),
     #f6f9f7;
@@ -1225,6 +1246,10 @@ function closeDataPage() {
 /* ==================== 底部导航 ==================== */
 
 .bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
