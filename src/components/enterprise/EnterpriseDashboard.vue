@@ -24,6 +24,11 @@
     <!-- 主内容 -->
     <template v-else>
       <view class="ep-content">
+        <view class="ep-welcome">
+          <text class="ep-welcome-kicker">企业工作台</text>
+          <text class="ep-welcome-title">欢迎回来，HR</text>
+          <text class="ep-welcome-desc">基于岗位、候选人和技能数据，快速掌握招聘进展</text>
+        </view>
         <!-- KPI 指标区 -->
         <view class="ep-section">
           <text class="ep-section-title">核心指标</text>
@@ -256,6 +261,17 @@ function goToJobDetail(id) {
   flex-direction: column;
   gap: 40rpx;
 }
+
+.ep-welcome { padding: 30rpx; border-radius: 24rpx; background: linear-gradient(135deg, #eaf2ff 0%, #f7f5ff 100%); border: 1rpx solid rgba(52, 102, 220, .14); display:flex; flex-direction:column; gap:10rpx; }
+.ep-welcome-kicker { color: var(--color-primary); font-size:22rpx; font-weight:700; }
+.ep-welcome-title { color: var(--color-on-surface); font-size:38rpx; font-weight:800; }
+.ep-welcome-desc { color: var(--color-on-surface-variant); font-size:23rpx; line-height:1.55; }
+.kpi-grid { gap:16rpx; }
+.kpi-item { border:1rpx solid var(--color-outline-variant); border-radius:20rpx; background:var(--color-surface-container-lowest); padding:22rpx; box-shadow:0 5rpx 18rpx rgba(24,44,84,.05); }
+.kpi-label { font-size:22rpx; color:var(--color-on-surface-variant); }
+.kpi-value { display:block; margin-top:12rpx; font-size:42rpx; color:var(--color-primary); font-weight:800; }
+.job-item { border:1rpx solid var(--color-outline-variant); box-shadow:0 4rpx 14rpx rgba(24,44,84,.04); }
+.shortcut-item { border:1rpx solid var(--color-outline-variant); border-radius:20rpx; background:var(--color-surface-container-lowest); padding:24rpx; box-shadow:0 4rpx 14rpx rgba(24,44,84,.04); }
 
 .ep-section {
   display: flex;

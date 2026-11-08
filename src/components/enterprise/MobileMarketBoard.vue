@@ -1,0 +1,12 @@
+<template><view class="mobile-page"><text class="mobile-title">市场数据看板</text><view class="mobile-actions"><button size="mini" @tap="tab='overview'">市场概况</button><button size="mini" @tap="tab='skills'">热门技能</button><button size="mini" @tap="tab='benchmark'">岗位对标</button></view><view v-if="tab!=='benchmark'" class="mobile-card"><input v-model="city" placeholder="按城市筛选，例如：北京"/><input v-model="field" placeholder="按领域筛选"/><button size="mini" :disabled="busy" @tap="load">应用筛选</button></view><button size="mini" :disabled="busy" @tap="load">刷新</button><text v-if="error" class="mobile-error">{{ error }}</text><text v-if="busy">加载中…</text><template v-if="tab==='overview' && data"><view class="mobile-card"><text v-for="(label,key) in kpis" :key="key">{{ label }}：{{ data.kpis?.[key] ?? '—' }}</text></view><text v-for="(insight,i) in data.insights" :key="i" class="mobile-card">{{ insight }}</text></template><template v-if="tab==='skills' && data"><view v-for="(s,i) in data.top_skills" :key="s.name" class="mobile-card"><text>{{ i+1 }}. {{ s.name }} · {{ s.demand ?? s.count ?? s.jobs ?? '—' }} 个岗位</text><text v-if="s.median_salary_k!=null">薪资中位数 {{ s.median_salary_k }}K</text></view></template><template v-if="tab==='benchmark' && data"><text v-if="!data.jobs?.length">暂无可对标的企业岗位。</text><view v-for="j in data.jobs" :key="j.id" class="mobile-card"><text>{{ j.title }}</text><text>{{ j.location || '' }} {{ j.own_mid_k != null ? j.own_mid_k+'K' : '' }}</text><text v-if="j.market_salary?.p50!=null">市场薪资中位数 {{ j.market_salary?.p50 }}K</text></view></template></view></template>
+<script setup>
+import {ref,watch} from 'vue'
+import {request} from '../../utils/request'
+const kpis={jobs:'岗位样本',companies:'覆盖企业',cities:'覆盖城市',median_salary_k:'薪资中位数（K）',skills:'技能标签',salary_coverage:'薪资覆盖率（%）'}
+const city=ref(''),field=ref('')
+const tab=ref('overview'),data=ref(null),busy=ref(false),error=ref('')
+let generation=0
+async function load(){const id=++generation; busy.value=true; data.value=null; error.value='';try{const path=tab.value==='overview'?'overview':tab.value==='skills'?'skills':'benchmark';const r=await request({url:'/api/enterprise/data-board/'+path,data:tab.value==='benchmark'?undefined:{city:city.value.trim(),field:field.value.trim()}});if(r.success===false) throw new Error(r.message||'看板加载失败'); if(id===generation)data.value=r.data??r}catch(e){if(id===generation)error.value=e.message}finally{if(id===generation)busy.value=false}}
+watch(tab,load,{immediate:true})
+</script>
+<style scoped src="../../styles/mobile-pages.css"></style>

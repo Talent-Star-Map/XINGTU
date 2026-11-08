@@ -36,6 +36,7 @@
       <EnterpriseMarketInsight
         v-else-if="currentPage === 'market'"
       />
+      <MobileMarketBoard v-else-if="currentPage === 'market-board'" />
       <EnterpriseIndustryReport
         v-else-if="currentPage === 'industry-report'"
       />
@@ -82,6 +83,7 @@ import EnterpriseDashboard from './EnterpriseDashboard.vue'
 import EnterpriseJobManage from './EnterpriseJobManage.vue'
 import EnterpriseTalentSearch from './EnterpriseTalentSearch.vue'
 import EnterpriseConversations from './EnterpriseConversations.vue'
+import MobileMarketBoard from './MobileMarketBoard.vue'
 import EnterpriseMarketInsight from './EnterpriseMarketInsight.vue'
 import EnterpriseIndustryReport from './EnterpriseIndustryReport.vue'
 import EnterpriseCompanyProfile from './EnterpriseCompanyProfile.vue'
@@ -115,6 +117,7 @@ const bottomNavItems = [
   { key: 'talent', icon: 'users', label: '人才星' },
   { key: 'messages', icon: 'chat', label: '消息' },
   { key: 'market', icon: 'line-chart', label: '市场洞察' },
+  { key: 'market-board', icon: 'bar-chart', label: '数据看板' },
 ]
 
 const pagePlaceholder = computed(() => {
@@ -123,6 +126,7 @@ const pagePlaceholder = computed(() => {
     talent: { title: '人才星', icon: 'users' },
     messages: { title: '消息', icon: 'chat' },
     market: { title: '市场洞察', icon: 'line-chart' },
+    'market-board': { title: '数据看板', icon: 'bar-chart' },
     'industry-report': { title: '行业报告', icon: 'file-text' },
     'company-profile': { title: '企业信息', icon: 'building' },
     'company-profile-edit': { title: '编辑企业信息', icon: 'edit' },
