@@ -4,6 +4,7 @@ import logging
 import time
 import re
 from typing import Literal
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel, Field
@@ -12,6 +13,7 @@ from services.llm import complete, stream_complete, LLMTier
 
 router = APIRouter(prefix='/api/interview', tags=['模拟面试'])
 logger = logging.getLogger(__name__)
+REPORT_NOTICE = 'AI 练习反馈，仅基于本次回答；引用已匹配原文，不代表评价已通过人工核验。'
 
 class Turn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
@@ -81,7 +83,52 @@ def report(req: InterviewRequest, me: dict = Depends(require_jobseeker)):
     if len(items) != len(req.history):
         raise HTTPException(502, '反馈引用未通过完整校验，请重新生成报告')
     return {'summary': str(payload.get('summary', ''))[:1500], 'items': sorted(items, key=lambda i: i['index']),
-            'notice': 'AI 练习反馈，仅基于本次回答；引用已匹配原文，不代表评价已通过人工核验。'}
+            'notice': REPORT_NOTICE}
+
+
+class FeedbackItem(BaseModel):
+    index: int = Field(ge=1, le=30)
+    quote: str = Field(min_length=1, max_length=600)
+    strength: str = Field(max_length=1800)
+    improvement: str = Field(max_length=1800)
+    outline: str = Field(max_length=1800)
+
+
+class ReportPdfRequest(BaseModel):
+    role: str = Field(min_length=1, max_length=120)
+    history: list[Turn] = Field(min_length=1, max_length=30)
+    summary: str = Field(max_length=1500)
+    items: list[FeedbackItem] = Field(min_length=1, max_length=30)
+
+
+@router.post('/report/pdf', response_class=Response)
+async def report_pdf(req: ReportPdfRequest, me: dict = Depends(require_jobseeker)):
+    from services.interview_report_pdf import render_interview_report
+
+    items = sorted(req.items, key=lambda item: item.index)
+    if [item.index for item in items] != list(range(1, len(req.history) + 1)):
+        raise HTTPException(422, '反馈与面试记录不一致，请重新生成报告。')
+
+    rounds = []
+    for turn, item in zip(req.history, items):
+        if not item.quote.strip() or item.quote not in turn.answer:
+            raise HTTPException(422, '反馈引用与回答不一致，请重新生成报告。')
+        rounds.append([
+            ('问题　', turn.question), ('回答　', turn.answer), ('原文引用　', item.quote),
+            ('亮点　', item.strength), ('改进建议　', item.improvement), ('参考思路　', item.outline),
+        ])
+
+    try:
+        payload = await render_interview_report(req.role, req.summary, rounds, REPORT_NOTICE)
+    except Exception:
+        logger.warning('Interview PDF rendering failed')
+        raise HTTPException(503, 'PDF 导出失败，请稍后重试。') from None
+
+    filename = quote('星图模拟面试报告.pdf')
+    return Response(payload, media_type='application/pdf', headers={
+        'Cache-Control': 'no-store',
+        'Content-Disposition': f"attachment; filename=interview-report.pdf; filename*=UTF-8''{filename}",
+    })
 
 
 class SpeechRequest(BaseModel):

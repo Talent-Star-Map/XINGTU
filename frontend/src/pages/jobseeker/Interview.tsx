@@ -56,6 +56,7 @@ export default function Interview() {
   const [history, setHistory] = useState<Turn[]>([])
   const [answer, setAnswer] = useState('')
   const [report, setReport] = useState<Report | null>(null)
+  const [downloading, setDownloading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [mediaError, setMediaError] = useState(false)
@@ -352,11 +353,42 @@ export default function Interview() {
     autoAllowed.current = true; setAutoMic(true); setPrepared(null); setContextId(''); setMainIndex(1); answerRef.current = '';
     setCamera(false); setStage('setup'); setHistory([]); setReport(null); setAnswer(''); setElapsed(0); setError('')
   }
-  function download() {
-    if (!report) return
-    const text = [`星图模拟面试练习报告`, `岗位：${role}`, report.summary, ...report.items.map(item => `\n第 ${item.index} 题：${history[item.index - 1].question}\n回答：${history[item.index - 1].answer}\n原文引用：${item.quote}\n亮点：${item.strength}\n改进：${item.improvement}\n组织思路：${item.outline}`), report.notice].join('\n')
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
-    const link = document.createElement('a'); link.href = url; link.download = '星图模拟面试报告.txt'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
+  async function download() {
+    if (!report || locked.current) return
+    locked.current = true
+    setDownloading(true)
+    setError('')
+    const ctrl = new AbortController()
+    controller.current = ctrl
+    const timer = window.setTimeout(() => ctrl.abort(), 60000)
+    try {
+      const response = await fetch('/api/interview/report/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role.trim(), history, summary: report.summary, items: report.items }),
+        signal: ctrl.signal,
+      })
+      if (!response.ok || !response.headers.get('Content-Type')?.startsWith('application/pdf')) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'PDF 导出失败，请重试。')
+      }
+      const blob = await response.blob()
+      if (!alive.current) return
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = '星图模拟面试报告.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (error) {
+      if (alive.current) setError(error instanceof Error && error.name !== 'AbortError' ? error.message : 'PDF 导出超时，请重试。')
+    } finally {
+      clearTimeout(timer)
+      locked.current = false
+      if (alive.current) setDownloading(false)
+    }
   }
 
   live.current = { busy, playing: speaking || audioPending, question, stage }
@@ -438,7 +470,7 @@ export default function Interview() {
           <div ref={bottom} />
         </div>
         <footer className="shrink-0 border-t p-4" style={{ borderColor: 'var(--color-outline-variant)' }}>
-          {stage === 'setup' ? <button onClick={startRoom} disabled={busy || !role.trim() || !RecognitionAPI} className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm font-semibold disabled:opacity-40" style={primary}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}开始面试 · 自动准备资料</button> : stage === 'report' ? <div className="flex flex-wrap gap-2"><button onClick={download} className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs" style={primary}><Download className="h-4 w-4" />下载报告</button><button onClick={reset} className="rounded-lg border px-4 py-2 text-xs" style={surface}>再练一次</button><button onClick={() => setPage('learning')} className="rounded-lg border px-4 py-2 text-xs" style={surface}>去学习中心</button></div> : <div className="flex flex-wrap items-center justify-between gap-3">
+          {stage === 'setup' ? <button onClick={startRoom} disabled={busy || !role.trim() || !RecognitionAPI} className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm font-semibold disabled:opacity-40" style={primary}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}开始面试 · 自动准备资料</button> : stage === 'report' ? <div className="flex flex-wrap gap-2"><button onClick={download} disabled={downloading} className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs disabled:opacity-50" style={primary}>{downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{downloading ? '正在导出…' : '下载 PDF 报告'}</button><button onClick={reset} disabled={downloading} className="rounded-lg border px-4 py-2 text-xs" style={surface}>再练一次</button><button onClick={() => setPage('learning')} className="rounded-lg border px-4 py-2 text-xs" style={surface}>去学习中心</button></div> : <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3"><button disabled={!RecognitionAPI} onClick={toggleAuto} aria-label={autoMic ? '暂停麦克风' : '恢复麦克风'} className="rounded-full border p-3" style={autoMic ? primary : surface}>{autoMic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button><div><p className="text-xs font-medium">{autoMic ? '持续聆听中' : '麦克风已暂停'}</p><p className="mt-1 text-[10px] opacity-50">直接开口回答或提问 · 停顿后面试官自动接话</p></div></div>
             <button disabled={busy || !question} onClick={() => speak(question)} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs" style={surface}><Volume2 className="h-4 w-4" />再听一遍</button>
             {!RecognitionAPI && <p className="w-full text-xs text-amber-700">此浏览器不支持语音识别，请使用支持中文语音识别的浏览器继续。</p>}
