@@ -153,6 +153,11 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* 屏幕上统一放大网页内容，打印使用原始尺寸。 */
+@media screen {
+  html { zoom: 125%; }
+}
+
 /* ─── 全局字体放大 ─── */
 html { font-size: 15px; }
 
