@@ -170,15 +170,12 @@ export default function JobSelector({
         )}
       </AnimatePresence>
 
-      {/* 推荐提示 — 给一个明确的返回入口，避免用户困在推荐结果里 */}
+      {/* 推荐岗位数量 */}
       {showRecBanner && (
-        <div className="rounded-xl border p-4 flex items-center justify-between gap-3 flex-wrap"
+        <div className="rounded-xl border p-4"
           style={{ borderColor: 'var(--color-primary-fixed)', background: 'var(--color-primary-fixed)' }}>
           <p className="text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>
             为您推荐 {recommendations.length} 个匹配岗位
-          </p>
-          <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>
-            分数 = 技能 50% + 经验 20% + 学历 15% + 薪资 15%
           </p>
         </div>
       )}
@@ -235,7 +232,6 @@ export default function JobSelector({
                   <div className="flex items-center gap-2">
                     {rec && (
                       <span className="text-xs font-bold px-2 py-1 rounded-full"
-                        title="综合匹配度：技能 50% + 经验 20% + 学历 15% + 薪资 15%"
                         style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                         匹配 {Math.round(rec.overall)}%
                         {typeof rec.matched_count === 'number' && typeof rec.job_skill_count === 'number' && rec.job_skill_count > 0 && (
