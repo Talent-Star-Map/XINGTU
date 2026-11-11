@@ -50,11 +50,11 @@ export default function ProfileHome() {
     if (!token) { setResumeLoading(false); return }
     try {
       // brief=1：只要 id 与时间，不拉 12 份简历的全部区块
-      const lr = await fetch(`/api/resume-center/list?brief=1&token=${token}`).then(r => r.json())
+      const lr = await fetch(`/api/resume-center/list?brief=1`).then(r => r.json())
       const list: any[] = lr.success ? (lr.data || []) : []
       if (!list.length) { setResume(null); return }
       const latest = latestResume(list)!
-      const dr = await fetch(`/api/resume-center/${latest.id}?token=${token}`).then(r => r.json())
+      const dr = await fetch(`/api/resume-center/${latest.id}`).then(r => r.json())
       if (dr.success) setResume(dr.data)
       else setResumeError(dr.error?.message || '读取简历失败')
     } catch {
@@ -67,7 +67,7 @@ export default function ProfileHome() {
   const fetchProfile = () => {
     const token = localStorage.getItem('xingtu_token')
     if (!token) { setLoading(false); return }
-    fetch(`/api/auth/profile?token=${token}`).then(r => r.json()).then(d => {
+    fetch(`/api/auth/profile`).then(r => r.json()).then(d => {
       if (d.success) {
         setP(d.data)
         try { setProjects(JSON.parse(d.data.projects || '[]')) } catch { setProjects([]) }
@@ -102,7 +102,7 @@ export default function ProfileHome() {
     const token = localStorage.getItem('xingtu_token')
     if (!token) return
     setSaving(true); setSaved(false); setErrors([])
-    const r = await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const r = await fetch(`/api/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const d = await r.json()
     if (d.success) { setSaved(true); fetchProfile(); void refreshSkills(); setTimeout(() => setModal(false), 800) }
     setSaving(false); setTimeout(() => setSaved(false), 3000)
@@ -110,10 +110,9 @@ export default function ProfileHome() {
 
   const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
-    const token = localStorage.getItem('xingtu_token')
     setAvatarUploading(true)
     const fd = new FormData(); fd.append('file', file)
-    const r = await fetch(`/api/auth/avatar?token=${token}`, { method: 'POST', body: fd })
+    const r = await fetch(`/api/auth/avatar`, { method: 'POST', body: fd })
     const d = await r.json()
     if (d.success) fetchProfile()
     setAvatarUploading(false)
@@ -121,9 +120,8 @@ export default function ProfileHome() {
 
   const uploadResume = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
-    const token = localStorage.getItem('xingtu_token')
     const fd = new FormData(); fd.append('file', file)
-    const r = await fetch(`/api/auth/resume-parse?token=${token}`, { method: 'POST', body: fd })
+    const r = await fetch(`/api/auth/resume-parse`, { method: 'POST', body: fd })
     const d = await r.json()
     if (d.success && d.data.text) {
       // 简单提取 — 后续接 DeepSeek 做精确解析

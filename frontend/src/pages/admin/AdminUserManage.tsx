@@ -3,8 +3,6 @@ import { Plus, Trash2, KeyRound, Loader2, X, Search, ChevronLeft, ChevronRight, 
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── 管理员 token 注入（与 QualityDashboard 一致，admin 接口必须携带 token）───
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 // 求职者记录类型
 interface JobseekerItem {
@@ -89,7 +87,7 @@ export default function AdminUserManage({ role }: Props) {
       params.set('page', String(p))
       params.set('size', String(pageSize))
       if (kw) params.set('keyword', kw)
-      const r = await fetch(withToken(`${apiBase}?${params.toString()}`))
+      const r = await fetch(`${apiBase}?${params.toString()}`)
       const d = await r.json()
       if (d.success) {
         if (isJobseeker) setJobseekers(d.data.list as JobseekerItem[])
@@ -150,7 +148,7 @@ export default function AdminUserManage({ role }: Props) {
         password: form.password,
       }
       if (!isJobseeker) body.company_name = form.company_name.trim()
-      const r = await fetch(withToken(apiBase), {
+      const r = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -176,7 +174,7 @@ export default function AdminUserManage({ role }: Props) {
     if (!resetTarget) return
     setResetting(true)
     try {
-      const r = await fetch(withToken(`${apiBase}/${resetTarget.id}/reset-password`), {
+      const r = await fetch(`${apiBase}/${resetTarget.id}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPwd }),
@@ -200,7 +198,7 @@ export default function AdminUserManage({ role }: Props) {
   const submitDelete = async () => {
     if (!deleteTarget) return
     try {
-      const r = await fetch(withToken(`${apiBase}/${deleteTarget.id}`), { method: 'DELETE' })
+      const r = await fetch(`${apiBase}/${deleteTarget.id}`, { method: 'DELETE' })
       const d = await r.json()
       if (d.success) {
         showToast(d.message || '已删除')

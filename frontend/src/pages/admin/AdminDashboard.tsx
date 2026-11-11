@@ -8,9 +8,6 @@ import {
 import DashboardInsights from '../../components/admin/DashboardInsights'
 
 // ─── token 注入(与其他 admin 页面一致) ────────────────────────────
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) =>
-  `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 // ─── 类型 ──────────────────────────────────────────────────────────
 interface AdminStats {
@@ -123,12 +120,12 @@ export default function AdminDashboard({ onNav }: Props) {
     try {
       // 并发 5 个请求:核心 stats + 3 个最近列表 + 系统状态
       const [rStats, rJs, rEnt, rJobs, rRes, rLLM] = await Promise.all([
-        fetch(withToken('/api/admin/stats')).then(r => r.json()),
-        fetch(withToken('/api/admin/jobseekers?size=5&page=1')).then(r => r.json()),
-        fetch(withToken('/api/admin/enterprises?size=5&page=1')).then(r => r.json()),
-        fetch(withToken('/api/admin/jobs?size=5&page=1')).then(r => r.json()),
-        fetch(withToken('/api/admin/resources?size=1&page=1')).then(r => r.json()),
-        fetch(withToken('/api/admin/llm-config')).then(r => r.json()),
+        fetch('/api/admin/stats').then(r => r.json()),
+        fetch('/api/admin/jobseekers?size=5&page=1').then(r => r.json()),
+        fetch('/api/admin/enterprises?size=5&page=1').then(r => r.json()),
+        fetch('/api/admin/jobs?size=5&page=1').then(r => r.json()),
+        fetch('/api/admin/resources?size=1&page=1').then(r => r.json()),
+        fetch('/api/admin/llm-config').then(r => r.json()),
       ])
 
       if (rStats.success) setStats(rStats.data)

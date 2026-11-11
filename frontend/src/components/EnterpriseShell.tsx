@@ -4,7 +4,6 @@ import { LayoutDashboard, Briefcase, Users, TrendingUp, LogOut, Sun, Moon, User,
 import { useTheme } from './ThemeProvider'
 import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
 import './enterprise/ent-theme.css'
-import { withToken } from '../lib/authFetch'
 
 // 企业端导航项
 type Page = EPPage
@@ -55,7 +54,7 @@ export default function EnterpriseShell({ onLogout }: Props) {
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const r = await fetch(withToken('/api/enterprise/conversations?size=1'))
+        const r = await fetch('/api/enterprise/conversations?size=1')
         const d = await r.json()
         if (d.success && d.data) {
           setUnreadCount(d.data.unread_total || 0)

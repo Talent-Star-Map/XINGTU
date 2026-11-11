@@ -22,9 +22,6 @@ interface Props {
   exporting?: boolean
 }
 
-const TOKEN = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) =>
-  `${url}${url.includes('?') ? '&' : '?'}token=${TOKEN()}`
 
 const AUTOSAVE_DEBOUNCE_MS = 800
 const UNDO_STACK_MAX = 50
@@ -231,7 +228,7 @@ export default function ResumeEditor({ resume: initial, templates, onBack, onSav
   const handleAIOptimize = useCallback(async (section: ResumeSection) => {
     setOptimizingId(String(section.id))
     try {
-      const r = await fetch(withToken('/api/resume-center/optimize'), {
+      const r = await fetch('/api/resume-center/optimize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

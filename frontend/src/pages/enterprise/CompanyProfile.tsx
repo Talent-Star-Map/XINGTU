@@ -40,7 +40,7 @@ export default function CompanyProfile() {
   const fetchProfile = () => {
     const token = localStorage.getItem('xingtu_token')
     if (!token) { setLoading(false); return }
-    fetch(`/api/auth/profile?token=${token}`).then(r => r.json()).then(d => {
+    fetch(`/api/auth/profile`).then(r => r.json()).then(d => {
       if (d.success) { setP(d.data); fetchStats(d.data.company_name) }
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -69,14 +69,14 @@ export default function CompanyProfile() {
     if (level === 1) {
       const site = p.company_website?.trim()
       if (!site) { alert('请先在编辑企业信息中填写公司官网'); return }
-      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, {
+      await fetch(`/api/auth/profile`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verified: 1 })
       })
       fetchProfile()
     } else if (level === 2) {
       if (p.verified < 1) { alert('请先完成官网验证'); return }
-      await fetch(`/api/auth/profile?token=${localStorage.getItem('xingtu_token')}`, {
+      await fetch(`/api/auth/profile`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verified: 2 })
       })
@@ -90,7 +90,7 @@ export default function CompanyProfile() {
     const token = localStorage.getItem('xingtu_token')
     if (!token) return
     setSaving(true); setSaved(false); setErrors([])
-    const r = await fetch(`/api/auth/profile?token=${token}`, {
+    const r = await fetch(`/api/auth/profile`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     })
@@ -102,13 +102,14 @@ export default function CompanyProfile() {
   const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     const token = localStorage.getItem('xingtu_token')
+    if (!token) return
     setLogoUploading(true)
     const fd = new FormData(); fd.append('file', file)
-    const r = await fetch(`/api/auth/avatar?token=${token}`, { method: 'POST', body: fd })
+    const r = await fetch('/api/auth/avatar', { method: 'POST', body: fd, headers: { Authorization: `Bearer ${token}` } })
     const d = await r.json()
     if (d.success) {
-      await fetch(`/api/auth/profile?token=${token}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      await fetch('/api/auth/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ company_logo: d.data.url })
       })
       fetchProfile()

@@ -91,7 +91,7 @@ export default function Diagnosis() {
       const body: Record<string, any> = { job_id: jobData.id, use_profile_skills: true }
       if (skills.length) { body.skills = skills; body.use_profile_skills = false }
 
-      const r = await fetch(`/api/match/analyze?token=${token}`, {
+      const r = await fetch(`/api/match/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

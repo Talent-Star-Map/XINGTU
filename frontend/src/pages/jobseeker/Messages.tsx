@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, MessageSquare, ChevronRight } from 'lucide-react'
 import ChatDialog from '../../components/ChatDialog'
-import { withToken } from '../../lib/authFetch'
 
 // 求职者 ID：登录时由 auth 接口写入 localStorage
 const getSeekerId = (): number | null => {
@@ -40,7 +39,7 @@ export default function Messages() {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch(withToken('/api/jobseeker/conversations?size=100'))
+      const r = await fetch('/api/jobseeker/conversations?size=100')
       const d = await r.json()
       if (d.success && d.data) {
         setConversations(d.data.conversations)

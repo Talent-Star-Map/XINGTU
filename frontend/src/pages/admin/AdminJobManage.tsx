@@ -3,8 +3,6 @@ import { Trash2, Loader2, X, Search, ChevronLeft, ChevronRight, Briefcase } from
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── 管理员 token 注入（与 QualityDashboard 一致）───
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 // 职位记录类型（字段来自后端 /api/admin/jobs）
 interface JobItem {
@@ -64,7 +62,7 @@ export default function AdminJobManage() {
       params.set('size', String(pageSize))
       if (kw) params.set('keyword', kw)
       if (status) params.set('status', status)
-      const r = await fetch(withToken(`/api/admin/jobs?${params.toString()}`))
+      const r = await fetch(`/api/admin/jobs?${params.toString()}`)
       const d = await r.json()
       if (d.success) {
         setJobs(d.data.list as JobItem[])
@@ -114,7 +112,7 @@ export default function AdminJobManage() {
   const submitDelete = async () => {
     if (!deleteTarget) return
     try {
-      const r = await fetch(withToken(`/api/admin/jobs/${deleteTarget.id}`), { method: 'DELETE' })
+      const r = await fetch(`/api/admin/jobs/${deleteTarget.id}`, { method: 'DELETE' })
       const d = await r.json()
       if (d.success) {
         showToast(d.message || '已删除')

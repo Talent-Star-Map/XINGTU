@@ -32,7 +32,7 @@ export default function ProfileEdit() {
   useEffect(() => {
     const token = localStorage.getItem('xingtu_token')
     if (!token) return
-    fetch(`/api/auth/profile?token=${token}`).then(r => r.json()).then(d => {
+    fetch(`/api/auth/profile`).then(r => r.json()).then(d => {
       if (d.success) {
         const p = d.data; setForm({
           real_name: p.real_name || '', gender: p.gender || '女', age: p.age?.toString() || '',
@@ -58,7 +58,7 @@ export default function ProfileEdit() {
     if (!token) return
     setSaving(true); setSaved(false); setErrors([])
     const body = { ...form, age: form.age?.toString().trim() ? parseInt(form.age) : null }
-    const r = await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const r = await fetch(`/api/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const d = await r.json()
     if (d.success) setSaved(true)
     setSaving(false); setTimeout(() => setSaved(false), 3000)

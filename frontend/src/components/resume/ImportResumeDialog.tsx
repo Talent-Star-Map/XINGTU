@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Upload, X, Loader2, FileText, CheckCircle2, AlertTriangle, Wand2 } from 'lucide-react'
 
-const getToken = () => localStorage.getItem('xingtu_token') || ''
 
 interface ImportMeta {
   method: string
@@ -68,7 +67,7 @@ export default function ImportResumeDialog({ onClose, onImported, onToast }: Pro
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch(`/api/resume-center/import?token=${getToken()}`, { method: 'POST', body: fd })
+      const r = await fetch(`/api/resume-center/import`, { method: 'POST', body: fd })
       const d = await r.json()
       if (!d.success) {
         onToast(d.error?.message || '导入失败')

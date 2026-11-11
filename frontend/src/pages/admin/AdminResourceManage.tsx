@@ -3,8 +3,6 @@ import { Trash2, Loader2, X, Search, ChevronLeft, ChevronRight, BookOpen, Plus, 
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── 管理员 token 注入 ───
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 interface ResourceItem {
   id: number
@@ -52,7 +50,7 @@ export default function AdminResourceManage() {
       params.set('page', String(p)); params.set('size', String(pageSize))
       if (kw) params.set('keyword', kw)
       if (skill) params.set('skill', skill)
-      const r = await fetch(withToken(`/api/admin/resources?${params}`))
+      const r = await fetch(`/api/admin/resources?${params}`)
       const d = await r.json()
       if (d.success) { setResources(d.data.list); setTotal(d.data.total) }
       else setError(d.error?.message || '加载失败')
@@ -62,7 +60,7 @@ export default function AdminResourceManage() {
 
   const loadSkills = async () => {
     try {
-      const r = await fetch(withToken('/api/admin/resources/skills'))
+      const r = await fetch('/api/admin/resources/skills')
       const d = await r.json()
       if (d.success) setSkillList(d.data)
     } catch { /* ignore */ }
@@ -98,7 +96,7 @@ export default function AdminResourceManage() {
     try {
       const url = editId ? `/api/admin/resources/${editId}` : '/api/admin/resources'
       const method = editId ? 'PUT' : 'POST'
-      const r = await fetch(withToken(url), { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const d = await r.json()
       if (d.success) { showToast(d.message); setFormOpen(false); load(); loadSkills() }
       else showToast(d.error?.message || '操作失败')
@@ -110,7 +108,7 @@ export default function AdminResourceManage() {
   const submitDelete = async () => {
     if (!deleteTarget) return
     try {
-      const r = await fetch(withToken(`/api/admin/resources/${deleteTarget.id}`), { method: 'DELETE' })
+      const r = await fetch(`/api/admin/resources/${deleteTarget.id}`, { method: 'DELETE' })
       const d = await r.json()
       if (d.success) {
         showToast(d.message || '已删除'); setDeleteTarget(null)

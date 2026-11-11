@@ -36,7 +36,7 @@ export default function JobMatch() {
   useEffect(() => {
     const token = localStorage.getItem('xingtu_token') || ''
     if (!token) return
-    fetch(`/api/auth/profile?token=${token}`)
+    fetch(`/api/auth/profile`)
       .then(r => r.json())
       .then(d => {
         const raw = d?.data?.skills
@@ -103,7 +103,7 @@ export default function JobMatch() {
     analyzingRef.current = true
     setError('')
     try {
-      const r = await fetch(`/api/match/recommend?n=10&token=${token}`, {
+      const r = await fetch(`/api/match/recommend?n=10`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // 只传结构化技能列表，不再拼接「熟练掌握 X、Y」的假简历文本

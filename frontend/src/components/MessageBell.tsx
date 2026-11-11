@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, X, MessageSquare, Loader2, ChevronRight } from 'lucide-react'
 import ChatDialog from './ChatDialog'
-import { withToken } from '../lib/authFetch'
 
 // 求职者 ID:登录时由 auth 接口写入 localStorage
 const getSeekerId = (): number | null => {
@@ -45,7 +44,7 @@ export default function MessageBell() {
   const refreshUnread = useCallback(async () => {
     if (!seekerId) return
     try {
-      const r = await fetch(withToken('/api/jobseeker/unread-total'))
+      const r = await fetch('/api/jobseeker/unread-total')
       const d = await r.json()
       if (d.success) setUnread(d.data.unread_total || 0)
     } catch { /* ignore */ }
@@ -67,7 +66,7 @@ export default function MessageBell() {
     if (!seekerId) return
     setLoading(true)
     try {
-      const r = await fetch(withToken('/api/jobseeker/conversations?size=100'))
+      const r = await fetch('/api/jobseeker/conversations?size=100')
       const d = await r.json()
       if (d.success && d.data) {
         setConversations(d.data.conversations || [])

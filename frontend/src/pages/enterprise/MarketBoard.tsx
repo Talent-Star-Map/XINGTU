@@ -427,7 +427,7 @@ export default function MarketBoard() {
   const benchmarkReq = useRef(0)
 
   const queryString = useMemo(() => {
-    const params = new URLSearchParams({ token })
+    const params = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
     return params.toString()
   }, [filters, token])
@@ -468,7 +468,7 @@ export default function MarketBoard() {
     const id = ++benchmarkReq.current
     setLoadingBenchmark(true)
     try {
-      const r = await fetch(`/api/enterprise/data-board/benchmark?token=${encodeURIComponent(token)}`)
+      const r = await fetch(`/api/enterprise/data-board/benchmark`)
       const json = await r.json()
       if (!json.success) throw new Error(json.error?.message || json.message || '加载失败')
       if (id === benchmarkReq.current) setBenchmark(json.data)
@@ -1307,7 +1307,7 @@ export default function MarketBoard() {
         </button>
       )}
       <JobDrawer open={!!drawer} onClose={() => setDrawer(null)}
-        title={drawer?.title || ''} subtitle={drawer?.subtitle} query={drawer?.query || {}} token={token} />
+        title={drawer?.title || ''} subtitle={drawer?.subtitle} query={drawer?.query || {}} />
       <DataNote open={noteOpen} onClose={() => setNoteOpen(false)} overview={overview} />
     </div>
   )

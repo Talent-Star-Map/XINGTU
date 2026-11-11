@@ -3,8 +3,6 @@ import { Shield, CheckCircle, AlertTriangle, TrendingUp, Loader2, Crosshair, Cop
 import ReviewModule from '../../components/admin/ReviewModule'
 
 // 拼接管理员 token 到质检接口 URL（质检 API 已加管理员鉴权，必须携带 token）
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 export default function QualityDashboard() {
   const [report, setReport] = useState<any>(null)
@@ -19,7 +17,7 @@ export default function QualityDashboard() {
 
   const loadReport = () => {
     setLoading(true)
-    fetch(withToken('/api/quality/report')).then(r => r.json()).then(d => {
+    fetch('/api/quality/report').then(r => r.json()).then(d => {
       if (d.success) setReport(d.data)
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -27,7 +25,7 @@ export default function QualityDashboard() {
 
   const refreshPanels = async () => {
     setPanelLoading(true)
-    const r = await fetch(withToken('/api/quality/report'))
+    const r = await fetch('/api/quality/report')
     const d = await r.json()
     if (d.success) setReport(d.data)
     setPanelLoading(false)
@@ -42,7 +40,7 @@ export default function QualityDashboard() {
     else if (type === 'match') url = '/api/quality/match-test'
     else if (type === 'resume') url = '/api/quality/resume-test'
 
-    const r = await fetch(withToken(url))
+    const r = await fetch(url)
     const d = await r.json()
     if (d.success) {
       if (type === 'jd') setJdResult(d.data)

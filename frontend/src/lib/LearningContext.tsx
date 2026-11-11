@@ -49,9 +49,9 @@ async function uploadLocalDiagnoses(token: string) {
       continue
     }
     try {
-      const response = await fetch(`/api/learning/history?token=${token}`, {
+      const response = await fetch('/api/learning/history', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       })
       const result = await response.json()
@@ -136,11 +136,11 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
         return result.data
       }
       const [marks, profile, resumes] = await Promise.all([
-        read(`/api/learning/skills?token=${t}`), read(`/api/auth/profile?token=${t}`),
-        read(`/api/resume-center/list?brief=1&token=${t}`),
+        read('/api/learning/skills'), read('/api/auth/profile'),
+        read('/api/resume-center/list?brief=1'),
       ])
       const latest = latestResume(resumes as { id: number; updated_at?: string; created_at?: string }[])
-      const resume = latest ? await read(`/api/resume-center/${latest.id}?token=${t}`) : null
+      const resume = latest ? await read(`/api/resume-center/${latest.id}`) : null
       if (request !== skillsRequest.current || t !== getToken()) return
       const groups = resolveUserSkills(profile.skills, resume?.sections || [], marks)
       setSkillCategories(groups)
@@ -159,7 +159,7 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
     if (!t) return
     const willMaster = !Array.from(masteredSkills).some(s => s.toLocaleLowerCase() === skill.trim().toLocaleLowerCase())
     try {
-      const response = await fetch(`/api/learning/skills?token=${t}`, {
+      const response = await fetch('/api/learning/skills', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skill_name: skill, job_id: null, mastered: willMaster }),
@@ -179,9 +179,10 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
         return
       }
       await uploadLocalDiagnoses(t)
-      const r = await fetch(`/api/learning/history?token=${t}&limit=20`)
+      if (t !== getToken()) return
+      const r = await fetch('/api/learning/history?limit=20')
       const d = await r.json()
-      if (r.ok && d.success && Array.isArray(d.data)) setDiagnosisHistory(d.data)
+      if (t === getToken() && r.ok && d.success && Array.isArray(d.data)) setDiagnosisHistory(d.data)
     }).catch(() => { /* 保留上一次成功读到的记录 */ })
     historyChain = run
     await run
@@ -190,7 +191,7 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
   const addDiagnosis = useCallback(async (record: Omit<DiagnosisRecord, 'id' | 'created_at'>) => {
     const t = getToken()
     if (!t) return
-    const response = await fetch(`/api/learning/history?token=${t}`, {
+    const response = await fetch('/api/learning/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record),
@@ -205,7 +206,7 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
     const t = getToken()
     if (!t) return
     try {
-      const q = jobId ? `?token=${t}&job_id=${jobId}` : `?token=${t}`
+      const q = jobId ? `?job_id=${jobId}` : ''
       const r = await fetch(`/api/learning/progress${q}`)
       const d = await r.json()
       if (d.success) setLearningProgress(d.data)
@@ -216,7 +217,7 @@ export function LearningProvider({ children, refreshKey }: { children: ReactNode
     const t = getToken()
     if (!t) return
     try {
-      await fetch(`/api/learning/progress?token=${t}`, {
+      await fetch('/api/learning/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skill_name: skill, job_id: jobId, status, study_minutes: mins }),

@@ -1,14 +1,4 @@
-/** 统一的带 token 请求工具
- *
- * 企业端/求职端接口现在都从 token 取身份，不再接受前端传 user id。
- * 所有私有接口调用都要经过这里拼 `?token=`，避免各处手写漏掉。
- */
-export const getToken = (): string => localStorage.getItem('xingtu_token') || ''
-
-export const withToken = (url: string): string => {
-  const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}token=${encodeURIComponent(getToken())}`
-}
+const getToken = (): string => localStorage.getItem('xingtu_token') || ''
 
 /** Attach identity only to this application's API, never external services. */
 export function createAuthenticatedFetch(fetcher: typeof fetch, origin: string, readToken = getToken): typeof fetch {
@@ -19,7 +9,7 @@ export function createAuthenticatedFetch(fetcher: typeof fetch, origin: string, 
       || (method === 'GET' && (url.pathname === '/api/health'
         || /^\/api\/resume-center\/share\/[a-f0-9]{16}\/?$/.test(url.pathname)
         || /^\/api\/resume-center\/print\/[A-Za-z0-9_-]{32,128}\/?$/.test(url.pathname)))
-    if (url.origin !== origin || !url.pathname.startsWith('/api/') || publicPath || url.searchParams.has('token')) {
+    if (url.origin !== origin || !url.pathname.startsWith('/api/') || publicPath) {
       return fetcher(input, init)
     }
     const token = readToken()
@@ -29,7 +19,8 @@ export function createAuthenticatedFetch(fetcher: typeof fetch, origin: string, 
     const response = await fetcher(input, { ...init, headers })
     // token 失效时必须可见地退回登录页：只让请求失败会让页面显示空数据，
     // 用户以为“没有消息”，实际是掉线。
-    if (response.status === 401 && typeof window !== 'undefined') {
+    if (response.status === 401 && typeof window !== 'undefined'
+      && headers.get('Authorization') === `Bearer ${readToken()}`) {
       window.dispatchEvent(new Event('xingtu:unauthorized'))
     }
     return response

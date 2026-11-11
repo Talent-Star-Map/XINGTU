@@ -7,8 +7,6 @@ import { useEffect, useState } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { ChartCard, TrendChart, RankBars, ColumnChart, FunnelBars } from './AdminCharts'
 
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 interface TrendItem { date: string; jobseeker: number; enterprise: number; job: number; resume: number }
 interface FunnelStep { key: string; label: string; value: number; ratio: number; hint?: string }
@@ -32,9 +30,9 @@ export default function DashboardInsights() {
     setLoading(true); setFailed(false)
     try {
       const [t, j, f] = await Promise.all([
-        fetch(withToken('/api/admin/analytics/trend?days=30')).then(r => r.json()),
-        fetch(withToken('/api/admin/analytics/jobs?top=8')).then(r => r.json()),
-        fetch(withToken('/api/admin/analytics/funnel')).then(r => r.json()),
+        fetch('/api/admin/analytics/trend?days=30').then(r => r.json()),
+        fetch('/api/admin/analytics/jobs?top=8').then(r => r.json()),
+        fetch('/api/admin/analytics/funnel').then(r => r.json()),
       ])
       if (t.success) setTrend(t.data.items || [])
       if (j.success) {

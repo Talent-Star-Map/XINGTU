@@ -5,8 +5,6 @@ import {
   CheckCircle2, AlertCircle, Briefcase, MapPin, Wallet,
 } from 'lucide-react'
 
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 interface JobLite {
   id: number
@@ -97,7 +95,7 @@ export default function MatchAnalysisDialog({ resumeId, resumeTitle, hasSkills =
     if (!selected) { onToast('先选一个目标岗位'); return }
     setAnalyzing(true)
     try {
-      const r = await fetch(withToken(`/api/resume-center/${resumeId}/analyze`), {
+      const r = await fetch(`/api/resume-center/${resumeId}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Send, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { withToken } from '../lib/authFetch'
 
 interface Message {
   id: number
@@ -41,7 +40,7 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
     setLoading(true)
     try {
       // 身份由 token 决定，不再把 jobseeker_id 放进 URL
-      const r = await fetch(withToken(`${apiBase}/messages/${matchRecordId}?size=100`))
+      const r = await fetch(`${apiBase}/messages/${matchRecordId}?size=100`)
       const d = await r.json()
       if (d.success && d.data) {
         setMessages(d.data.messages)
@@ -59,7 +58,7 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
       loadMessages()
       setInput('')
       // 标记已读 — 完成后广播事件，导航栏/列表的红点立即刷新（否则要等轮询）
-      fetch(withToken(`${apiBase}/messages/read?match_record_id=${matchRecordId}`), { method: 'POST' })
+      fetch(`${apiBase}/messages/read?match_record_id=${matchRecordId}`, { method: 'POST' })
         .then(() => window.dispatchEvent(new Event('xingtu:msg-read')))
         .catch(() => {})
     }
@@ -81,7 +80,7 @@ export default function ChatDialog({ open, onClose, matchRecordId, candidate, ro
     setInput('')
     try {
       // 求职端与企业端统一 POST /messages（路径带 {id} 会抢走 /messages/read 的匹配）
-      const url = withToken(`${apiBase}/messages`)
+      const url = `${apiBase}/messages`
       const body = { match_record_id: matchRecordId, content: text }
       const r = await fetch(url, {
         method: 'POST',

@@ -11,8 +11,6 @@ import { templateName as tplName } from '../../lib/resumeTemplateNames'
 import type { EditorResume, EditorSection } from '../../components/resume/editor/types'
 
 // ─── token 注入 ───
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 // ─── 类型 ───
 interface Template { id: number; name: string; template_key: string; category: string; thumbnail: string }
@@ -195,7 +193,7 @@ export default function ResumeCenter() {
     if (!next || next === r.title) { cancelRename(); return }
     cancelRename()
     try {
-      const resp = await fetch(withToken(`/api/resume-center/${r.id}`), {
+      const resp = await fetch(`/api/resume-center/${r.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -226,7 +224,6 @@ export default function ResumeCenter() {
     try {
       const qs = new URLSearchParams({
         format,
-        token: getToken(),
         ...(fitOnePage && { fit_one_page: 'true' }),
       })
       const r = await fetch(`/api/resume-center/${editing.id}/export?${qs}`, {
@@ -272,8 +269,8 @@ export default function ResumeCenter() {
     setLoading(true)
     try {
       const [tr, mr] = await Promise.all([
-        fetch(withToken('/api/resume-center/templates/list')),
-        fetch(withToken('/api/resume-center/list')),
+        fetch('/api/resume-center/templates/list'),
+        fetch('/api/resume-center/list'),
       ])
       const td = await tr.json(); const md = await mr.json()
       if (td.success) setTemplates(td.data)
@@ -301,7 +298,7 @@ export default function ResumeCenter() {
   // ── 新建空简历 ──
   const createResume = async (templateKey: string) => {
     try {
-      const r = await fetch(withToken('/api/resume-center'), {
+      const r = await fetch('/api/resume-center', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: '未命名简历', template_key: templateKey }),
       })
@@ -314,7 +311,7 @@ export default function ResumeCenter() {
       showToast('简历已创建,已初始化 5 个默认模块')
       // 立刻 PUT 把默认区块持久化到数据库(防止用户关闭页面丢失)
       try {
-        await fetch(withToken(`/api/resume-center/${filled.id}`), {
+        await fetch(`/api/resume-center/${filled.id}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: filled.title, template_key: filled.template_key, sections: filled.sections }),
         })
@@ -327,7 +324,7 @@ export default function ResumeCenter() {
   const deleteResume = async (id: number) => {
     if (!confirm('确定删除这份简历吗？')) return
     try {
-      const r = await fetch(withToken(`/api/resume-center/${id}`), { method: 'DELETE' })
+      const r = await fetch(`/api/resume-center/${id}`, { method: 'DELETE' })
       const d = await r.json()
       if (d.success) { showToast('简历已删除'); if (editing?.id === id) setEditing(null); await loadAll() }
       else showToast(d.error?.message || '删除失败')
@@ -337,7 +334,7 @@ export default function ResumeCenter() {
   // ── 复制简历 ──
   const duplicateResume = async (id: number) => {
     try {
-      const r = await fetch(withToken(`/api/resume-center/${id}/duplicate`), { method: 'POST' })
+      const r = await fetch(`/api/resume-center/${id}/duplicate`, { method: 'POST' })
       const d = await r.json()
       if (d.success) { showToast('已复制一份'); await loadAll() }
       else showToast(d.error?.message || '复制失败')
@@ -375,7 +372,7 @@ export default function ResumeCenter() {
         exporting={exporting}
         onSave={async (r) => {
           try {
-            const resp = await fetch(withToken(`/api/resume-center/${r.id}`), {
+            const resp = await fetch(`/api/resume-center/${r.id}`, {
               method: 'PUT', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ title: r.title, template_key: r.template_key, sections: r.sections }),
             })

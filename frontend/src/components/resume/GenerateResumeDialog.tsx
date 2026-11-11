@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, X, Loader2, Wand2, Check, AlertTriangle, User, Briefcase, GraduationCap, Wrench } from 'lucide-react'
-import { withToken } from '../../lib/authFetch'
 
 interface Template { id: number; name: string; template_key: string }
 
@@ -45,7 +44,7 @@ export default function GenerateResumeDialog({ templates, templateName, onClose,
     let alive = true
     ;(async () => {
       try {
-        const r = await fetch(withToken('/api/resume-center/generate-context'))
+        const r = await fetch('/api/resume-center/generate-context')
         const d = await r.json()
         if (!alive) return
         if (d.success) {
@@ -85,7 +84,7 @@ export default function GenerateResumeDialog({ templates, templateName, onClose,
     if (!form.job_title.trim()) { onToast('请填写目标岗位'); return }
     setGenerating(true)
     try {
-      const r = await fetch(withToken('/api/resume-center/generate'), {
+      const r = await fetch('/api/resume-center/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           job_title: form.job_title,

@@ -14,8 +14,6 @@ import {
 } from '../../components/admin/AdminCharts'
 import { templateName } from '../../lib/resumeTemplateNames'
 
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 const SERIES = [
   { key: 'jobseeker', name: '求职者', color: '#3b82f6' },
@@ -85,11 +83,11 @@ export default function AdminDataBoard({ onNav }: Props) {
     setLoading(true); setError('')
     try {
       const [o, t, j, r, f] = await Promise.all([
-        fetch(withToken('/api/admin/analytics/overview')).then(x => x.json()),
-        fetch(withToken(`/api/admin/analytics/trend?days=${days}`)).then(x => x.json()),
-        fetch(withToken('/api/admin/analytics/jobs?top=10')).then(x => x.json()),
-        fetch(withToken('/api/admin/analytics/resumes')).then(x => x.json()),
-        fetch(withToken('/api/admin/analytics/funnel')).then(x => x.json()),
+        fetch('/api/admin/analytics/overview').then(x => x.json()),
+        fetch(`/api/admin/analytics/trend?days=${days}`).then(x => x.json()),
+        fetch('/api/admin/analytics/jobs?top=10').then(x => x.json()),
+        fetch('/api/admin/analytics/resumes').then(x => x.json()),
+        fetch('/api/admin/analytics/funnel').then(x => x.json()),
       ])
       if (!o.success) throw new Error(o.error?.message || '概览数据加载失败')
       setOverview(o.data)

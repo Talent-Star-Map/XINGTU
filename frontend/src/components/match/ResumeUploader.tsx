@@ -45,7 +45,7 @@ export default function ResumeUploader({
     try {
       const form = new FormData()
       form.append('file', file)
-      const r = await fetch(`/api/auth/resume-parse?token=${token}`, { method: 'POST', body: form })
+      const r = await fetch(`/api/auth/resume-parse`, { method: 'POST', body: form })
       const d = await r.json()
       if (!r.ok || !d.success) {
         throw new Error(d.message || `解析失败 (${r.status})`)

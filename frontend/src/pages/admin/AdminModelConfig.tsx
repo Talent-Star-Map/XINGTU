@@ -3,8 +3,6 @@ import { Loader2, Cpu, Save, RefreshCw, Check, X, Shield, Zap, Eye, EyeOff, Serv
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── 管理员 token 注入 ───
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 // ─── 类型定义 ───
 interface LlmConfigData {
@@ -59,7 +57,7 @@ export default function AdminModelConfig() {
   const load = async () => {
     setLoading(true)
     try {
-      const r = await fetch(withToken('/api/admin/llm-config'))
+      const r = await fetch('/api/admin/llm-config')
       const d = await r.json()
       if (d.success) {
         setConfigs(d.data.configs || {})
@@ -85,7 +83,7 @@ export default function AdminModelConfig() {
         global_enabled: globalEnabled ? '1' : '0',
         mock_mode: '0', // 保存时清理历史模拟开关，不再提供模拟模式。
       }
-      const r = await fetch(withToken('/api/admin/llm-config'), {
+      const r = await fetch('/api/admin/llm-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ configs: payload }),
@@ -101,7 +99,7 @@ export default function AdminModelConfig() {
   const testTier = async (tier: TierKey) => {
     setTestBusy(tier)
     try {
-      const r = await fetch(withToken('/api/admin/llm-config/test'), {
+      const r = await fetch('/api/admin/llm-config/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier }),

@@ -25,22 +25,20 @@ async function postJson<T = any>(url: string, body: any): Promise<T> {
   return j.data
 }
 
-const withToken = (path: string) => `${path}${path.includes('?') ? '&' : '?'}token=${TOKEN()}`
-
 export const kgApi = {
   personalGraph: () => getJson('/api/kg/personal/graph'),
-  overview: () => getJson(withToken('/api/kg/jobs/overview')),
+  overview: () => getJson('/api/kg/jobs/overview'),
   catalog: (includeUnverified = false, techStack = '', level = '') => {
     const p = new URLSearchParams({ include_unverified: String(includeUnverified) })
     if (techStack) p.set('tech_stack', techStack)
     if (level) p.set('level', level)
-    return getJson(withToken(`/api/kg/catalog?${p}`))
+    return getJson(`/api/kg/catalog?${p}`)
   },
-  roleDefinition: (role: string, draft = false) => getJson(withToken(`/api/kg/roles/definition?role=${encodeURIComponent(role)}&draft=${draft}`)),
-  roleDefinitionHistory: (role: string) => getJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`)),
-  roleDefinitionEvidence: (role: string) => getJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/evidence`)),
+  roleDefinition: (role: string, draft = false) => getJson(`/api/kg/roles/definition?role=${encodeURIComponent(role)}&draft=${draft}`),
+  roleDefinitionHistory: (role: string) => getJson(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`),
+  roleDefinitionEvidence: (role: string) => getJson(`/api/kg/admin/roles/${encodeURIComponent(role)}/evidence`),
   saveRoleDefinition: (role: string, fields: Record<string, unknown>, publish: boolean, reviewNote: string) =>
-    postJson(withToken(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`), { fields, publish, review_note: reviewNote }),
+    postJson(`/api/kg/admin/roles/${encodeURIComponent(role)}/versions`, { fields, publish, review_note: reviewNote }),
   graph: (limitJobs = 200, limitSkills = 80, techStack?: string | null, level?: string | null) => {
     const p = new URLSearchParams({
       limit_jobs: String(limitJobs),
@@ -48,24 +46,24 @@ export const kgApi = {
     })
     if (techStack) p.set('tech_stack', techStack)
     if (level) p.set('level', level)
-    return getJson(withToken(`/api/kg/jobs/graph?${p.toString()}`))
+    return getJson(`/api/kg/jobs/graph?${p.toString()}`)
   },
-  jobDetail: (id: number) => getJson(withToken(`/api/kg/jobs/${id}`)),
+  jobDetail: (id: number) => getJson(`/api/kg/jobs/${id}`),
   jobEvolution: (id: number, metric = 'salary_avg', from?: string, to?: string) => {
     const p = new URLSearchParams({ metric })
     if (from) p.set('from', from)
     if (to) p.set('to', to)
-    return getJson(withToken(`/api/kg/jobs/${id}/evolution?${p.toString()}`))
+    return getJson(`/api/kg/jobs/${id}/evolution?${p.toString()}`)
   },
-  jobChanges: (id: number) => getJson(withToken(`/api/kg/jobs/${id}/changes`)),
-  timelineAnchors: (bucket = 'month') => getJson(withToken(`/api/kg/snapshot/timeline?bucket=${bucket}`)),
+  jobChanges: (id: number) => getJson(`/api/kg/jobs/${id}/changes`),
+  timelineAnchors: (bucket = 'month') => getJson(`/api/kg/snapshot/timeline?bucket=${bucket}`),
   snapshotAt: (date: string, limit = 100) =>
-    getJson(withToken(`/api/kg/snapshot/at?date=${date}&limit=${limit}`)),
+    getJson(`/api/kg/snapshot/at?date=${date}&limit=${limit}`),
   semanticSearch: (query: string, topK = 20, asOf?: string) =>
-    postJson(withToken('/api/kg/semantic-search'), { query, top_k: topK, as_of: asOf }),
-  personalRecommend: () => getJson(withToken('/api/kg/personal/recommend')),
-  personalGap: (jobId: number) => getJson(withToken(`/api/kg/personal/gap?job_id=${jobId}`)),
-  chatTools: () => getJson(withToken('/api/kg/chat/tools')),
+    postJson('/api/kg/semantic-search', { query, top_k: topK, as_of: asOf }),
+  personalRecommend: () => getJson('/api/kg/personal/recommend'),
+  personalGap: (jobId: number) => getJson(`/api/kg/personal/gap?job_id=${jobId}`),
+  chatTools: () => getJson('/api/kg/chat/tools'),
 }
 
 export type KgEvent =

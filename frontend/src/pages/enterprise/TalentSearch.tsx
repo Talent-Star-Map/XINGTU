@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ChatDialog from '../../components/ChatDialog'
 import CompareStudio, { compareColor as getCompareColor } from '../../components/enterprise/CompareStudio'
 import { EPNav } from '../../lib/NavContext'
-import { withToken } from '../../lib/authFetch'
 
 // 候选人展开行的五维进度条配置(雷达区已迁移至 CompareStudio)
 const DIMENSION_BARS = [
@@ -364,7 +363,7 @@ export default function TalentSearch() {
       params.set('page', '1')
       params.set('size', '20')
 
-      const r = await fetch(withToken(`/api/enterprise/candidates?${params.toString()}`))
+      const r = await fetch(`/api/enterprise/candidates?${params.toString()}`)
       const d: ApiResponse = await r.json()
       if (d.success && d.data) {
         setJobs(d.data.jobs)
@@ -429,7 +428,7 @@ export default function TalentSearch() {
     setMatchInfo('')
     setError('')
     try {
-      const r = await fetch(withToken('/api/enterprise/run-match'), { method: 'POST' })
+      const r = await fetch('/api/enterprise/run-match', { method: 'POST' })
       const d = await r.json()
       if (d.success) {
         const info = d.data || {}
@@ -456,7 +455,7 @@ export default function TalentSearch() {
     setDeepCompareData(null)
     setDeepCompareError('')
     try {
-      const r = await fetch(withToken('/api/enterprise/candidates/compare'), {
+      const r = await fetch('/api/enterprise/candidates/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(compareSelected) }),
@@ -483,7 +482,7 @@ export default function TalentSearch() {
     setDeepCompareError('')
     setDeepCompareData(null)
     try {
-      const r = await fetch(withToken('/api/enterprise/candidates/deep-compare'), {
+      const r = await fetch('/api/enterprise/candidates/deep-compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(compareSelected) }),

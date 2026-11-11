@@ -28,14 +28,13 @@ interface JobItem {
 }
 
 export default function JobDrawer({
-  open, onClose, title, subtitle, query, token,
+  open, onClose, title, subtitle, query,
 }: {
   open: boolean
   onClose: () => void
   title: string
   subtitle?: string
   query: DrawerQuery
-  token: string
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -51,7 +50,7 @@ export default function JobDrawer({
 
   useEffect(() => {
     if (!open) return
-    const params = new URLSearchParams({ token, limit: '30' })
+    const params = new URLSearchParams({ limit: '30' })
     Object.entries(query).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') params.set(k, String(v))
     })
@@ -69,7 +68,7 @@ export default function JobDrawer({
       .catch(e => { if (!cancelled) setError(String(e?.message || e)) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [open, token, JSON.stringify(query)])
+  }, [open, JSON.stringify(query)])
 
   if (!open) return null
 

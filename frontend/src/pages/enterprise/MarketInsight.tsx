@@ -22,7 +22,6 @@ interface GraphResp {
   trends: { rising: TrendItem[]; declining: TrendItem[] }
 }
 
-const token = () => localStorage.getItem('xingtu_token') || ''
 
 /** 薪资区间条:同技能市场 P25-P75 + 中位线,叠加本岗位区间 */
 function SalaryBand({ job }: { job: MarketNode }) {
@@ -74,7 +73,7 @@ export default function MarketInsight() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/enterprise/market-graph?token=${encodeURIComponent(token())}`)
+    fetch(`/api/enterprise/market-graph`)
       .then((r) => r.json())
       .then((j) => {
         if (!j.success) throw new Error(j.error?.message || j.message || '加载失败')

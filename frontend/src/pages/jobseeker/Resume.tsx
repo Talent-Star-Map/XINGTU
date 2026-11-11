@@ -45,7 +45,7 @@ export default function Resume() {
     if (!token) return
     setHistoryLoading(true)
     setHistoryError('')
-    fetch(`/api/auth/resume-history?token=${token}`).then(r => r.json()).then(d => {
+    fetch(`/api/auth/resume-history`).then(r => r.json()).then(d => {
       if (d.success) setHistory(d.data)
       else setHistoryError('附件列表加载失败，请重试')
       setHistoryLoading(false)
@@ -62,10 +62,9 @@ export default function Resume() {
   const parse = async () => {
     if (!file) return
     setParsing(true); setError(''); setParseResult(null); setParseDone(false)
-    const token = localStorage.getItem('xingtu_token')
     const fd = new FormData(); fd.append('file', file)
     try {
-      const r = await fetch(`/api/auth/resume-parse?token=${token}`, { method: 'POST', body: fd })
+      const r = await fetch(`/api/auth/resume-parse`, { method: 'POST', body: fd })
       const d = await r.json()
       fetchHistory()
       if (d.success) {
@@ -87,7 +86,6 @@ export default function Resume() {
   const fillProfile = async () => {
     if (!parseResult) return
     setFilling(true)
-    const token = localStorage.getItem('xingtu_token')
     const body: Record<string, any> = {}
     if (parseResult.name) body.real_name = parseResult.name
     if (parseResult.phone) body.phone = parseResult.phone
@@ -98,7 +96,7 @@ export default function Resume() {
     if (parseResult.experience) body.experience = parseResult.experience
     if (parseResult.skills.length) body.skills = parseResult.skills.join(', ')
 
-    const r = await fetch(`/api/auth/profile?token=${token}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const r = await fetch(`/api/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const d = await r.json()
     setFilling(false)
     if (d.success) setFilled(true)
@@ -113,9 +111,8 @@ export default function Resume() {
   const reparseHistory = async (path: string) => {
     setFile(null); setParseResult(null); setConfirmed(false); setError('')
     setParsing(true); setParseDone(false)
-    const token = localStorage.getItem('xingtu_token')
     try {
-      const r = await fetch(`/api/auth/resume-reparse?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'POST' })
+      const r = await fetch(`/api/auth/resume-reparse?filename=${encodeURIComponent(path)}`, { method: 'POST' })
       const d = await r.json()
       if (d.success) { setParseResult(d.data); setParseDone(true); fetchHistory() }
       else { setParsing(false); setError(d.message || '重新解析失败') }
@@ -123,9 +120,8 @@ export default function Resume() {
   }
 
   const deleteHistory = async (path: string) => {
-    const token = localStorage.getItem('xingtu_token')
     try {
-      const response = await fetch(`/api/auth/resume-delete?token=${token}&filename=${encodeURIComponent(path)}`, { method: 'DELETE' })
+      const response = await fetch(`/api/auth/resume-delete?filename=${encodeURIComponent(path)}`, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok || !data.success) throw new Error('删除附件失败')
       setHistory(h => h.filter(i => i.path !== path))

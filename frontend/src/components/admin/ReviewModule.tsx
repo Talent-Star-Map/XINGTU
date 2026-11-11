@@ -22,18 +22,15 @@ import {
 // ────────────────────────────────────────────────────────────
 // token 注入(与 QualityDashboard 保持一致)
 // ────────────────────────────────────────────────────────────
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) =>
-  `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 const apiGet = async (path: string) => {
-  const r = await fetch(withToken(path))
+  const r = await fetch(path)
   const d = await r.json()
   if (!d.success) throw new Error(d.message || '请求失败')
   return d.data
 }
 const apiPost = async (path: string, body: any) => {
-  const r = await fetch(withToken(path), {
+  const r = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
@@ -43,7 +40,7 @@ const apiPost = async (path: string, body: any) => {
   return d.data
 }
 const apiPut = async (path: string, body: any) => {
-  const r = await fetch(withToken(path), {
+  const r = await fetch(path, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),

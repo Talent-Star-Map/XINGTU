@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Share2, X, Copy, Loader2, Eye, ShieldOff, Link2, Clock } from 'lucide-react'
 
-const getToken = () => localStorage.getItem('xingtu_token') || ''
-const withToken = (url: string) => `${url}${url.includes('?') ? '&' : '?'}token=${getToken()}`
 
 interface ShareInfo {
   exists: boolean
@@ -36,7 +34,7 @@ export default function ShareResumeDialog({ resumeId, resumeTitle, onClose, onTo
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(withToken(`/api/resume-center/share-info/${resumeId}`))
+      const r = await fetch(`/api/resume-center/share-info/${resumeId}`)
       const d = await r.json()
       if (d.success) setInfo(d.data)
     } catch {
@@ -51,7 +49,7 @@ export default function ShareResumeDialog({ resumeId, resumeTitle, onClose, onTo
   const create = async () => {
     setBusy(true)
     try {
-      const r = await fetch(withToken(`/api/resume-center/share/${resumeId}`), {
+      const r = await fetch(`/api/resume-center/share/${resumeId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expire_days: expireDays }),
@@ -71,7 +69,7 @@ export default function ShareResumeDialog({ resumeId, resumeTitle, onClose, onTo
     if (!confirm('撤销后原链接立即失效，确定吗？')) return
     setBusy(true)
     try {
-      const r = await fetch(withToken(`/api/resume-center/share/${resumeId}`), { method: 'DELETE' })
+      const r = await fetch(`/api/resume-center/share/${resumeId}`, { method: 'DELETE' })
       const d = await r.json()
       if (!d.success) { onToast(d.error?.message || '撤销失败'); return }
       setInfo({ exists: false })
