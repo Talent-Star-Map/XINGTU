@@ -131,7 +131,14 @@ def _get_api_key(tier: LLMTier) -> str:
 
 def _get_model(tier: LLMTier) -> str:
     """获取 tier 的模型名：表 → env → 默认"""
-    return get_config(f'{tier.value}_model', os.getenv('DEEPSEEK_MODEL', _DEFAULT_MODELS[tier]))
+    model = get_config(f'{tier.value}_model', os.getenv('DEEPSEEK_MODEL', _DEFAULT_MODELS[tier]))
+    # DeepSeek's OpenAI-compatible API uses deepseek-chat for the general
+    # conversation model.  Older deployment env files in the team workspace
+    # used the informal alias ``deepseek-flash``; sending that value upstream
+    # makes every interview request fail with a model-not-found response.
+    if model == 'deepseek-flash':
+        return 'deepseek-chat'
+    return model
 
 
 def _get_base_url(tier: LLMTier) -> str:
