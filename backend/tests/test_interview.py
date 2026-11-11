@@ -85,37 +85,40 @@ try:
     raise AssertionError('conversation limit accepted')
 except HTTPException as exc:
     assert exc.status_code == 422
-with patch.dict(os.environ, {'INTERVIEW_TTS_URL': '', 'INTERVIEW_TTS_REF_AUDIO': ''}):
+with patch('services.interview_voice.voice_available', return_value=False):
     assert voice_status(me)['configured'] is False
     try:
         synthesize('你好')
-        raise AssertionError('missing TTS configuration accepted')
+        raise AssertionError('missing dependency accepted')
     except HTTPException as exc:
         assert exc.status_code == 503
-with patch('services.interview_voice.synthesize', return_value=b'RIFF-test-WAVE'):
+with patch('services.interview_voice.synthesize', return_value=b'mp3-audio'):
     response = speech(SpeechRequest(text='你好'), me)
-    assert response.media_type == 'audio/wav' and response.headers['cache-control'] == 'no-store'
-print('PASS: streamed text, sentence boundaries, stream failure, free conversation limits and voice configuration')
+    assert response.media_type == 'audio/mpeg' and response.headers['cache-control'] == 'no-store'
 
-# Exercise actual GPT-SoVITS adapter contract through an in-process HTTP transport.
-import httpx
-wav = b'RIFF' + bytes(4) + b'WAVE' + bytes(32)
-captured = []
-def tts_handler(request):
-    captured.append(json.loads(request.content))
-    return httpx.Response(200, content=wav)
-real_client = httpx.Client
-with patch.dict(os.environ, {'INTERVIEW_TTS_URL': 'http://tts.internal:9880', 'INTERVIEW_TTS_REF_AUDIO': '/voices/authorized.wav'}):
-    with patch('services.interview_voice.httpx.Client', side_effect=lambda **kw: real_client(transport=httpx.MockTransport(tts_handler), **kw)):
-        assert synthesize('请介绍你的项目。') == wav
-    assert captured[0]['ref_audio_path'] == '/voices/authorized.wav' and captured[0]['streaming_mode'] is False
-    with patch('services.interview_voice.httpx.Client', side_effect=lambda **kw: real_client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={'error': 'private path'})), **kw)):
+# Exercise the adapter's stream collection and provider error handling offline.
+import sys
+import types
+class FakeCommunicate:
+    def __init__(self, **kwargs):
+        assert kwargs['voice'] == 'zh-CN-XiaoxiaoNeural'
+    async def stream(self):
+        yield {'type': 'WordBoundary', 'text': 'ignored'}
+        yield {'type': 'audio', 'data': b'first'}
+        yield {'type': 'audio', 'data': b'second'}
+class EmptyCommunicate(FakeCommunicate):
+    async def stream(self):
+        yield {'type': 'WordBoundary'}
+with patch('services.interview_voice.voice_available', return_value=True):
+    with patch.dict(sys.modules, {'edge_tts': types.SimpleNamespace(Communicate=FakeCommunicate)}):
+        assert synthesize('你好') == b'firstsecond'
+    with patch.dict(sys.modules, {'edge_tts': types.SimpleNamespace(Communicate=EmptyCommunicate)}):
         try:
             synthesize('你好')
-            raise AssertionError('non-audio payload accepted')
+            raise AssertionError('empty audio accepted')
         except HTTPException as exc:
-            assert exc.status_code == 502 and 'private path' not in exc.detail
-print('PASS: GPT-SoVITS reference configuration, WAV transport and invalid audio rejection')
+            assert exc.status_code == 502
+print('PASS: Edge voice selection, MP3 response, ordered audio chunks and empty audio rejection')
 
 
 from services import interview_context as ic

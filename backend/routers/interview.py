@@ -89,9 +89,8 @@ class SpeechRequest(BaseModel):
 
 @router.get('/voice/status')
 def voice_status(me: dict = Depends(require_jobseeker)):
-    from services.interview_voice import voice_config
-    base, reference = voice_config()
-    return {'configured': bool(base and reference), 'engine': 'GPT-SoVITS',
+    from services.interview_voice import voice_available, VOICE
+    return {'configured': voice_available(), 'engine': 'edge-tts', 'voice': VOICE,
             'note': '配置状态不代表服务已通过连通性与延迟验收'}
 
 @router.post('/speech')
@@ -99,7 +98,7 @@ def speech(req: SpeechRequest, me: dict = Depends(require_jobseeker)):
     from services.interview_voice import synthesize
     started = time.perf_counter()
     audio = synthesize(req.text)
-    return Response(audio, media_type='audio/wav', headers={
+    return Response(audio, media_type='audio/mpeg', headers={
         'Cache-Control': 'no-store', 'X-TTS-Milliseconds': str(round((time.perf_counter()-started)*1000))})
 
 class PrepareRequest(BaseModel):

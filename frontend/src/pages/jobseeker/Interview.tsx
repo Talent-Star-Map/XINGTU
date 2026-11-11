@@ -61,7 +61,7 @@ export default function Interview() {
   const [mediaError, setMediaError] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [intro, setIntro] = useState(false)
-  const [voiceEngine, setVoiceEngine] = useState('browser')
+  const [voiceEngine, setVoiceEngine] = useState('edge-tts')
   const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoiceURI, setSelectedVoiceURI] = useState('')
   const [voiceConfigured, setVoiceConfigured] = useState<boolean | null>(null)
@@ -172,7 +172,7 @@ export default function Interview() {
 
   function speak(text: string) {
     stopVoice()
-    if (voiceEngine === 'gpt-sovits') {
+    if (voiceEngine === 'edge-tts') {
       voice.current?.begin()
       setAudioPending(true)
       const chunks = text.match(/[^。！？!?；;\n]{1,100}[。！？!?；;\n]?/g) || [text]
@@ -185,7 +185,7 @@ export default function Interview() {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'zh-CN'; utterance.rate = 0.95
     const selectedVoice = window.speechSynthesis.getVoices().find(v => v.voiceURI === selectedVoiceURI)
-    if (!selectedVoice) { setError('尚未找到可用中文女声，请在声音列表选择并试听，或使用已配置的 GPT-SoVITS 女声。'); return }
+    if (!selectedVoice) { setError('尚未找到可用中文女声，请在声音列表选择并试听，或使用已配置的 Edge 晓晓在线语音 女声。'); return }
     utterance.voice = selectedVoice
     setAudioPending(true)
     utterance.onstart = () => {
@@ -278,7 +278,7 @@ export default function Interview() {
     shouldFollow.current = true
     setStage('session'); setQuestion(''); setFocus('自由交流'); setFirstAudio(null); setFirstToken(null)
     if (avatar.current) { avatar.current.muted = true; avatar.current.loop = true; void avatar.current.play().catch(() => {}) }
-    if (voiceEngine === 'gpt-sovits') { voice.current?.begin(); setAudioPending(true) }
+    if (voiceEngine === 'edge-tts') { voice.current?.begin(); setAudioPending(true) }
     let activeContext = contextId
     let full = '', completed = false, interviewDone = false
     try {
@@ -301,7 +301,7 @@ export default function Interview() {
         if (event.type === 'context') { setMainIndex(event.main_index); setTargetCount(event.target_questions); setFocus(event.focus); interviewDone = event.complete }
         if (event.type === 'error') throw new Error(event.message)
         if (event.type === 'delta') { full += event.text; setQuestion(full) }
-        if (event.type === 'sentence' && voiceEngine === 'gpt-sovits') voice.current?.enqueue(event.text)
+        if (event.type === 'sentence' && voiceEngine === 'edge-tts') voice.current?.enqueue(event.text)
         if (event.type === 'latency') setFirstToken(event.first_token_ms)
         if (event.type === 'done') completed = true
       }
@@ -316,7 +316,7 @@ export default function Interview() {
       if (!completed || !full.trim()) throw new Error('回复未完整生成，请重试。')
       committed = true
       setHistory(nextHistory); setAnswer(''); answerRef.current = ''; interrupted.current = false; setInterim('')
-      if (voiceEngine === 'gpt-sovits') void voice.current?.finish().then(active => { if (active && alive.current) setAudioPending(false) })
+      if (voiceEngine === 'edge-tts') void voice.current?.finish().then(active => { if (active && alive.current) setAudioPending(false) })
       else speak(full)
       if (interviewDone) {
         autoAllowed.current = false; setAutoMic(false)
@@ -367,7 +367,7 @@ export default function Interview() {
     preparingMedia.current = true; setBusy(true)
     autoAllowed.current = true; setAutoMic(true); setNotice('')
     // User gesture unlocks sound; camera prompt happens on this same explicit start action.
-    if (voiceEngine === 'gpt-sovits') voice.current?.unlock()
+    if (voiceEngine === 'edge-tts') voice.current?.unlock()
     if (!stream.current) {
       try {
         const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -391,9 +391,9 @@ export default function Interview() {
       <div className="flex items-center gap-2"><span className="rounded-full border px-3 py-2 text-xs" style={surface}>{stage === 'setup' ? '约 15–25 分钟 · 默认 7 道主问题' : `${mainIndex} / ${targetCount} 道主问题 · ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`}</span><button aria-label="声音设置" onClick={() => setSettingsOpen(v => !v)} className="rounded-full border p-2" style={surface}><Settings2 className="h-4 w-4" /></button></div>
     </header>
     {settingsOpen && <section className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border p-3 text-xs" style={surface}>
-      <label>声音引擎 <select disabled={busy} value={voiceEngine} onChange={e => { stopVoice(); setVoiceEngine(e.target.value) }} className="rounded border bg-transparent p-2"><option value="browser">系统中文女声</option><option value="gpt-sovits">GPT-SoVITS</option></select></label>
+      <label>声音引擎 <select disabled={busy} value={voiceEngine} onChange={e => { stopVoice(); setVoiceEngine(e.target.value) }} className="rounded border bg-transparent p-2"><option value="browser">系统中文女声</option><option value="edge-tts">Edge 晓晓在线语音</option></select></label>
       {voiceEngine === 'browser' && <><select aria-label="中文声音" value={selectedVoiceURI} onChange={e => { stopVoice(); setSelectedVoiceURI(e.target.value) }} className="max-w-xs rounded border bg-transparent p-2"><option value="">请选择女声</option>{systemVoices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}</select><button onClick={() => speak('你好，我们开始今天的模拟面试。')}>试听</button></>}
-      {voiceEngine === 'gpt-sovits' && <span>{voiceConfigured ? '语音服务已配置' : '语音服务尚未配置，可使用系统女声'}</span>}
+      {voiceEngine === 'edge-tts' && <span>{voiceConfigured ? '晓晓在线语音已就绪' : '在线语音未就绪，可使用系统女声'}</span>}
       {firstToken !== null && <span>首字 {firstToken}ms</span>}{firstAudio !== null && <span>首段声音 {firstAudio}ms</span>}
     </section>}
     {(error || notice) && <div role={error ? 'alert' : 'status'} className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs leading-5 text-amber-900"><span>{error || notice}</span><div className="flex gap-3">{error && stage === 'session' && <button disabled={busy} onClick={() => { setError(''); if (answerRef.current.trim()) void advance(); else speak(question) }} className="font-semibold underline">重试</button>}<button onClick={() => { setError(''); setNotice('') }}>关闭</button></div></div>}
