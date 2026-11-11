@@ -3,7 +3,6 @@ import { AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X 
 import { JSNav } from '../../lib/NavContext'
 import JobSelector, { type JobSummary, type JobFilters, type SortKey, sortJobs } from '../../components/match/JobSelector'
 import ResumeUploader from '../../components/match/ResumeUploader'
-import JobComparison from '../../components/visuals/JobComparison'
 
 const PAGE_SIZE = 20
 
@@ -204,7 +203,6 @@ export default function JobMatch() {
         </div>
       )}
 
-      {!loading && <JobComparison jobs={jobs} recommendations={recommendations} onPick={handleDiagnose} />}
       <JobSelector
         jobs={displayJobs}
         recommendations={recommendations}
