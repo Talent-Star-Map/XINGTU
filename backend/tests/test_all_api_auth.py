@@ -178,7 +178,7 @@ class AllAPIAccessTests(unittest.TestCase):
             session.commit()
             uid = user.id
         private = client.get('/api/auth/profile', headers=header('enterprise', uid))
-        public = client.get('/api/company/public/Legacy%20Verify%20Fixture')
+        public = client.get('/api/company/public/Legacy%20Verify%20Fixture', headers=header('enterprise', uid))
         for response in (private, public):
             self.assertEqual(response.status_code, 200, response.text)
             self.assertEqual(response.json()['data']['verified'], 0)
