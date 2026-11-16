@@ -1,6 +1,6 @@
 import os, uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, func, Text, DECIMAL, UniqueConstraint, Index
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, ForeignKey, func, Text, DECIMAL, UniqueConstraint, Index
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT, TINYINT
 
@@ -86,6 +86,18 @@ class Enterprise(Base):
     company_benefits = Column(String(500), default='')
     verified = Column(Integer, default=0)
     city = Column(String(100), default='')
+
+class EnterpriseVerification(Base):
+    __tablename__ = 'enterprise_verifications'
+    enterprise_id = Column(Integer, ForeignKey('enterprises.id', ondelete='CASCADE'), primary_key=True)
+    submission_id = Column(String(32), nullable=False)
+    company_name = Column(String(200), nullable=False)
+    credit_code = Column(String(18), nullable=False)
+    status = Column(String(16), nullable=False)
+    submitted_at = Column(DateTime, nullable=False, default=func.now())
+    reviewed_at = Column(DateTime)
+    reviewer_id = Column(Integer)
+    review_note = Column(String(500))
 
 class Admin(Base):
     """管理员账号表 — 支撑管理员端登录与质检 API 鉴权"""

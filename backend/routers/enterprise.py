@@ -21,6 +21,7 @@ import bisect
 import json
 
 from auth_guard import require_enterprise, require_admin
+from services.enterprise_verification import VerificationSubmission, submit
 from database import get_session, Job, Jobseeker, MatchRecord, Message
 from database import get_neo4j_driver
 from sqlalchemy import func as _func
@@ -36,6 +37,12 @@ from services.match_engine import (
 )
 
 router = APIRouter(prefix='/api/enterprise', tags=['enterprise'])
+
+
+@router.post('/verification')
+def submit_verification(req: VerificationSubmission, ent: dict = Depends(require_enterprise)):
+    with get_session() as session:
+        return {'success': True, 'data': submit(session, ent['user_id'], req.credit_code)}
 
 
 def _err(code: str, message: str, details=None):

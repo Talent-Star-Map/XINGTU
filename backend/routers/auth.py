@@ -10,6 +10,7 @@ from services.resume_attachments import owned_path, cached_data, metadata, remem
 from pathlib import Path
 from pydantic import BaseModel
 from database import create_user, get_user_by_login, create_token, verify_token, get_session, get_user_model_by_role, Jobseeker, Enterprise, VerifyCode
+from services.enterprise_verification import current_verification, verification_data
 import bcrypt, secrets, re, smtplib, uuid
 from email.mime.text import MIMEText
 
@@ -42,7 +43,7 @@ class ProfileUpdate(BaseModel):
     expected_salary: str = ''; target_position: str = ''; experience: str = ''; skills: str = ''; bio: str = ''
     avatar: str = ''; projects: str = ''
     company_name: str = ''; industry: str = ''; company_size: str = ''
-    company_desc: str = ''; company_website: str = ''; company_logo: str = ''; company_benefits: str = ''; verified: int = 0
+    company_desc: str = ''; company_website: str = ''; company_logo: str = ''; company_benefits: str = ''
 
 def send_email(to, code):
     body = f'''<div style="max-width:560px;margin:0 auto;padding:32px;font-family:sans-serif;background:#fff;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:28px;font-weight:800;background:linear-gradient(135deg,#0052D9,#5B21B6);-webkit-background-clip:text;color:transparent">✦ 星图</span></div><p style="font-size:14px;color:#434654">您好！<br>您的验证码为：</p><div style="text-align:center;margin:24px 0"><span style="display:inline-block;font-size:36px;font-weight:800;letter-spacing:8px;padding:12px 32px;background:#f0f4ff;border-radius:12px;color:#0052D9">{code}</span></div><p style="font-size:12px;color:#8a8fa0">星图 · 岗位能力图谱系统</p></div>'''
@@ -119,14 +120,21 @@ def get_profile(token: str = Depends(request_token)):
     session = get_session()
     Model = get_user_model_by_role(payload['role'])
     user = session.query(Model).filter(Model.id == payload['user_id']).first()
-    session.close()
-    if not user: raise HTTPException(404, '用户不存在')
+    try:
+        if not user: raise HTTPException(404, '用户不存在')
+        record = current_verification(session, user) if payload['role'] == 'enterprise' else None
+        verification = verification_data(record)
+    finally:
+        session.close()
     fields = ['id','email','phone','username','role','avatar','real_name','gender','age','education','school','city','target_city','expected_salary','target_position','experience','skills','bio','projects','company_name','industry','company_size','company_desc','company_website','company_logo','company_benefits','verified']
     data = {}
     for f in fields:
         val = getattr(user, f, None)
         data[f] = val if val is not None else ''
     data['role'] = payload['role']
+    if payload['role'] == 'enterprise':
+        data['verified'] = int(verification['status'] == 'approved')
+        data['verification'] = verification
     return {'success': True, 'data': data}
 
 @router.put('/profile')
@@ -135,8 +143,10 @@ def update_profile(req: ProfileUpdate, token: str = Depends(request_token)):
     except ValueError as e: raise HTTPException(401, str(e))
     session = get_session()
     Model = get_user_model_by_role(payload['role'])
-    user = session.query(Model).filter(Model.id == payload['user_id']).first()
-    if not user: raise HTTPException(404, '用户不存在')
+    user = session.query(Model).filter(Model.id == payload['user_id']).with_for_update().first()
+    if not user:
+        session.close()
+        raise HTTPException(404, '用户不存在')
     common = {'phone', 'city', 'avatar'}
     seeker_fields = {'real_name', 'gender', 'age', 'education', 'school', 'target_city',
                      'expected_salary', 'target_position', 'experience', 'skills', 'bio', 'projects'}
@@ -144,8 +154,13 @@ def update_profile(req: ProfileUpdate, token: str = Depends(request_token)):
                          'company_website', 'company_logo', 'company_benefits'}
     allowed = common | (seeker_fields if payload['role'] == 'jobseeker' else
                         enterprise_fields if payload['role'] == 'enterprise' else set())
-    # Enterprise verification is managed by administrators, never by profile edits.
-    for k, v in req.model_dump(exclude_unset=True).items():
+    # The public profile endpoint only updates self-reported fields.
+    changes = req.model_dump(exclude_unset=True)
+    if payload['role'] == 'enterprise' and 'company_name' in changes and changes['company_name'] != user.company_name:
+        record = current_verification(session, user)
+        if record:
+            record.status = 'revoked'
+    for k, v in changes.items():
         if k in allowed and hasattr(user, k):
             setattr(user, k, v)
     session.commit(); session.close()

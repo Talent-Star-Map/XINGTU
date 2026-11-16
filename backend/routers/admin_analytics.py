@@ -23,7 +23,7 @@ from sqlalchemy import text
 
 from database import (
     get_session, Jobseeker, Enterprise, Job, MatchRecord, SkillResource,
-    Resume, ResumeSection, ResumeTemplate, ResumeShare, CrawledJob,
+    Resume, ResumeSection, ResumeTemplate, ResumeShare, CrawledJob, EnterpriseVerification,
 )
 from routers.admin import require_admin
 from time_util import to_local
@@ -105,7 +105,10 @@ def overview():
             },
             'enterprises': {
                 'total': session.query(Enterprise).count(),
-                'verified': session.query(Enterprise).filter(Enterprise.verified == 1).count(),
+                'verified': session.query(EnterpriseVerification).join(Enterprise).filter(
+                    EnterpriseVerification.status == 'approved',
+                    EnterpriseVerification.company_name == Enterprise.company_name,
+                ).count(),
                 'today': _count_since(session, Enterprise, day0),
                 'month': _count_since(session, Enterprise, d30),
             },

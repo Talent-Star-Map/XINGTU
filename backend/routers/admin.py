@@ -32,6 +32,7 @@ from services.llm import (
 
 # ─── 管理员鉴权依赖 — 所有 admin 接口强制校验 token + role=admin ──────────────
 from auth_guard import require_admin
+from services.enterprise_verification import VerificationDecision, current_verification, review, verification_data
 
 
 
@@ -244,7 +245,7 @@ class EnterpriseCreateReq(BaseModel):
     company_name: str = Field('', description='企业名称（可选，可后续补充）')
 
 
-def _enterprise_to_dict(ent: Enterprise) -> dict:
+def _enterprise_to_dict(ent: Enterprise, verification=None) -> dict:
     """企业 ORM → 前端字典"""
     return {
         'id': ent.id,
@@ -254,7 +255,8 @@ def _enterprise_to_dict(ent: Enterprise) -> dict:
         'company_name': ent.company_name or '',
         'industry': ent.industry or '',
         'city': ent.city or '',
-        'verified': ent.verified or 0,
+        'verified': int(verification is not None and verification.status == 'approved'),
+        'verification': verification_data(verification, reviewer=True),
         'created_at': ent.created_at.strftime('%Y-%m-%d %H:%M') if ent.created_at else '',
     }
 
@@ -282,7 +284,7 @@ def list_enterprises(
         return {
             'success': True,
             'data': {
-                'list': [_enterprise_to_dict(ent) for ent in rows],
+                'list': [_enterprise_to_dict(ent, current_verification(session, ent)) for ent in rows],
                 'total': total, 'page': page, 'size': size,
             },
             'message': 'ok',
@@ -291,6 +293,12 @@ def list_enterprises(
         return _err('INTERNAL_ERROR', f'查询企业列表失败: {e}')
     finally:
         session.close()
+
+
+@router.post('/enterprises/{ent_id}/verification')
+def review_enterprise(ent_id: int, req: VerificationDecision, admin: dict = Depends(require_admin)):
+    with get_session() as session:
+        return {'success': True, 'data': review(session, ent_id, admin['user_id'], req)}
 
 
 @router.post('/enterprises')

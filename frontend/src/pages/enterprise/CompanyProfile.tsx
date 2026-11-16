@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   Building, Loader2, Edit3, Mail, Globe, Users, Tag, MapPin,
-  Save, CheckCircle, AlertCircle, X, Camera, Award, ExternalLink, ShieldCheck, ShieldOff,
+  Save, CheckCircle, AlertCircle, X, Camera, ExternalLink, ShieldCheck, ShieldOff,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EPNav } from '../../lib/NavContext'
@@ -15,13 +15,6 @@ const requiredFields = ['company_name', 'industry', 'company_size', 'company_des
 const industryOpts = ['人工智能', '互联网/电商', '企业服务/SaaS', '金融科技', '教育培训', '医疗健康', '硬件/芯片', '游戏', '汽车/出行', '其他']
 const sizeOpts = ['少于15人', '15-50人', '50-150人', '150-500人', '500-2000人', '2000人以上']
 
-// 认证等级 — 单一 accent 色表达状态
-const verifyInfo = [
-  { level: 0, icon: ShieldOff, label: '未认证', desc: '完善企业信息后可申请官网认证' },
-  { level: 1, icon: ShieldCheck, label: '官网已验证', desc: '已通过企业官网真实性核验' },
-  { level: 2, icon: Award, label: '三方认证', desc: '已通过企查查/天眼查工商数据认证' },
-]
-
 export default function CompanyProfile() {
   const { setPage } = EPNav.use()
   const [p, setP] = useState<any>(null)
@@ -34,6 +27,9 @@ export default function CompanyProfile() {
   const [errors, setErrors] = useState<string[]>([])
   const logoRef = useRef<HTMLInputElement>(null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [creditCode, setCreditCode] = useState('')
+  const [submittingVerification, setSubmittingVerification] = useState(false)
+  const [verificationError, setVerificationError] = useState('')
 
   useEffect(() => { fetchProfile() }, [])
 
@@ -64,25 +60,6 @@ export default function CompanyProfile() {
   }
 
   const h = (k: string, v: string) => setForm((prev: any) => ({ ...prev, [k]: v }))
-
-  const handleVerify = async (level: number) => {
-    if (level === 1) {
-      const site = p.company_website?.trim()
-      if (!site) { alert('请先在编辑企业信息中填写公司官网'); return }
-      await fetch(`/api/auth/profile`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: 1 })
-      })
-      fetchProfile()
-    } else if (level === 2) {
-      if (p.verified < 1) { alert('请先完成官网验证'); return }
-      await fetch(`/api/auth/profile`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: 2 })
-      })
-      fetchProfile()
-    }
-  }
 
   const save = async () => {
     const missing = requiredFields.filter(k => !form[k]?.trim())
@@ -117,6 +94,28 @@ export default function CompanyProfile() {
     setLogoUploading(false)
   }
 
+  const submitVerification = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmittingVerification(true)
+    setVerificationError('')
+    try {
+      const response = await fetch('/api/enterprise/verification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credit_code: creditCode.trim() }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(typeof result.detail === 'string' ? result.detail : '提交失败，请重试')
+      }
+      setP((previous: any) => ({ ...previous, verification: result.data, verified: Number(result.data.status === 'approved') }))
+      setCreditCode('')
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : '提交失败，请重试')
+    } finally {
+      setSubmittingVerification(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-full gap-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
       <Loader2 className="h-5 w-5 animate-spin" />
@@ -125,8 +124,11 @@ export default function CompanyProfile() {
   )
   if (!p) return <div className="text-center py-24 text-base" style={{ color: 'var(--color-on-surface-variant)' }}>请先登录</div>
 
-  const currentVerify = verifyInfo.find(v => v.level === (p.verified || 0)) || verifyInfo[0]
-  const VIcon = currentVerify.icon
+  const verification = p.verification
+  const verificationStatus = verification?.status
+  const VerificationIcon = verificationStatus === 'approved' ? ShieldCheck : ShieldOff
+  const verificationLabel = verificationStatus === 'approved' ? '平台已核验' :
+    verificationStatus === 'pending' ? '待审核' : verificationStatus === 'rejected' ? '未通过' : '未认证'
   const filledCount = requiredFields.filter(k => hasVal(p[k])).length
   const pct = Math.round((filledCount / requiredFields.length) * 100)
   const qichachaUrl = p.company_name ? `https://www.qcc.com/web/search?key=${encodeURIComponent(p.company_name)}` : '#'
@@ -214,10 +216,10 @@ export default function CompanyProfile() {
               </h2>
               <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg font-medium"
                 style={{
-                  background: p.verified > 0 ? 'var(--color-primary-fixed)' : 'var(--color-surface-container-high)',
-                  color: p.verified > 0 ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
+                  background: 'var(--color-surface-container-high)',
+                  color: 'var(--color-on-surface-variant)'
                 }}>
-                <VIcon className="h-4 w-4" /> {currentVerify.label}
+                <VerificationIcon className="h-4 w-4" /> {verificationLabel}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2.5 mb-4">
@@ -298,38 +300,27 @@ export default function CompanyProfile() {
             {/* 企业认证 */}
             <div>
               <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>企业认证</h3>
-              {/* 当前状态 — 极简展示 */}
-              <div className="flex items-center gap-3.5 mb-6 pb-5 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
-                <VIcon className="h-6 w-6" style={{ color: p.verified > 0 ? 'var(--color-primary)' : 'var(--color-on-surface-variant)' }} />
-                <div>
-                  <p className="text-lg font-medium" style={{ color: 'var(--color-on-surface)' }}>{currentVerify.label}</p>
-                  <p className="text-sm mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>{currentVerify.desc}</p>
-                </div>
-              </div>
-              {/* 认证操作 */}
               <div className="space-y-3">
-                <button
-                  onClick={() => handleVerify(1)}
-                  disabled={p.verified >= 1}
-                  className="flex items-center justify-between w-full px-5 py-3 rounded-md text-base font-medium border disabled:opacity-50 transition-colors hover:bg-[var(--color-surface-container-low)]"
-                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}
-                >
-                  <span className="flex items-center gap-2.5"><Globe className="h-5 w-5" /> 官网认证</span>
-                  {p.verified >= 1
-                    ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-                    : <span style={{ color: 'var(--color-primary)' }}>去认证</span>}
-                </button>
-                <button
-                  onClick={() => handleVerify(2)}
-                  disabled={p.verified >= 2}
-                  className="flex items-center justify-between w-full px-5 py-3 rounded-md text-base font-medium border disabled:opacity-50 transition-colors hover:bg-[var(--color-surface-container-low)]"
-                  style={{ borderColor: 'var(--color-outline-variant)', color: 'var(--color-on-surface)' }}
-                >
-                  <span className="flex items-center gap-2.5"><Award className="h-5 w-5" /> 三方认证</span>
-                  {p.verified >= 2
-                    ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-                    : <span style={{ color: 'var(--color-primary)' }}>去认证</span>}
-                </button>
+                <p className="text-sm" role="status">{verificationLabel}</p>
+                {verificationStatus === 'pending' && <p className="text-sm">已提交 {verification.credit_code}，请等待平台核对工商登记与企业授权。</p>}
+                {verificationStatus === 'approved' && <p className="text-sm">平台已核对工商登记和企业授权。</p>}
+                {verificationStatus === 'rejected' && <p className="text-sm">审核意见：{verification.review_note}</p>}
+                {verificationStatus !== 'pending' && verificationStatus !== 'approved' && (
+                  <form onSubmit={submitVerification} className="space-y-3">
+                    <p className="text-sm">请填写与营业执照一致的企业全称，再提交统一社会信用代码。管理员会通过企业账号联系方式核对授权。</p>
+                    <label className="block text-sm">
+                      统一社会信用代码
+                      <input required maxLength={18} minLength={18} value={creditCode}
+                        onChange={event => setCreditCode(event.target.value.toUpperCase())}
+                        className="mt-1" style={inputStyle} />
+                    </label>
+                    <button type="submit" disabled={!p.company_name?.trim() || submittingVerification}
+                      className="rounded-md border px-4 py-2 text-sm disabled:opacity-50">
+                      {submittingVerification ? '提交中…' : '提交核验'}
+                    </button>
+                    {verificationError && <p role="alert" className="text-sm text-red-600">{verificationError}</p>}
+                  </form>
+                )}
               </div>
               {/* 第三方查询入口 */}
               {p.company_name && (
@@ -337,13 +328,13 @@ export default function CompanyProfile() {
                   <a href={qichachaUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-between w-full px-4 py-2.5 rounded-md text-sm transition-colors hover:bg-[var(--color-surface-container-low)]"
                     style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 企查查</span>
+                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 查询企查查</span>
                     <span>{p.company_name}</span>
                   </a>
                   <a href={tianyanchaUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-between w-full px-4 py-2.5 rounded-md text-sm transition-colors hover:bg-[var(--color-surface-container-low)]"
                     style={{ color: 'var(--color-on-surface-variant)' }}>
-                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 天眼查</span>
+                    <span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> 查询天眼查</span>
                     <span>{p.company_name}</span>
                   </a>
                 </div>

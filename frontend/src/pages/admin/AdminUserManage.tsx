@@ -20,6 +20,14 @@ interface JobseekerItem {
 }
 
 // 企业记录类型
+interface Verification {
+  status: string
+  submission_id?: string
+  company_name?: string
+  credit_code?: string
+  review_note?: string
+}
+
 interface EnterpriseItem {
   id: number
   email: string
@@ -29,6 +37,7 @@ interface EnterpriseItem {
   industry: string
   city: string
   verified: number
+  verification?: Verification
   created_at: string
 }
 
@@ -347,9 +356,7 @@ export default function AdminUserManage({ role }: Props) {
                         <Td>{e.industry || '-'}</Td>
                         <Td>{e.city || '-'}</Td>
                         <Td>
-                          {e.verified
-                            ? <span style={{ color: 'var(--accent-green)' }}>已认证</span>
-                            : <span style={{ color: 'var(--color-on-surface-variant)' }}>未认证</span>}
+                          <EnterpriseReview key={e.verification?.submission_id} enterprise={e} />
                         </Td>
                         <Td>{e.created_at}</Td>
                         <Td className="text-right">
@@ -533,6 +540,86 @@ export default function AdminUserManage({ role }: Props) {
 }
 
 // ─── 表格子组件 ─────────────────────────────────────────────────────────
+function EnterpriseReview({ enterprise }: { enterprise: EnterpriseItem }) {
+  const [open, setOpen] = useState(false)
+  const [updated, setUpdated] = useState<Verification>()
+  const [registrationChecked, setRegistrationChecked] = useState(false)
+  const [authorizationChecked, setAuthorizationChecked] = useState(false)
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const verification = updated ?? enterprise.verification
+  const status = verification?.status
+  const label = status === 'approved' ? '平台已核验' :
+    status === 'pending' ? '审核申请' : status === 'rejected' ? '未通过' : '未认证'
+  if (!verification || (status !== 'pending' && status !== 'approved')) return <span>{label}</span>
+
+  const decide = async (approved: boolean) => {
+    setSaving(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/admin/enterprises/${enterprise.id}/verification`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submission_id: verification.submission_id, approved, note: note.trim(),
+          registration_checked: registrationChecked, authorization_checked: authorizationChecked,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(typeof result.detail === 'string' ? result.detail : '保存审核结果失败')
+      }
+      setUpdated(result.data)
+      setOpen(false)
+      setNote('')
+      setRegistrationChecked(false)
+      setAuthorizationChecked(false)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '保存审核结果失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <>
+    <button type="button" className="text-blue-600 underline" onClick={() => setOpen(true)}>{label}</button>
+    {open && (
+      <Modal title="企业核验" onClose={() => { if (!saving) setOpen(false) }}>
+        <div className="space-y-3 text-sm">
+          <p>{verification.company_name} · {verification.credit_code}</p>
+          <p>申请账号联系方式：{[enterprise.email, enterprise.phone].filter(Boolean).join(' · ') || '未填写'}</p>
+          <a className="text-blue-600 underline" href="https://www.gsxt.gov.cn/" target="_blank" rel="noopener noreferrer">国家企业信用信息公示系统</a>
+          {status === 'pending' && <>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={registrationChecked} onChange={event => setRegistrationChecked(event.target.checked)} />
+              已核对登记名称、信用代码和登记状态
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={authorizationChecked} onChange={event => setAuthorizationChecked(event.target.checked)} />
+              已通过企业公开渠道或授权材料确认申请人有权代表该企业
+            </label>
+          </>}
+          {status === 'approved' && <p>原核验依据：{verification.review_note}</p>}
+          <label className="block">
+            核验依据或驳回原因
+            <textarea value={note} maxLength={500} rows={3} onChange={event => setNote(event.target.value)}
+              className="mt-1 w-full rounded border p-2" placeholder="记录查询来源及授权核对方式，请勿填写证件号码" />
+          </label>
+          {error && <p role="alert" className="text-red-600">{error}</p>}
+          <div className="flex gap-3">
+            <button type="button" disabled={saving || !note.trim()} onClick={() => void decide(false)}
+              className="rounded border px-3 py-2 disabled:opacity-50">{status === 'approved' ? '撤销认证' : '驳回'}</button>
+            {status === 'pending' && (
+              <button type="button" disabled={saving || !note.trim() || !registrationChecked || !authorizationChecked}
+                onClick={() => void decide(true)} className="rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-50">通过核验</button>
+            )}
+          </div>
+        </div>
+      </Modal>
+    )}
+  </>
+}
+
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <th className={`px-4 py-3 text-xs font-semibold whitespace-nowrap ${className}`}

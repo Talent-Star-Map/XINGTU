@@ -170,6 +170,62 @@ class AllAPIAccessTests(unittest.TestCase):
             user=session.query(database.Enterprise).filter_by(id=uid).one()
             self.assertEqual(user.verified,0);self.assertEqual(user.company_desc,'updated')
 
+    def test_legacy_enterprise_flag_is_not_published_as_verified(self):
+        with database.get_session() as session:
+            user = database.Enterprise(email='legacy-verify@example.test', username='legacy-verify',
+                                       password='fixture', company_name='Legacy Verify Fixture', verified=2)
+            session.add(user)
+            session.commit()
+            uid = user.id
+        private = client.get('/api/auth/profile', headers=header('enterprise', uid))
+        public = client.get('/api/company/public/Legacy%20Verify%20Fixture')
+        for response in (private, public):
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()['data']['verified'], 0)
+
+    def test_enterprise_verification_lifecycle(self):
+        from fastapi import HTTPException
+        from routers.admin import review_enterprise
+        from routers.company import get_company_public
+        from routers.enterprise import submit_verification
+        from services.enterprise_verification import VerificationDecision, VerificationSubmission
+
+        with database.get_session() as session:
+            user = database.Enterprise(email='verify-flow@example.test', username='verify-flow',
+                                       password='fixture', company_name='Verification Flow Fixture')
+            session.add(user)
+            session.commit()
+            uid = user.id
+        enterprise = {'user_id': uid}
+        reviewer = {'user_id': 1}
+        valid = VerificationSubmission(credit_code='91110108551385082Q')
+        with self.assertRaises(HTTPException) as invalid:
+            submit_verification(VerificationSubmission(credit_code='911101085513850820'), enterprise)
+        self.assertEqual(invalid.exception.status_code, 422)
+        first = submit_verification(valid, enterprise)['data']
+        self.assertEqual(first['status'], 'pending')
+        self.assertEqual(submit_verification(valid, enterprise)['data'], first)
+        self.assertEqual(get_company_public('Verification Flow Fixture')['data']['verified'], 0)
+        with self.assertRaises(HTTPException) as unchecked:
+            review_enterprise(uid, VerificationDecision(submission_id=first['submission_id'],
+                              approved=True, note='No checks'), reviewer)
+        self.assertEqual(unchecked.exception.status_code, 422)
+        review_enterprise(uid, VerificationDecision(submission_id=first['submission_id'],
+                          approved=False, note='Missing authorization'), reviewer)
+        second = submit_verification(valid, enterprise)['data']
+        self.assertNotEqual(first['submission_id'], second['submission_id'])
+        stale = VerificationDecision(submission_id=first['submission_id'], approved=True,
+                                     registration_checked=True, authorization_checked=True, note='Checked')
+        with self.assertRaises(HTTPException) as conflict:
+            review_enterprise(uid, stale, reviewer)
+        self.assertEqual(conflict.exception.status_code, 409)
+        review_enterprise(uid, stale.model_copy(update={'submission_id': second['submission_id']}), reviewer)
+        self.assertEqual(get_company_public('Verification Flow Fixture')['data']['verified'], 1)
+        token = header('enterprise', uid)['Authorization'].split()[-1]
+        auth.update_profile(auth.ProfileUpdate(company_name='Changed Name'), token)
+        auth.update_profile(auth.ProfileUpdate(company_name='Verification Flow Fixture'), token)
+        self.assertEqual(get_company_public('Verification Flow Fixture')['data']['verified'], 0)
+
     def test_existing_ownership_regressions(self):
         spec=importlib.util.spec_from_file_location('ownership_suite',BACKEND/'tests'/'test_authz.py')
         suite=importlib.util.module_from_spec(spec);spec.loader.exec_module(suite)

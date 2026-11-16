@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Building, Globe, Users, Tag, MapPin, X, Loader2, ShieldCheck, Award, ShieldOff, Star } from 'lucide-react'
+import { Building, Globe, Users, Tag, MapPin, X, Loader2, ShieldCheck, ShieldOff, Star } from 'lucide-react'
 
 interface Props {
   companyName: string
@@ -9,8 +9,7 @@ interface Props {
 // 认证等级信息：使用主题变量，在亮/暗两种主题下自动适配
 const verifyInfo = [
   { level: 0, icon: ShieldOff, label: '未认证', color: 'var(--color-on-surface-variant)', bg: 'var(--color-neutral-dim)' },
-  { level: 1, icon: ShieldCheck, label: '官网已验证', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
-  { level: 2, icon: Award, label: '三方认证', color: 'var(--accent-green)', bg: 'var(--accent-green-dim)' },
+  { level: 1, icon: ShieldCheck, label: '平台已核验', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
 ]
 
 export default function CompanyCard({ companyName, onClose }: Props) {
