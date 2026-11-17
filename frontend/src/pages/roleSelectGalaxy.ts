@@ -16,8 +16,6 @@ type Galaxy = {
   orbitPhase?: number
   orbitSpeed?: number
   orbitY?: number
-  orbitInclination?: number
-  orbitNode?: number
   currentDepth?: number
 }
 
@@ -145,9 +143,8 @@ export function mountRoleSelectGalaxy(
   });
 
   /* ── 周围的小星图：每个都有自己的中心、自转、若干节点 ── */
-  /* ── 卫星星图：绕中央公转，均布在轨道上，景深决定"是星点还是星图" ──
-     20 个卫星，各自有轨道半径、高度、相位、公转速度和倾角。
-     转到远端时被压缩成一颗亮星，转到近端才长成完整的小星图。 */
+  /* 外围星图均匀分布在立体球壳上，保留前后景深与各自的自转。
+     远端仍能看见图的结构，旋转和悬停时四周的星域保持可辨认。 */
   const SATELLITES = [
     {label:'算法工程',   orb:560, y:-150, ph:0.15, sp:0.055, scale:.62, n:7, s:104},
     {label:'产品与设计', orb:700, y:  60, ph:1.05, sp:0.043, scale:.70, n:8, s:116},
@@ -168,7 +165,23 @@ export function mountRoleSelectGalaxy(
     {label:'知识工程',   orb:860, y: -70, ph:4.80, sp:0.037, scale:.46, n:6, s: 88},
     {label:'用户体验',   orb:960, y: 260, ph:5.86, sp:0.026, scale:.44, n:5, s: 82},
     {label:'数据应用',   orb:820, y:-360, ph:2.25, sp:0.039, scale:.42, n:5, s: 82},
-    {label:'系统架构',   orb:940, y: 100, ph:5.00, sp:0.029, scale:.44, n:5, s: 84}
+    {label:'系统架构',   orb:940, y: 100, ph:5.00, sp:0.029, scale:.44, n:5, s: 84},
+    {label:'自然语言',   orb:830, y:0, ph:0.25, sp:0.042, scale:.50, n:6, s:96},
+    {label:'计算机视觉', orb:920, y:0, ph:0.65, sp:0.036, scale:.56, n:7, s:104},
+    {label:'推荐系统',   orb:780, y:0, ph:0.90, sp:0.045, scale:.46, n:6, s:90},
+    {label:'数据可视化', orb:860, y:0, ph:0.35, sp:0.034, scale:.52, n:6, s:98},
+    {label:'移动开发',   orb:940, y:0, ph:0.70, sp:0.041, scale:.48, n:5, s:94},
+    {label:'质量工程',   orb:810, y:0, ph:0.15, sp:0.033, scale:.50, n:6, s:96},
+    {label:'云端运维',   orb:900, y:0, ph:0.55, sp:0.039, scale:.46, n:5, s:92},
+    {label:'商业分析',   orb:850, y:0, ph:0.80, sp:0.044, scale:.54, n:7, s:102},
+    {label:'隐私计算',   orb:930, y:0, ph:0.30, sp:0.031, scale:.48, n:5, s:90},
+    {label:'知识检索',   orb:800, y:0, ph:0.60, sp:0.037, scale:.52, n:6, s:98},
+    {label:'嵌入式开发', orb:880, y:0, ph:0.95, sp:0.043, scale:.46, n:5, s:94},
+    {label:'机器学习',   orb:950, y:0, ph:0.45, sp:0.035, scale:.54, n:7, s:104},
+    {label:'业务建模',   orb:820, y:0, ph:0.10, sp:0.040, scale:.50, n:6, s:96},
+    {label:'交付协作',   orb:910, y:0, ph:0.75, sp:0.032, scale:.48, n:5, s:92},
+    {label:'数据挖掘',   orb:840, y:0, ph:0.50, sp:0.038, scale:.52, n:6, s:100},
+    {label:'智能交互',   orb:960, y:0, ph:0.20, sp:0.046, scale:.50, n:6, s:98}
   ];
 
   SATELLITES.forEach((s, si) => {
@@ -178,12 +191,10 @@ export function mountRoleSelectGalaxy(
       scale: s.scale, far: true, label: s.label,
       spin: .22 + si * .035, drift: 1.2
     });
-    g.orbit = s.orb;
-    g.orbitPhase = si / SATELLITES.length * Math.PI * 2 + (s.ph % 1 - .5) * .12;
+    g.orbit = 620 + (s.orb - 560) * .15;
+    g.orbitPhase = si * Math.PI * (3 - Math.sqrt(5));
     g.orbitSpeed = s.sp;
-    g.orbitY = s.y;
-    g.orbitInclination = [.72, -.58, 1.02, -.86, .36][si % 5];
-    g.orbitNode = si * 2.3999632297;
+    g.orbitY = 1 - 2 * (si + .5) / SATELLITES.length;
 
     /* 中心小核 */
     const hub = add(g, {
@@ -299,26 +310,17 @@ export function mountRoleSelectGalaxy(
 
     let gx = g.cx, gy = g.cy, gz = g.cz, scale = g.scale;
 
-    /* 卫星：绕中央公转。角度变化时，远处的星图会被压小并淡化成星点 */
+    /* 黄金角球面采样：各纬度都有星图，整体公转不会缩成同一个平面。 */
     if (g.orbit) {
-      /* 共享缓慢公转节拍，个体速度只作小幅错位，避免长期聚到同一侧。 */
       const drift = reduced ? 0 : time * .000024 + Math.sin(time * .000006 * ((g.orbitSpeed ?? .04) / .04)) * .07;
       const ang = (g.orbitPhase ?? 0) + drift;
-      const orbitX = Math.cos(ang) * g.orbit;
-      const inclination = g.orbitInclination ?? 0;
-      const ascending = g.orbitNode ?? 0;
-      const depthPhase = ang + ascending;
-      const orbitZ = Math.sin(depthPhase) * g.orbit * .38;
-      const spreadX = Math.max(.5, Math.min(1.45, W / Math.max(1, H) / 1.6));
-      gx = orbitX * spreadX;
-      gy = (g.orbitY ?? 0) * .12 + Math.sin(ang) * g.orbit * (.56 + Math.abs(Math.sin(inclination)) * .10)
-        + Math.sin(time * .00009 + g.phase) * 30;
-      gz = orbitZ;
-
-      /* 景深因子：正面（+z 朝向观察者）为 1，背面为 0 */
-      const depthK = Math.max(0, Math.min(1, (Math.sin(depthPhase) + 1) / 2));
-      /* 背面压成很小的星点，正面长成完整星图 */
-      scale = g.scale * (0.16 + depthK * depthK * 0.95);
+      const height = g.orbitY ?? 0;
+      const latitudeRadius = Math.sqrt(Math.max(0, 1 - height * height));
+      gx = Math.cos(ang) * latitudeRadius * g.orbit;
+      gy = height * g.orbit;
+      gz = Math.sin(ang) * latitudeRadius * g.orbit;
+      const depthK = (Math.sin(ang) * latitudeRadius + 1) / 2;
+      scale = g.scale * (.62 + depthK * .48);
       g.currentDepth = depthK;
       }
 
@@ -334,11 +336,23 @@ export function mountRoleSelectGalaxy(
 
     /* 全局视角旋转（整页共享） */
     const cy = Math.cos(rotY), sy = Math.sin(rotY);
-    const x0 = wx * cy - wz * sy;
+    let x0 = wx * cy - wz * sy;
     const z0 = wx * sy + wz * cy;
     const cx2 = Math.cos(tiltX), sx2 = Math.sin(tiltX);
-    const y0 = wy * cx2 - z0 * sx2;
-    const zr = wy * sx2 + z0 * cx2;
+    let y0 = wy * cx2 - z0 * sx2;
+    let zr = wy * sx2 + z0 * cx2;
+
+    if (g.far) {
+      /* 只让球壳中心适配视口，局部星图保持原比例。
+         先旋转球面、后适配宽高，宽屏和手动旋转时两侧都保留空间覆盖。 */
+      const centerX = gx * cy - gz * sy;
+      const centerZ = gx * sy + gz * cy;
+      const centerY = gy * cx2 - centerZ * sx2;
+      const centerDepth = gy * sx2 + centerZ * cx2;
+      x0 += centerX * (W * .425 * CAM / (focal * 660) - 1);
+      y0 += centerY * (H * .405 * CAM / (focal * 660) - 1);
+      zr += centerDepth * (.23 - 1);
+    }
 
     const d = zr + CAM;
     if (d < 150) return null;
@@ -592,7 +606,7 @@ export function mountRoleSelectGalaxy(
 
       let a = Math.min(.46, near * .5 * w) * (far ? .34 : 1) * (far ? 1 : 1 - authAmount);
       if (far) a *= Math.min(auth.backgroundOpacity(A.p), auth.backgroundOpacity(B.p));
-      a *= (hoverId ? (ha > .1 ? 1 + ha * .9 : .30) : 1);
+      a *= (hoverId ? (ha > .1 ? 1 + ha * .9 : far ? .72 : .30) : 1);
       if (a < .010) return;
 
       ctx.globalAlpha = a * (light ? .62 : 1);
@@ -605,7 +619,7 @@ export function mountRoleSelectGalaxy(
     proj.forEach(({n, p}) => {
       const g = n.gx;
       const ha = hoverAmt[g.id] || 0;
-      const dim = hoverId && hoverId !== g.id ? .40 : 1;
+      const dim = hoverId && hoverId !== g.id ? (g.far ? .82 : .40) : 1;
 
       /* 悬停的星图整体放大 */
       const grow = 1 + ha * .22;
