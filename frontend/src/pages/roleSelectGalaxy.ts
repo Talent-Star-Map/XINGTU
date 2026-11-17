@@ -16,6 +16,8 @@ type Galaxy = {
   orbitPhase?: number
   orbitSpeed?: number
   orbitY?: number
+  orbitInclination?: number
+  orbitNode?: number
   currentDepth?: number
 }
 
@@ -144,7 +146,7 @@ export function mountRoleSelectGalaxy(
 
   /* ── 周围的小星图：每个都有自己的中心、自转、若干节点 ── */
   /* ── 卫星星图：绕中央公转，均布在轨道上，景深决定"是星点还是星图" ──
-     12 个卫星，各自有轨道半径、高度、相位、公转速度。
+     20 个卫星，各自有轨道半径、高度、相位、公转速度和倾角。
      转到远端时被压缩成一颗亮星，转到近端才长成完整的小星图。 */
   const SATELLITES = [
     {label:'算法工程',   orb:560, y:-150, ph:0.15, sp:0.055, scale:.62, n:7, s:104},
@@ -158,7 +160,15 @@ export function mountRoleSelectGalaxy(
     {label:'智能应用',   orb:900, y:  40, ph:2.55, sp:0.030, scale:.54, n:7, s: 94},
     {label:'运营增长',   orb:560, y:-320, ph:3.48, sp:0.064, scale:.44, n:5, s: 82},
     {label:'数据治理',   orb:780, y: 360, ph:4.45, sp:0.036, scale:.48, n:5, s: 88},
-    {label:'交互设计',   orb:660, y:-380, ph:5.60, sp:0.052, scale:.52, n:6, s: 92}
+    {label:'交互设计',   orb:660, y:-380, ph:5.60, sp:0.052, scale:.52, n:6, s: 92},
+    {label:'信息安全',   orb:880, y: 150, ph:0.40, sp:0.035, scale:.45, n:5, s: 84},
+    {label:'数字运营',   orb:940, y:-190, ph:1.50, sp:0.028, scale:.48, n:6, s: 90},
+    {label:'软件研发',   orb:780, y: 340, ph:2.72, sp:0.041, scale:.46, n:5, s: 86},
+    {label:'智能制造',   orb:920, y:-330, ph:3.76, sp:0.032, scale:.42, n:5, s: 80},
+    {label:'知识工程',   orb:860, y: -70, ph:4.80, sp:0.037, scale:.46, n:6, s: 88},
+    {label:'用户体验',   orb:960, y: 260, ph:5.86, sp:0.026, scale:.44, n:5, s: 82},
+    {label:'数据应用',   orb:820, y:-360, ph:2.25, sp:0.039, scale:.42, n:5, s: 82},
+    {label:'系统架构',   orb:940, y: 100, ph:5.00, sp:0.029, scale:.44, n:5, s: 84}
   ];
 
   SATELLITES.forEach((s, si) => {
@@ -169,9 +179,11 @@ export function mountRoleSelectGalaxy(
       spin: .22 + si * .035, drift: 1.2
     });
     g.orbit = s.orb;
-    g.orbitPhase = s.ph;
+    g.orbitPhase = si / SATELLITES.length * Math.PI * 2 + (s.ph % 1 - .5) * .12;
     g.orbitSpeed = s.sp;
     g.orbitY = s.y;
+    g.orbitInclination = [.72, -.58, 1.02, -.86, .36][si % 5];
+    g.orbitNode = si * 2.3999632297;
 
     /* 中心小核 */
     const hub = add(g, {
@@ -289,14 +301,22 @@ export function mountRoleSelectGalaxy(
 
     /* 卫星：绕中央公转。角度变化时，远处的星图会被压小并淡化成星点 */
     if (g.orbit) {
-      /* 公转速度：取 0.018 的量级，约 4~6 分钟绕一圈，肉眼看得出但不催人 */
-      const ang = (g.orbitPhase ?? 0) + (reduced ? 0 : time * .000012 * (g.orbitSpeed ?? 0) * 100);
-      gx = Math.cos(ang) * g.orbit;
-      gz = Math.sin(ang) * g.orbit * .82;
-      gy = (g.orbitY ?? 0) + Math.sin(time * .00009 + g.phase) * 30;
+      /* 共享缓慢公转节拍，个体速度只作小幅错位，避免长期聚到同一侧。 */
+      const drift = reduced ? 0 : time * .000024 + Math.sin(time * .000006 * ((g.orbitSpeed ?? .04) / .04)) * .07;
+      const ang = (g.orbitPhase ?? 0) + drift;
+      const orbitX = Math.cos(ang) * g.orbit;
+      const inclination = g.orbitInclination ?? 0;
+      const ascending = g.orbitNode ?? 0;
+      const depthPhase = ang + ascending;
+      const orbitZ = Math.sin(depthPhase) * g.orbit * .38;
+      const spreadX = Math.max(.5, Math.min(1.45, W / Math.max(1, H) / 1.6));
+      gx = orbitX * spreadX;
+      gy = (g.orbitY ?? 0) * .12 + Math.sin(ang) * g.orbit * (.56 + Math.abs(Math.sin(inclination)) * .10)
+        + Math.sin(time * .00009 + g.phase) * 30;
+      gz = orbitZ;
 
       /* 景深因子：正面（+z 朝向观察者）为 1，背面为 0 */
-      const depthK = Math.max(0, Math.min(1, (Math.sin(ang) + 1) / 2));
+      const depthK = Math.max(0, Math.min(1, (Math.sin(depthPhase) + 1) / 2));
       /* 背面压成很小的星点，正面长成完整星图 */
       scale = g.scale * (0.16 + depthK * depthK * 0.95);
       g.currentDepth = depthK;
@@ -424,7 +444,10 @@ export function mountRoleSelectGalaxy(
   function sectorPill(x: number, y: number, text: string, a: number, light: boolean) {
     ctx.font = '600 13.5px "PingFang SC","Microsoft YaHei",sans-serif';
     const w = ctx.measureText(text).width + 26, h = 30;
-    if (x - w / 2 < 8 || x + w / 2 > W - 8) return;
+    const box = { l: x - w / 2 - 5, r: x + w / 2 + 5, t: y - h / 2 - 5, b: y + h / 2 + 5 };
+    if (box.l < 8 || box.r > W - 8 || box.t < 70 || box.b > H - 8) return;
+    if (occupiedLabels.some(b => box.l < b.r && box.r > b.l && box.t < b.b && box.b > b.t)) return;
+    occupiedLabels.push(box);
     ctx.globalAlpha = a;
     ctx.beginPath(); ctx.roundRect(x - w/2, y - h/2, w, h, 9);
     ctx.fillStyle = light ? 'rgba(255,255,255,.94)' : 'rgba(8,12,22,.86)';
@@ -453,6 +476,8 @@ export function mountRoleSelectGalaxy(
     const vh = H;
     return viewport.dataset.authRoute === 'login' ? 0 : Math.max(0, Math.min(1, (scrollArea.scrollTop - vh * .42) / (vh * 1.55)));
   }
+
+  const readingAreas = Array.from(viewport.querySelectorAll<HTMLElement>('.hero h1, .hero .lede, .cards, .admin, .nav'));
 
   function frame(t: number) {
     if (!W || !H) return;
@@ -606,6 +631,14 @@ export function mountRoleSelectGalaxy(
     const avoid = viewport.dataset.authRoute === 'login' ? null : labelAvoidBox();
     occupiedLabels.length = 0;
     if (avoid) occupiedLabels.push(avoid);
+    if (viewport.dataset.authRoute !== 'login') {
+      const bounds = viewport.getBoundingClientRect();
+      readingAreas.forEach(element => {
+        const r = element.getBoundingClientRect();
+        if (r.bottom < bounds.top || r.top > bounds.bottom) return;
+        occupiedLabels.push({l:r.left-bounds.left-12,r:r.right-bounds.left+12,t:r.top-bounds.top-12,b:r.bottom-bounds.top+12});
+      });
+    }
 
     /* 小星图的分区名称：只在转到近端、且远离中央主图时才显示 */
     galaxies.filter(g => g.far && g.label).forEach(g => {
