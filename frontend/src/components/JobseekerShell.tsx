@@ -1,6 +1,7 @@
+import BrandLogo from './BrandLogo'
 import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Star, Menu, X, Sun, Moon, User, FileText, Activity, BrainCircuit } from 'lucide-react'
+import { LayoutDashboard, Share2, Upload, LineChart, BookOpen, TrendingUp, LogOut, Menu, X, Sun, Moon, User, FileText, Activity, BrainCircuit } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { JSNav, type JSPage, type JSNavParams } from '../lib/NavContext'
 import { LearningProvider } from '../lib/LearningContext'
@@ -122,12 +123,8 @@ export default function JobseekerShell({ onLogout }: Props) {
         <div className="flex items-center justify-between pl-5 pr-6 h-16 max-w-[1440px] mx-auto">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2.5 pl-1">
-              <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-primary-fixed)' }}
-                animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
-                <Star className="h-5.5 w-5.5" style={{ color: 'var(--color-primary)' }} />
-              </motion.div>
-              <span className="text-xl font-extrabold gradient-text">星图</span>
-              <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>求职者</span>
+              <BrandLogo />
+              <span className="brand-role-badge text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>求职者</span>
             </div>
             <nav className="hidden xl:flex items-center gap-1">
               {navItems.map(item => {

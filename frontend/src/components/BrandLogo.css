@@ -1,0 +1,14 @@
+.xingtu-brand{display:inline-block;position:relative;flex:none;width:112px;height:40px;vertical-align:middle}
+.xingtu-brand--mark{width:40px;height:34px}
+.xingtu-brand img{display:block;width:100%;height:100%;object-fit:contain}
+.xingtu-brand .xingtu-brand__dark{display:none}
+[data-theme="dark"] .xingtu-brand .xingtu-brand__light{display:none}
+[data-theme="dark"] .xingtu-brand .xingtu-brand__dark{display:block}
+.role-select .brand .xingtu-brand{width:112px;height:40px}
+.role-select .foot .brand .xingtu-brand{width:96px;height:35px}
+.role-select .auth-emblem .xingtu-brand{width:100%;height:100%}
+.brand-role-badge{white-space:nowrap;flex-shrink:0}
+@media(max-width:520px){
+  .xingtu-brand{width:76px;height:30px}
+  header .xingtu-brand + .brand-role-badge{padding-inline:4px;margin-left:0;font-size:11px}
+}

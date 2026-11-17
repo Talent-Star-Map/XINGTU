@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Star, ArrowLeft, Loader2, Eye, EyeOff, Shield } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import './Login.css'
+import BrandLogo from '../components/BrandLogo'
+import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react'
 
 interface Props { onLogin: (role: 'jobseeker' | 'enterprise' | 'admin') => void }
 
@@ -93,73 +95,63 @@ export default function Login({ onLogin }: Props) {
     }
   }
 
-  // 管理员端主题色：绿色（区别于求职者青色、企业紫色）
-  const accentColor = userRole === 'admin' ? 'var(--accent-green)' : (userRole === 'jobseeker' ? 'var(--color-primary)' : 'var(--accent-purple)')
-  const accentDim = userRole === 'admin' ? 'var(--accent-green-dim)' : (userRole === 'jobseeker' ? 'var(--color-primary-fixed)' : 'var(--accent-purple-dim)')
+  const roleLabel = userRole === 'admin' ? '管理员' : userRole === 'enterprise' ? '企业' : '求职者'
 
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="star-field" />
-      <div className="relative z-10 w-full max-w-sm px-4">
-        <a href="/" className="inline-flex items-center gap-1 text-xs mb-6" style={{color:'var(--color-outline)'}}>
-          <ArrowLeft className="h-3.5 w-3.5" /> 返回
-        </a>
-        <div className="rounded-xl border p-6" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface-container-lowest)'}}>
-          <div className="text-center mb-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3" style={{background:accentDim}}>
-              {userRole === 'admin' ? <Shield className="h-6 w-6" style={{color:accentColor}} /> : <Star className="h-6 w-6" style={{color:accentColor}} />}
-            </div>
-            <h2 className="text-base font-semibold" style={{color:'var(--color-on-surface)'}}>{mode==='login'?'登录':'注册'}星图{userRole==='admin'?' · 管理员':''}</h2>
+    <div className="auth-stage">
+      <div className="auth-wrap">
+        <section className="auth-panel" data-auth-panel data-role={userRole} aria-labelledby="auth-title">
+          <Link to="/" className="auth-back"><ArrowLeft aria-hidden="true" />返回星图</Link>
+          <div className="auth-heading">
+            <div className="auth-emblem" data-auth-emblem aria-hidden="true"><BrandLogo variant="mark" /></div>
+            <h2 id="auth-title">{mode === 'login' ? '登录' : '注册'}星图</h2>
+            <p>{roleLabel}入口</p>
           </div>
-          {/* 管理员端只显示登录 Tab，不显示注册 Tab */}
           {userRole !== 'admin' && (
-            <div className="flex mb-4 rounded-lg border p-0.5" style={{borderColor:'var(--color-outline-variant)'}}>
-              <button onClick={()=>setMode('login')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='login'?'var(--color-primary)':'transparent',color:mode==='login'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>登录</button>
-              <button onClick={()=>setMode('register')} className="flex-1 py-2 text-sm font-semibold rounded-md" style={{background:mode==='register'?'var(--color-primary)':'transparent',color:mode==='register'?'var(--color-on-primary)':'var(--color-on-surface-variant)'}}>注册</button>
+            <div className="auth-tabs" aria-label="账户操作">
+              <button type="button" onClick={() => setMode('login')} aria-pressed={mode === 'login'}>登录</button>
+              <button type="button" onClick={() => setMode('register')} aria-pressed={mode === 'register'}>注册</button>
             </div>
           )}
-          {error&&<div className="text-xs text-center mb-3 py-2 rounded-lg" style={{background:'var(--accent-red-dim)',color:'var(--accent-red)'}}>{error}</div>}
-          <div className="space-y-3.5">
+          {error && <div className="auth-error" role="alert">{error}</div>}
+          <div className="auth-fields">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>邮箱 {userRole !== 'admin' && '/ 手机号'}</label>
-              <input value={account} onChange={e=>setAccount(e.target.value)} onKeyDown={handleKeyDown} placeholder={userRole==='admin'?'请输入管理员邮箱':'请输入邮箱或手机号'}
-                className="w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
+              <label htmlFor="auth-account" className="auth-label">邮箱{userRole !== 'admin' && ' / 手机号'}</label>
+              <div className="auth-input-wrap" data-auth-field="account">
+                <input id="auth-account" value={account} onChange={e => setAccount(e.target.value)} onKeyDown={handleKeyDown}
+                  autoComplete="username" placeholder={userRole === 'admin' ? '请输入管理员邮箱' : '请输入邮箱或手机号'} className="auth-input" />
+              </div>
             </div>
-            {mode==='register'&&userRole!=='admin'&&<div>
-              <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>验证码</label>
-              <div className="flex gap-2">
-                <input value={code} onChange={e=>setCode(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入验证码"
-                  className="flex-1 rounded-lg border px-3.5 py-2.5 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
-                <button onClick={sendCode} disabled={loading||cd>0} className="shrink-0 px-4 rounded-lg text-xs font-semibold disabled:opacity-50" style={{background:'var(--color-primary)',color:'var(--color-on-primary)'}}>
-                  {cd>0?`${cd}s`:'获取'}
-                </button>
+            {mode === 'register' && userRole !== 'admin' && <div>
+              <label htmlFor="auth-code" className="auth-label">验证码</label>
+              <div className="auth-code-row">
+                <div className="auth-input-wrap" data-auth-field="code">
+                  <input id="auth-code" value={code} onChange={e => setCode(e.target.value)} onKeyDown={handleKeyDown}
+                    autoComplete="one-time-code" placeholder="输入验证码" className="auth-input" />
+                </div>
+                <button type="button" onClick={sendCode} disabled={loading || cd > 0} className="auth-code-send">{cd > 0 ? `${cd}s` : '获取'}</button>
               </div>
             </div>}
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{color:'var(--color-on-surface-variant)'}}>密码</label>
-              <div className="relative">
-                <input value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={handleKeyDown} type={showPwd?'text':'password'} placeholder="请输入密码"
-                  className="w-full rounded-lg border px-3.5 py-2.5 pr-10 text-sm outline-none" style={{borderColor:'var(--color-outline-variant)',background:'var(--color-surface)',color:'var(--color-on-surface)'}} />
-                <button type="button" onClick={()=>setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--color-on-surface-variant)'}}>
-                  {showPwd ? <Eye className="h-4.5 w-4.5" /> : <EyeOff className="h-4.5 w-4.5" />}
+              <label htmlFor="auth-password" className="auth-label">密码</label>
+              <div className="auth-input-wrap" data-auth-field="password">
+                <input id="auth-password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
+                  type={showPwd ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                  placeholder="请输入密码" className="auth-input auth-password" />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} className="auth-eye"
+                  aria-label={showPwd ? '隐藏密码' : '显示密码'} aria-pressed={showPwd}>
+                  {showPwd ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
                 </button>
               </div>
             </div>
-            {/* 记住我：勾选后登录成功会把账号密码存 localStorage，下次自动填充 */}
-            {mode==='login' && (
-              <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{color:'var(--color-on-surface-variant)'}}>
-                <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded" style={{accentColor:'var(--color-primary)'}} />
-                记住账号密码（下次自动填充）
-              </label>
-            )}
-            <button onClick={submit} disabled={loading}
-              className="w-full rounded-lg py-2.5 text-sm font-semibold disabled:opacity-60"
-              style={{background:`linear-gradient(135deg, ${accentColor}, var(--accent-purple))`,color:'var(--color-on-primary)'}}>
-              {loading?<Loader2 className="h-4 w-4 mx-auto animate-spin" />:'登 录'}
+            {mode === 'login' && <label className="auth-remember">
+              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />记住账号密码（下次自动填充）
+            </label>}
+            <button type="button" onClick={submit} disabled={loading} className="auth-submit" data-auth-submit>
+              {loading ? <Loader2 className="animate-spin" aria-label="正在处理" /> : mode === 'login' ? '登录' : '注册'}
             </button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )

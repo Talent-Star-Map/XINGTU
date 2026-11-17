@@ -56,8 +56,10 @@ export default function App() {
             <Route path="/share/:token" element={<SharedResume />} />
             {!user ? (
               <>
-                <Route path="/" element={<RoleSelect />} />
-                <Route path="/login/:role" element={<Login onLogin={handleLogin} />} />
+                <Route element={<RoleSelect />}>
+                  <Route path="/" element={null} />
+                  <Route path="/login/:role" element={<Login onLogin={handleLogin} />} />
+                </Route>
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             ) : user.role === 'jobseeker' ? (

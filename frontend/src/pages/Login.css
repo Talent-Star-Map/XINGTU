@@ -1,0 +1,98 @@
+.role-select .scroll-area{transition:opacity .4s ease,filter .4s ease}
+.role-select[data-auth-route="login"] .scroll-area{opacity:0;filter:blur(8px);pointer-events:none}
+.role-select .auth-overlay{
+  position:absolute;inset:0;z-index:5;overflow:auto;overscroll-behavior:contain;
+  opacity:var(--auth-reveal,0);visibility:hidden;pointer-events:none;
+  scroll-padding:88px 0 28px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 66px,#000 88px);
+  mask-image:linear-gradient(to bottom,transparent 66px,#000 88px);
+}
+.role-select[data-auth-route="login"] .auth-overlay{visibility:visible}
+.role-select[data-auth-route="login"][data-auth-ready="true"] .auth-overlay{pointer-events:auto}
+.role-select .auth-stage{
+  min-height:100%;display:flex;align-items:center;justify-content:center;
+  padding:108px 24px 48px;box-sizing:border-box;
+}
+.role-select .auth-wrap{position:relative;width:min(100%,480px)}
+.role-select .auth-back{
+  display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;
+  min-height:36px;color:var(--auth-muted);font-size:13.5px;font-weight:500;
+}
+.role-select .auth-back svg{width:16px;height:16px}
+.role-select .auth-back:hover{color:var(--ink)}
+.role-select .auth-panel{
+  --auth-accent:#B9B4EA;--auth-accent-ink:#131327;
+  --auth-muted:#BAC5D9;--auth-placeholder:#96A5BE;
+  position:relative;padding:22px 40px 36px;border-radius:28px;
+  background:linear-gradient(145deg,rgba(14,20,40,.35),rgba(12,18,36,.14));
+  box-shadow:inset 0 0 0 1px var(--line),0 16px 70px rgba(0,0,0,.055);
+  color:var(--ink);isolation:isolate;
+}
+.role-select .auth-panel[data-role="enterprise"]{--auth-accent:#A8D7D9;--auth-accent-ink:#0B222A}
+.role-select .auth-panel[data-role="admin"]{--auth-accent:#ABCBBE;--auth-accent-ink:#14251F}
+.role-select[data-role-theme="light"] .auth-panel{
+  --auth-accent:#675BA8;--auth-accent-ink:#FFF;
+  --auth-muted:#465369;--auth-placeholder:#64748B;
+  background:linear-gradient(145deg,rgba(255,255,255,.33),rgba(247,250,255,.17));
+}
+.role-select[data-role-theme="light"] .auth-panel[data-role="enterprise"]{--auth-accent:#346F7C;--auth-accent-ink:#FFF}
+.role-select[data-role-theme="light"] .auth-panel[data-role="admin"]{--auth-accent:#3E7462;--auth-accent-ink:#FFF}
+.role-select .auth-heading{text-align:center;margin-bottom:25px}
+.role-select .auth-emblem{height:40px;width:50px;margin:0 auto 12px}
+.role-select .auth-heading h2{font-size:28px;line-height:1.35;font-weight:600;letter-spacing:.02em}
+.role-select .auth-heading p{margin-top:8px;font-size:14px;color:var(--auth-muted);letter-spacing:.03em}
+.role-select .auth-tabs{
+  display:flex;gap:25px;justify-content:center;margin-bottom:25px;border-bottom:1px solid var(--line);
+}
+.role-select .auth-tabs button{
+  position:relative;border:0;background:transparent;color:var(--auth-muted);font-size:15px;
+  font-weight:500;min-height:44px;padding:0 9px 10px;cursor:pointer;
+}
+.role-select .auth-tabs button[aria-pressed="true"]{color:var(--ink);font-weight:600}
+.role-select .auth-tabs button[aria-pressed="true"]::after{
+  content:"";position:absolute;left:4px;right:4px;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--auth-accent),transparent);
+  box-shadow:0 0 7px color-mix(in srgb,var(--auth-accent) 40%,transparent);
+}
+.role-select .auth-fields{display:flex;flex-direction:column;gap:18px}
+.role-select .auth-label{display:block;margin-bottom:8px;font-size:14px;font-weight:500;color:var(--auth-muted)}
+.role-select .auth-input-wrap{position:relative;display:flex;align-items:stretch;min-width:0}
+.role-select .auth-input{
+  width:100%;min-width:0;box-sizing:border-box;height:52px;padding:0 16px;
+  border:1px solid var(--line);border-radius:12px;background:rgba(5,10,24,.28);
+  color:var(--ink);font:inherit;font-size:16px;font-weight:500;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.role-select[data-role-theme="light"] .auth-input{background:rgba(255,255,255,.36)}
+.role-select .auth-input::placeholder{color:var(--auth-placeholder);font-weight:400}
+.role-select .auth-input:focus{border-color:var(--auth-accent);box-shadow:0 0 15px color-mix(in srgb,var(--auth-accent) 12%,transparent)}
+.role-select .auth-password{padding-right:46px}
+.role-select .auth-eye{
+  position:absolute;inset:0 0 0 auto;width:44px;border:0;background:transparent;
+  color:var(--ink2);cursor:pointer;display:grid;place-items:center;
+}
+.role-select .auth-eye svg{width:17px;height:17px}
+.role-select .auth-code-row{display:flex;gap:10px}
+.role-select .auth-code-row .auth-input-wrap{flex:1}
+.role-select .auth-code-send{border:1px solid var(--line2);border-radius:12px;padding:0 16px;background:transparent;color:var(--ink);font-size:14px;font-weight:500;cursor:pointer}
+.role-select .auth-remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--auth-muted);cursor:pointer}
+.role-select .auth-remember input{accent-color:var(--auth-accent);width:14px;height:14px;flex:none}
+.role-select .auth-submit{
+  height:52px;width:100%;border:1px solid color-mix(in srgb,var(--auth-accent) 65%,transparent);
+  border-radius:12px;color:var(--auth-accent-ink);background:var(--auth-accent);
+  font-size:16px;font-weight:600;letter-spacing:.16em;cursor:pointer;
+  box-shadow:0 0 24px color-mix(in srgb,var(--auth-accent) 9%,transparent);
+  transition:filter .2s,box-shadow .2s;
+}
+.role-select .auth-submit:hover{filter:brightness(1.08);box-shadow:0 0 28px color-mix(in srgb,var(--auth-accent) 18%,transparent)}
+.role-select .auth-submit svg{width:18px;height:18px;margin:auto}
+.role-select .auth-panel button:disabled{opacity:.55;cursor:wait}
+.role-select .auth-error{font-size:13px;line-height:1.6;color:var(--accent-red);background:var(--accent-red-dim);border-radius:9px;padding:8px 10px;margin-bottom:18px}
+@media(max-width:520px){
+  .role-select .auth-stage{padding:108px 22px 38px;align-items:safe center}
+  .role-select .auth-panel{padding:18px 23px 28px;border-radius:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .role-select .scroll-area{transition:none}
+  .role-select[data-auth-route="login"] .scroll-area{filter:none}
+}

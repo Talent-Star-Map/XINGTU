@@ -1,6 +1,7 @@
+import BrandLogo from './BrandLogo'
 import { useState, useEffect, useCallback, lazy, Suspense, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
-import { Star, LogOut, Sun, Moon, Menu, X, ChevronRight } from 'lucide-react'
+import { LogOut, Sun, Moon, Menu, X, ChevronRight } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { adminPages, adminGroups, groupForPage, readAdminPage, type AdminPage as Page, type AdminGroup } from '../lib/adminNavigation'
 
@@ -78,12 +79,8 @@ export default function AdminShell({ onLogout }: Props) {
         <div className="flex items-center justify-between px-4 md:px-6 h-16 max-w-[1440px] mx-auto">
           <div className="flex min-w-0 items-center gap-5">
             <div className="flex items-center gap-2.5 pl-1">
-              <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--accent-green-dim)' }}
-                animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 4, repeat: Infinity }}>
-                <Star className="h-5.5 w-5.5" style={{ color: 'var(--accent-green)' }} />
-              </motion.div>
-              <span className="text-xl font-extrabold gradient-text">星图</span>
-              <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>管理员</span>
+              <BrandLogo />
+              <span className="brand-role-badge text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>管理员</span>
             </div>
             <nav aria-label="管理员主导航" className="hidden lg:flex items-center gap-1">
               {adminGroups.map(item => {

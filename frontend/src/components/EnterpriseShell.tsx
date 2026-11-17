@@ -1,6 +1,7 @@
+import BrandLogo from './BrandLogo'
 import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Briefcase, Users, TrendingUp, LogOut, Sun, Moon, User, Menu, X, MessageSquare, Star, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, TrendingUp, LogOut, Sun, Moon, User, Menu, X, MessageSquare, BarChart3 } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 import { EPNav, type EPPage, type EPNavParams } from '../lib/NavContext'
 import './enterprise/ent-theme.css'
@@ -75,12 +76,8 @@ export default function EnterpriseShell({ onLogout }: Props) {
         <div className="flex items-center justify-between h-20 px-6 xl:px-14 mx-auto">
           <div className="flex items-center gap-5 xl:gap-10">
             <div className="flex items-center gap-2.5 pl-1">
-              <motion.div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--color-primary-fixed)' }}
-                animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
-                <Star className="h-5.5 w-5.5" style={{ color: 'var(--color-primary)' }} />
-              </motion.div>
-              <span className="text-xl font-extrabold gradient-text">星图</span>
-              <span className="text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
+              <BrandLogo />
+              <span className="brand-role-badge text-xs px-3 py-0.5 rounded ml-1.5 font-semibold" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>企业版</span>
             </div>
             <nav className="hidden md:flex items-center gap-0.5 xl:gap-1.5">
               {navItems.map(item => {

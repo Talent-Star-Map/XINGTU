@@ -1,0 +1,303 @@
+/* The approved full-screen canvas uses CSS pixels; internal screens retain the global zoom. */
+html[data-auth-layout="true"]{zoom:1}
+.role-select{
+    --ink:#F2F5FB;
+    --closing-surface:#05070D;
+    --ink2:#A2AEC5;
+    --ink3:#66718A;
+    --line:rgba(255,255,255,.10);
+    --line2:rgba(255,255,255,.20);
+    --card:rgba(255,255,255,.05);
+    --card-hover:rgba(255,255,255,.085);
+    --accent:#9BB8FF;
+    --glow:rgba(130,160,255,.26);
+  }
+  .role-select[data-role-theme="light"]{
+    --ink:#0B1019;
+    --closing-surface:#F6F8FC;
+    --ink2:#4C5669;
+    --ink3:#8B95A7;
+    --line:rgba(11,16,25,.10);
+    --line2:rgba(11,16,25,.22);
+    --card:rgba(255,255,255,.70);
+    --card-hover:rgba(255,255,255,.92);
+    --accent:#1B57D1;
+    --glow:rgba(27,87,209,.16);
+  }
+
+  .role-select{
+    color:var(--ink);
+    font-family:"Inter","Manrope","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size:14px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    position:relative;isolation:isolate;width:100%;height:100%;overflow:hidden;
+    background:#05070E;
+    transition:color .5s ease;
+  }
+  /* 银河底色：整页一张，紫蓝在上、青在下 */
+  .role-select::before{
+    content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(1300px 900px at 50% -6%, rgba(96,122,255,.32), transparent 62%),
+      radial-gradient(1100px 800px at 4% 30%, rgba(150,96,236,.22), transparent 64%),
+      radial-gradient(1200px 860px at 98% 56%, rgba(28,158,176,.17), transparent 66%),
+      radial-gradient(1000px 760px at 26% 104%, rgba(102,80,214,.18), transparent 68%),
+      linear-gradient(180deg,#070A16 0%,#080C1B 44%,#05070E 100%);
+  }
+  .role-select[data-role-theme="light"]::before{
+    background:
+      radial-gradient(1300px 900px at 50% -6%, rgba(168,192,246,.62), transparent 62%),
+      radial-gradient(1100px 800px at 4% 30%, rgba(206,182,246,.46), transparent 64%),
+      radial-gradient(1200px 860px at 98% 56%, rgba(164,220,226,.44), transparent 66%),
+      linear-gradient(180deg,#F3F6FD 0%,#EDF1FA 50%,#F7F9FC 100%);
+  }
+
+  .role-select a{color:inherit;text-decoration:none}
+  .role-select :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+
+  /* 唯一的画布，贯穿全页 */
+  .role-select .scene{position:absolute;inset:0;z-index:-1;width:100%;height:100%;display:block;pointer-events:none}
+
+  /* ═══════ 导航 ═══════ */
+  .role-select .nav{
+    position:absolute;inset:0 0 auto 0;height:66px;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(20px,4vw,52px);
+    border-bottom:1px solid transparent;
+    transition:background .35s,border-color .35s,backdrop-filter .35s;
+  }
+  .role-select .nav.scrolled{
+    background:color-mix(in srgb,#05070E 66%,transparent);
+    -webkit-backdrop-filter:blur(16px) saturate(1.2);
+    backdrop-filter:blur(16px) saturate(1.2);
+    border-bottom-color:var(--line);
+  }
+  .role-select[data-role-theme="light"] .nav.scrolled{background:rgba(247,249,253,.74)}
+  .role-select .brand{display:flex;align-items:center;gap:10px;font-size:15.5px;font-weight:600;letter-spacing:.06em}
+  .role-select .brand .mark{width:23px;height:23px;overflow:visible;color:var(--ink)}
+  .role-select .icon-btn{
+    width:36px;height:36px;display:grid;place-items:center;border-radius:10px;
+    background:transparent;border:1px solid transparent;color:var(--ink2);
+    cursor:pointer;transition:color .2s,border-color .2s,background .2s;
+  }
+  .role-select .icon-btn:hover{color:var(--ink);border-color:var(--line);background:var(--card)}
+  .role-select .icon-btn svg{width:17px;height:17px}
+
+  /* ═══════ 首屏 ═══════ */
+  .role-select .hero{
+    position:relative;min-height:max(640px, 100svh);
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:clamp(88px,12vh,180px) 24px clamp(48px,8vh,72px);text-align:center;
+    box-sizing:border-box;
+  }
+  .role-select .hero h1{
+    font-size:clamp(28px,3.2vw,68px);font-weight:600;
+    letter-spacing:-.024em;line-height:1.24;max-width:15em;
+  }
+  .role-select .hero .lede{margin-top:16px;font-size:14.5px;color:var(--ink2);letter-spacing:.02em}
+  /* 留给星系的空间，卡片固定在下方 */
+  .role-select .hero .gap{flex:1 1 auto;min-height:170px;width:100%}
+
+  .role-select .cards{
+    display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+  }
+  .role-select :is(.cards,.admin){
+    opacity:var(--entry-opacity,1);filter:blur(var(--entry-blur,0px));
+  }
+  .role-select :is(.cards,.admin)[data-hidden="true"]{visibility:hidden;pointer-events:none}
+  .role-select .card{
+    --entry-rgb:190,185,231;
+    width:clamp(308px,21.4vw,440px);padding:24px 24px 23px;border-radius:18px;text-align:left;
+    background:transparent;border:1px solid transparent;
+    display:flex;flex-direction:column;position:relative;overflow:hidden;
+    transition:transform .36s cubic-bezier(.22,.7,.3,1);
+  }
+  .role-select .card:nth-child(2){--entry-rgb:170,216,221}
+  .role-select[data-role-theme="light"] .card{--entry-rgb:95,83,151}
+  .role-select[data-role-theme="light"] .card:nth-child(2){--entry-rgb:42,105,119}
+  .role-select .card::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(ellipse at 37% 43%,rgba(var(--entry-rgb),.075),transparent 70%);
+    opacity:.6;transition:opacity .45s ease;
+  }
+  .role-select .card:hover{transform:translateY(-3px)}
+  .role-select .card:is(:hover,:focus-visible)::before{opacity:1}
+  .role-select .entry-orbit{
+    position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
+    color:rgb(var(--entry-rgb));opacity:.5;
+    filter:brightness(1) drop-shadow(0 0 0px rgba(var(--entry-rgb),0));
+    transition:opacity .45s ease,filter .45s ease;
+  }
+  .role-select .entry-orbit path{transition:stroke-width .45s ease}
+  .role-select .card:is(:hover,:focus-visible) .entry-orbit{
+    opacity:1;filter:brightness(1.65) drop-shadow(0 0 3px rgba(var(--entry-rgb),.65));
+  }
+  .role-select .card:is(:hover,:focus-visible) .entry-orbit path{stroke-width:1.15}
+  .role-select .entry-star{
+    position:relative;display:inline-flex;width:18px;height:18px;flex:none;
+    color:rgb(var(--entry-rgb));
+    filter:drop-shadow(0 0 4px rgba(var(--entry-rgb),.6));
+    transition:filter .4s ease;
+  }
+  .role-select .entry-star::before{
+    content:"";position:absolute;inset:-13px;pointer-events:none;
+    background:radial-gradient(ellipse,rgba(var(--entry-rgb),.2),transparent 66%);
+  }
+  .role-select .entry-star svg{fill:currentColor}
+  .role-select .card:is(:hover,:focus-visible) .entry-star{filter:drop-shadow(0 0 7px rgba(var(--entry-rgb),.9))}
+  .role-select .card-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+  .role-select .card-title{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600}
+  .role-select .card-title svg{width:18px;height:18px}
+  .role-select .card-arrow{width:16px;height:16px;color:var(--ink3);transition:transform .36s,color .36s}
+  .role-select .card:hover .card-arrow{transform:translateX(4px);color:var(--accent)}
+  .role-select .card-desc{margin-top:11px;font-size:13.5px;color:var(--ink2);line-height:1.7;position:relative;z-index:1}
+
+  .role-select .admin{
+    margin-top:34px;display:inline-flex;align-items:center;gap:6px;
+    min-height:32px;font-size:13px;color:var(--ink2);transition:color .2s;
+  }
+  .role-select .admin:hover{color:var(--accent)}
+  .role-select .admin svg{width:13px;height:13px}
+
+  /* ═══════ 图谱解说（画布此时显形） ═══════
+     不要卡片、不要底色：贴着左边缘的一列排版，和星图共处同一层空间 */
+  .role-select .statement{
+    min-height:215svh;position:relative;z-index:3;
+    padding:0 clamp(22px,6vw,110px);
+    pointer-events:none;
+  }
+  .role-select .statement .block{
+    position:sticky;top:calc(50vh - 130px);
+    max-width:330px;
+    padding-left:22px;
+    border-left:1px solid var(--line2);
+  }
+  .role-select .statement h2{
+    font-size:clamp(24px,2.5vw,33px);font-weight:500;
+    letter-spacing:-.02em;line-height:1.35;
+    color:var(--ink);
+  }
+  .role-select .statement h2 span{display:block;color:var(--ink3);font-size:.56em;letter-spacing:.02em;margin-top:10px;font-weight:400}
+  .role-select .statement p{
+    margin-top:22px;font-size:14px;color:var(--ink2);
+    line-height:1.95;letter-spacing:.01em;
+  }
+  .role-select .statement .note{
+    margin-top:16px;font-size:12px;color:var(--ink2);
+  }
+
+  /* ═══════ 特性：不用三张一样的卡，用一条横向的序列表 ═══════
+     整段坐在一层很长的渐隐上，让星图在它下面慢慢沉进底色，而不是被切一刀 */
+  .role-select .feats{
+    position:relative;z-index:2;
+    max-width:1240px;margin:0 auto;
+    padding:clamp(160px,26vh,300px) clamp(20px,4vw,52px) clamp(24px,4vh,40px);
+    display:grid;grid-template-columns:repeat(3,1fr);
+    pointer-events:auto;
+  }
+  .role-select .feats::before{
+    content:"";position:absolute;left:50%;transform:translateX(-50%);
+    bottom:0;width:100vw;height:calc(100% + 220px);
+    z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,
+      rgba(5,7,13,0) 0%,
+      rgba(5,7,13,.55) 22%,
+      rgba(5,7,13,.90) 42%,
+      rgba(5,7,13,1) 58%,
+      rgba(5,7,13,1) 100%);
+  }
+  .role-select[data-role-theme="light"] .feats::before{
+    background:linear-gradient(180deg,
+      rgba(246,248,252,0) 0%,
+      rgba(246,248,252,.60) 22%,
+      rgba(246,248,252,.93) 42%,
+      rgba(246,248,252,1) 58%,
+      rgba(246,248,252,1) 100%);
+  }
+  .role-select .feat{
+    padding:0 clamp(18px,2.4vw,34px);
+    border-left:1px solid var(--line);
+  }
+  .role-select .feat:first-child{border-left:0;padding-left:0}
+  .role-select .feat h3{font-size:20px;font-weight:500;letter-spacing:-.01em}
+  .role-select .feat p{margin-top:10px;font-size:13.5px;color:var(--ink2);line-height:1.85;max-width:26em}
+
+  .role-select .foot{
+    position:relative;z-index:2;
+    max-width:1240px;margin:0 auto;padding:110px clamp(20px,4vw,52px) 56px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    font-size:12.5px;color:var(--ink3);flex-wrap:wrap;
+  }
+  .role-select .foot .brand{font-size:13px}
+
+  /* ═══════ 入场 ═══════ */
+  .role-select .rise{opacity:0;transform:translateY(16px);animation:role-select-rise 1s cubic-bezier(.22,.7,.3,1) forwards}
+  @keyframes role-select-rise{to{opacity:1;transform:none}}
+  .role-select .d1{animation-delay:.05s}
+  .role-select .d2{animation-delay:.15s}
+  .role-select .d3{animation-delay:.27s}
+  .role-select .d4{animation-delay:.4s}
+  .role-select .d5{animation-delay:.52s}
+
+  .role-select .mark .n{transform-box:fill-box;transform-origin:center;animation:role-select-node-pulse 5.2s ease-in-out infinite}
+  .role-select .mark .n2{animation-delay:-1.7s}
+  .role-select .mark .n3{animation-delay:-3.3s}
+  .role-select .mark .n4{animation-delay:-4.4s}
+  @keyframes role-select-node-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+
+  @media (prefers-reduced-motion:reduce){
+    .role-select :is(.cards,.admin){filter:none}
+    .role-select .rise{animation:none;opacity:1;transform:none}
+    .role-select .mark .n{animation:none}
+  }
+
+  @media (max-width:900px){
+    .role-select .hero{padding:96px 20px 44px}
+    .role-select .hero h1{font-size:27px}
+    .role-select .hero .gap{min-height:clamp(150px, 28svh, 250px)}
+    .role-select .cards{width:100%;max-width:380px;gap:12px}
+    .role-select .card{width:100%;padding:20px}
+    .role-select .statement{min-height:120svh;padding:0 22px}
+    .role-select .statement .block{max-width:none}
+    .role-select .feats{grid-template-columns:1fr;gap:28px}
+    .role-select .feat{padding:0;border-left:0}
+    .role-select .foot{padding:80px 20px 40px;flex-direction:column;align-items:flex-start;gap:6px}
+  }
+
+.role-select .scroll-area {
+  height: 100%;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: 72px;
+  scroll-behavior: smooth;
+}
+
+.role-select .nav { pointer-events: none; }
+.role-select .nav :is(a, button) { pointer-events: auto; }
+.role-select .icon-btn { width: 44px; height: 44px; }
+.role-select .statement .block { pointer-events: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .role-select .scroll-area { scroll-behavior: auto; }
+  .role-select, .role-select * { transition: none; }
+}
+
+.role-select.dragging { cursor: grabbing; user-select: none; }
+
+.role-select .foot::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: var(--closing-surface);
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media (min-width: 1800px) {
+  .role-select .card { padding: 30px; }
+  .role-select .card-title { font-size: 20px; }
+  .role-select .card-desc, .role-select .lede { font-size: 16px; }
+}
