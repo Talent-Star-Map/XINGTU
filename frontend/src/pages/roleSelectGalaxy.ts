@@ -189,8 +189,10 @@ export function mountRoleSelectGalaxy(
       id: 'g' + si,
       cx: 0, cy: s.y, cz: 0,
       scale: s.scale, far: true, label: s.label,
-      spin: .22 + si * .035, drift: 1.2
+      // 复用定稿时12组星图的速度档位，数量增加时不继续加速。
+      spin: .22 + (si % 12) * .035, drift: 1.2
     });
+    if (si >= 12) g.spin = Math.sign(g.spin) * Math.abs(galaxies[si % 12 + 1].spin);
     g.orbit = 620 + (s.orb - 560) * .15;
     g.orbitPhase = si * Math.PI * (3 - Math.sqrt(5));
     g.orbitSpeed = s.sp;
