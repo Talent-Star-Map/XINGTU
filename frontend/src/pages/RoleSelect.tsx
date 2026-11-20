@@ -88,7 +88,7 @@ export default function RoleSelect() {
         onScroll={event => setScrolled(event.currentTarget.scrollTop > 8)}>
         <main>
           <section className="hero" aria-labelledby="role-select-title">
-            <h1 className="rise d1" id="role-select-title">知其所在<br />见其所往</h1>
+            <h1 className="rise d1" id="role-select-title"><span className="hero-slogan-line">星图照见所长，AI助你轻装</span><span className="hero-slogan-line">让每一份才华奔赴梦想</span></h1>
             <p className="lede rise d2">岗位能力图谱动态演化与分析系统</p>
             <div className="gap" aria-hidden="true" />
             <div className="cards" ref={entranceGroup}>

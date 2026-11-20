@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Xingtu Display";
+  src: url("/fonts/xingtu-display-slogan.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
 /* The approved full-screen canvas uses CSS pixels; internal screens retain the global zoom. */
 html[data-auth-layout="true"]{zoom:1}
 .role-select{
@@ -91,8 +98,20 @@ html[data-auth-layout="true"]{zoom:1}
     box-sizing:border-box;
   }
   .role-select .hero h1{
-    font-size:clamp(28px,3.2vw,68px);font-weight:600;
-    letter-spacing:-.024em;line-height:1.24;max-width:15em;
+    font-family:"Xingtu Display","Noto Serif SC","Songti SC",serif;
+    font-size:clamp(28px,3.4vw,64px);font-weight:900;
+    letter-spacing:.025em;line-height:1.5;max-width:100%;
+  }
+  .role-select .hero-slogan-line{
+    display:block;
+    color:#5146B9;
+    background-image:linear-gradient(110deg,#2854C7 0%,#7043BC 43%,#A23991 69%,#087F93 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .role-select[data-role-theme="dark"] .hero-slogan-line{
+    color:#C6B5FF;
+    background-image:linear-gradient(110deg,#8FBEFF 0%,#BC9DFF 43%,#F1A4DB 69%,#7DE4E8 100%);
   }
   .role-select .hero .lede{margin-top:16px;font-size:14.5px;color:var(--ink2);letter-spacing:.02em}
   /* 留给星系的空间，卡片固定在下方 */
@@ -254,7 +273,7 @@ html[data-auth-layout="true"]{zoom:1}
 
   @media (max-width:900px){
     .role-select .hero{padding:96px 20px 44px}
-    .role-select .hero h1{font-size:27px}
+    .role-select .hero h1{font-size:clamp(19px,4.1vw,36px);letter-spacing:0;line-height:1.65}
     .role-select .hero .gap{min-height:clamp(150px, 28svh, 250px)}
     .role-select .cards{width:100%;max-width:380px;gap:12px}
     .role-select .card{width:100%;padding:20px}
