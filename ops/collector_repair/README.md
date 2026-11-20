@@ -1,5 +1,52 @@
 # 双来源岗位采集维护
 
+## 趋势更新链路修复（2026-11-20，待服务器部署）
+
+本轮本地 API/前端读取现有云库已通过验证；下述采集修复只有部署到实际
+`xingtu-collector` 后，才会在下一次真实采集时开始产生新观测。
+没有修改云库、补造历史、启用外部 AI 定时任务或变更表结构。
+
+- 腾讯/智联采集将标准化的 `observation` 与原始响应一起追加到证据 JSONL。
+  `observations.sync_observations` 在当前岗位 SQL 同步后消费该日志，写现有
+  `job_observations`；只有新格式真实记录被接受，旧日志不推测回填。
+- 文件偏移保存在 `logs/observation_offsets.json`，SQL 提交后才推进；观测键
+  对来源、岗位身份、实际采集时间及内容做摘要，失败重试不重复写入。
+  日志必须追加保存，不得清空或截断尚未消费的文件。runner 全局锁仍有效。
+- 同一来源、同一岗位编号的完整公开 JD 之间才比较技能；登录受限列表
+  不与完整 JD 比较，不会把正文缺失记成技能删除。真实差异与观测同事务写入
+  `job_skill_changes`，通过来源链接关联当前岗位。
+- 已公开的月薪区间解析进入原有薪资字段；面议、掩码、日薪、年薪不推算。
+  无公开薪资的来源仍可能使薪资图样本少，这是覆盖限制，不能通过生成数据修复。
+- 图谱同步增加来自真实观测的 `JobSnapshot`，保留来源链接、企业和岗位身份；
+  图谱写入失败可重跑，不重新生成历史时间。
+- 招聘热度 API 改按近30天真实技术招聘去重计数，概念类型仍使用已有图谱分类；
+  不再以旧 Entity.hot_score 作为当前招聘热度。GitHub 仍独立统计。
+- 前端可见时每分钟读取，返回页面及“刷新全部”均刷新独立技能河流与已打开的
+  历史。真实招聘周历史不足时显示缺失提示，不自动替换为旧差异河流。
+  各数据源展示采集时间；AI 候选仍是原分析结果，新增候选依赖独立分析流程。
+
+部署时先保存运行版本和日志偏移，再将本目录 `job_sync.py` 与
+`repair_pipeline` 作为同一套采集代码部署；前后端一并部署本轮修改。
+不调用初次安装/空目录 staging 脚本，不执行 init_db 或任何 DDL，
+不重新启用 analyzer timer。服务端代码位置与容器挂载应先按实际 Compose 核对。
+`--skip-collection` 仅同步已经存在的日志，不会凭空建立观测；首次完整采集
+后检查 `pipeline_latest.json` 的 observations 阶段及三处观测数量。
+招聘周河流至少两个真实周窗口才有曲线，同一岗位技能变化至少两次完整正文
+观测且确有差异才有新增记录。不应以“本轮零差异”判定采集失败。
+
+验证命令：
+
+```powershell
+python ops/collector_repair/test_observations.py
+python ops/collector_repair/test_repair.py
+python backend/tests/test_jobseeker_visuals.py
+cd frontend
+npm run build
+```
+
+回滚采集代码前保留新格式证据及偏移，不删除已入库观测。
+前端/接口回滚可恢复旧版本，但会重新显示旧指标口径。
+
 服务器采集目录为 `/xingtu-min`，容器为 `xingtu-collector`。
 `repair_pipeline.scheduler` 每天北京时间 14:30、23:10 调用 runner。
 runner 默认执行腾讯与智联两个独立来源，随后执行 SQL 同步和图谱投影。

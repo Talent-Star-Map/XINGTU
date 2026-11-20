@@ -71,7 +71,9 @@ def persist(record, raw_response):
     directory.mkdir(parents=True, exist_ok=True)
     payload = {'observed_at_utc': now.isoformat(), 'source': record['source'],
                'source_job_id': record['source_job_id'], 'source_url': record['source_url'],
-               'response': raw_response, 'skill_evidence': record['skill_evidence']}
+               'response': raw_response, 'skill_evidence': record['skill_evidence'],
+               'observation': {**record, 'observed_at': now.isoformat(),
+                               'description_scope': record.get('description_scope') or 'full_public'}}
     serialized = json.dumps(payload, ensure_ascii=False)
     with (directory / f'{now:%Y%m%d}.jsonl').open('a', encoding='utf-8') as f:
         f.write(serialized + '\n')
@@ -102,6 +104,11 @@ def persist(record, raw_response):
             clean_id = clean[0] if clean else q.lastrowid
             if record.get('raw_salary'):
                 q.execute('UPDATE job_raw SET raw_salary=%s WHERE id=%s', (record['raw_salary'], raw_id))
+                from .salary import monthly_salary
+                salary = monthly_salary(record['raw_salary'])
+                if salary:
+                    q.execute('UPDATE job_info SET salary_min=%s,salary_max=%s,salary_months=COALESCE(%s,salary_months) WHERE id=%s',
+                              salary + (clean_id,))
             if record.get('education'):
                 q.execute('UPDATE job_raw SET raw_education=%s WHERE id=%s', (record['education'], raw_id))
                 q.execute('UPDATE job_info SET education=%s WHERE id=%s', (record['education'], clean_id))

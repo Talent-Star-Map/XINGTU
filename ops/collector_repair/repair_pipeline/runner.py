@@ -84,6 +84,8 @@ def main():
                     result['stages'][name] = {'status': 'failed', 'error_type': type(exc).__name__}
                 record()
         result['stages']['sync']=sync_jobs(backfill=args.backfill); record()
+        from .observations import sync_observations
+        result['stages']['observations']=sync_observations(logs); record()
         from .graph_sync import sync_graph
         result['stages']['graph']=sync_graph(); record()
         states=[value.get('status') for value in result['stages'].values() if isinstance(value,dict)]
