@@ -3,12 +3,12 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { ArrowUpRight, Database, ExternalLink, RefreshCw } from 'lucide-react'
 import OpportunityMap, { type RegionStat } from './OpportunityMap'
 import SkillRiver from './SkillRiver'
-import SkillChangeRiver from './SkillChangeRiver'
+import { sourceTime } from '../../lib/useTrendRefresh'
 import GitHubDailyObservation from './GitHubDailyObservation'
 import CitySalaryDistribution from './CitySalaryDistribution'
 import { COLORS, EmptyVisual, VisualCard, chartTooltip } from './VisualPrimitives'
 
-export default function JobseekerInsights() {
+export default function JobseekerInsights({ refreshKey = 0, onRefresh }: { refreshKey?: number; onRefresh?: () => void }) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -30,14 +30,14 @@ export default function JobseekerInsights() {
     }).catch(e => { if (!controller.signal.aborted) setError(e.message || '数据加载失败，请重试') })
       .finally(() => { window.clearTimeout(timeout); if (!controller.signal.aborted) setLoading(false) })
     return () => { controller.abort(); window.clearTimeout(timeout) }
-  }, [family, experience, city, skill, reload])
+  }, [family, experience, city, skill, reload, refreshKey])
   const daily = data?.github?.history?.at(-1)
-  const latest = data?.latest_collection ? `${data.latest_collection} UTC` : '暂无记录'
+  const latest = sourceTime(data?.latest_collection)
   const reset = () => { setFamily(''); setExperience(''); setCity(''); setSkill(''); setProvince('') }
   return <div className="space-y-5">
     <div className="rounded-2xl border p-5 flex items-start justify-between gap-4 flex-wrap" style={{ background: 'var(--color-surface-container-lowest)', borderColor: 'var(--color-outline-variant)' }}>
-      <div><p className="text-xs font-semibold tracking-wider text-blue-500 mb-1">JOB MARKET OBSERVATORY</p><h2 className="text-xl font-bold">从技能到城市，找到你的下一站</h2><p className="text-xs mt-2 opacity-60">招聘样本与开源技术分开观察，每个结论都可以回到来源。</p></div>
-      <button onClick={() => setReload(v => v + 1)} disabled={loading} className="text-xs border rounded-lg px-3 py-2 flex items-center gap-2"><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />{loading ? '更新中' : '刷新数据'}</button>
+      <div><p className="text-xs font-semibold tracking-wider text-blue-500 mb-1">JOB MARKET OBSERVATORY</p><h2 className="text-xl font-bold">从技能到城市，找到你的下一站</h2><p className="text-xs mt-2 opacity-60">页面可见时每分钟重新读取数据；招聘与开源分别展示，最近采集时间以各数据源为准。</p></div>
+      <button onClick={() => onRefresh ? onRefresh() : setReload(v => v + 1)} disabled={loading} className="text-xs border rounded-lg px-3 py-2 flex items-center gap-2"><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />{loading ? '更新中' : '刷新数据'}</button>
       <div className="w-full flex flex-wrap gap-2 mt-1 text-sm">
         <select aria-label="岗位方向" className="border rounded-lg px-3 py-2 bg-transparent" value={family} onChange={e => { setFamily(e.target.value); setCity(''); setSkill('') }}><option value="">全部技术方向</option>{data?.families?.map((f: string) => <option key={f}>{f}</option>)}</select>
         <select aria-label="经验要求" className="border rounded-lg px-3 py-2 bg-transparent" value={experience} onChange={e => setExperience(e.target.value)}><option value="">全部经验要求</option>{['应届', '不限', '1-3', '3-5', '5-10'].map(v => <option key={v} value={v}>{v.includes('-') ? `${v}年` : v}</option>)}</select>
@@ -46,7 +46,7 @@ export default function JobseekerInsights() {
         {skill && <button onClick={() => setSkill('')} className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs">原文列表：{skill} ×</button>}
       </div>
     </div>
-    {error && <p role="alert" className="rounded-xl border p-4 text-sm text-red-500">{error}<button className="ml-3 underline" onClick={() => setReload(v => v + 1)}>重试</button></p>}
+    {error && <p role="alert" className="rounded-xl border p-4 text-sm text-red-500">{error}<button className="ml-3 underline" onClick={() => onRefresh ? onRefresh() : setReload(v => v + 1)}>重试</button></p>}
     {loading && <p role="status" className="text-xs opacity-60">正在读取真实招聘与GitHub数据…</p>}
     {data && <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[
@@ -54,17 +54,18 @@ export default function JobseekerInsights() {
         ['有效薪资样本', data.salary_samples, `${data.total_jobs ? Math.round(data.salary_samples / data.total_jobs * 100) : 0}% 薪资覆盖率`],
         ['GitHub仓库', data.github.repo_count ?? '—', '开源观察独立样本'],
       ].map(([label, value, note]) => <div key={label} className="rounded-xl border p-4" style={{ background: 'var(--color-surface-container-lowest)', borderColor: 'var(--color-outline-variant)' }}><p className="text-xs opacity-60">{label}</p><p className="text-3xl font-bold tabular-nums mt-2">{value}</p><p className="text-[10px] mt-2 opacity-50">{note}</p></div>)}</div>
+      <p className="text-xs opacity-65">招聘采集：{latest}（北京时间） · 有效薪资最近采集：{sourceTime(data.latest_salary_collection)}。薪资仅使用公开有效区间，覆盖不足时不会以估算补齐。</p>
       <div className="grid lg:grid-cols-2 gap-5 items-start">
-        <VisualCard title="招聘技能需求排行" description="标签在去重招聘样本中的出现次数；点击条形查看对应招聘来源。">
+        <VisualCard title="招聘技能需求排行" description={`标签在去重招聘样本中的出现次数。最近采集：${latest}（北京时间）；点击条形查看来源。`}>
           {data.skills.length ? <ResponsiveContainer width="100%" height={340}><BarChart layout="vertical" data={data.skills.slice(0, 12)} margin={{ left: 8, right: 24 }}><CartesianGrid horizontal={false} opacity={.15} /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis type="category" dataKey="name" width={105} tick={{ fontSize: 11 }} /><Tooltip contentStyle={chartTooltip} formatter={(value: any) => [value, '招聘提及数']} /><Bar isAnimationActive={false} dataKey="count" radius={[0, 5, 5, 0]} onClick={(row: any) => setSkill(row.name)} cursor="pointer">{data.skills.slice(0, 12).map((r: any, i: number) => <Cell key={r.name} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer> : <EmptyVisual>当前条件下没有可统计的技能标签</EmptyVisual>}
         </VisualCard>
-        <VisualCard title="GitHub技术标签热度" description={`来自仓库语言与Topics，不与招聘技能热度混算。最近采集：${data.github.latest_collection || '暂无'} UTC`}>
+        <VisualCard title="GitHub技术标签热度" description={`来自仓库语言与Topics，不与招聘技能热度混算。最近采集：${sourceTime(data.github.latest_collection)}（北京时间）`}>
           {data.github.status === 'available' && data.github.skills.length ? <ResponsiveContainer width="100%" height={340}><BarChart layout="vertical" data={data.github.skills.slice(0, 12)} margin={{ right: 24 }}><CartesianGrid horizontal={false} opacity={.15} /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} /><Tooltip contentStyle={chartTooltip} formatter={(value: any) => [value, '涉及仓库数']} /><Bar isAnimationActive={false} dataKey="count" fill="#13a89e" radius={[0, 5, 5, 0]} /></BarChart></ResponsiveContainer> : <EmptyVisual>{data.github.message || '暂无GitHub标签样本'}</EmptyVisual>}
           <p className="text-[10px] leading-relaxed opacity-50 mt-2">{data.github.method}</p>
         </VisualCard>
       </div>
       <div className="grid lg:grid-cols-2 gap-5 items-start">
-        {data.history.length >= 2 ? <VisualCard title="招聘技能演化 · 主题河流" description="按周对比留存的招聘重复观测；每条色带是一项技能。"><SkillRiver windows={data.history} note={data.history_note} /></VisualCard> : <SkillChangeRiver scopeNote="展示已有技能差异记录；使用本卡片的岗位筛选，独立于页面上方的招聘样本筛选。" />}
+        <VisualCard title="招聘技能演化 · 主题河流" description="按周对比完整公开正文的真实招聘观测；不以旧差异记录代替招聘历史。"><SkillRiver windows={data.history} note={data.history_note} /></VisualCard>
         <GitHubDailyObservation snapshots={data.github.history || []} message={data.github.message} />
       </div>
       {daily && <VisualCard title={`GitHub每日榜单 · ${daily.date}`} description={`本次保存${daily.repo_count}个仓库；来自GitHub Trending daily。每天北京时间09:00采集，榜单仅代表抓取时刻。`} action={<a href={daily.source_url || 'https://github.com/trending?since=daily'} target="_blank" rel="noreferrer" className="text-xs text-blue-500 whitespace-nowrap">查看来源 ↗</a>}>

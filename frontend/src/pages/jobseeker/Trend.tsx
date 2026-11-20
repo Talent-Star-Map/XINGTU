@@ -4,8 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import JobEvolutionTimeline from '../../components/kg/JobEvolutionTimeline'
 import JobseekerInsights from '../../components/visuals/JobseekerInsights'
 import SkillChangeRiver from '../../components/visuals/SkillChangeRiver'
+import { sourceTime, useTrendRefresh } from '../../lib/useTrendRefresh'
 
-type TrendSkill = { name: string; type: string; hot_score: number; mention_count: number; aliases: string[] }
+type TrendSkill = { name: string; type: string; hot_score: number; mention_count: number; aliases: string[]; latest_collection?: string; sample_count?: number }
 type TrendConcept = { name: string; hot_score: number; mention_count: number }
 type SalaryRow = { title: string; avg_salary_k: number; count: number }
 type NewJob = {
@@ -36,9 +37,9 @@ type SkillChange = {
 }
 type GrowthRow = { month: string; count: number; cum_count: number; has_observations?: boolean }
 
-async function loadTrendData<T>(path: string): Promise<T> {
+async function loadTrendData<T>(path: string, signal?: AbortSignal): Promise<T> {
   const token = localStorage.getItem('xingtu_token') || ''
-  const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` } })
+  const response = await fetch(path, { signal, headers: { Authorization: `Bearer ${token}` } })
   if (!response.ok) throw new Error('趋势数据暂不可用，请稍后重试')
   const result = await response.json()
   if (!result.success) throw new Error('趋势数据暂不可用，请稍后重试')
@@ -51,6 +52,10 @@ function formatSalary(min: number, max: number) {
 }
 
 export default function Trend() {
+  const { revision, refresh } = useTrendRefresh()
+  const [sourceStatus, setSourceStatus] = useState<Record<string, string | null>>({})
+  const [statusError, setStatusError] = useState('')
+  const [detailError, setDetailError] = useState('')
   const [tab, setTab] = useState<'visuals' | 'trend' | 'discovery' | 'update'>('visuals')
 
   const [skills, setSkills] = useState<TrendSkill[]>([])
@@ -73,58 +78,71 @@ export default function Trend() {
   const [evolutionFor, setEvolutionFor] = useState<{ jobId: number; jobTitle: string } | null>(null)
 
   useEffect(() => {
+    let active = true
+    loadTrendData<Record<string, string | null>>('/api/trend/status')
+      .then(data => { if (active) { setSourceStatus(data); setStatusError('') } })
+      .catch(() => { if (active) setStatusError('数据更新时间读取失败') })
+    return () => { active = false }
+  }, [revision])
+
+  useEffect(() => {
     if (tab !== 'trend') return
-    setTrendLoading(true)
-    setTrendError('')
+    const controller = new AbortController()
+    setTrendLoading(true); setTrendError('')
     Promise.all([
-      loadTrendData<TrendSkill[]>('/api/trend/skills?limit=10'),
-      loadTrendData<TrendConcept[]>('/api/trend/concepts?limit=8'),
-      loadTrendData<SalaryRow[]>('/api/trend/salary?limit=6'),
-      loadTrendData<GrowthRow[]>('/api/trend/growth?months=6'),
+      loadTrendData<TrendSkill[]>('/api/trend/skills?limit=10', controller.signal),
+      loadTrendData<TrendConcept[]>('/api/trend/concepts?limit=8', controller.signal),
+      loadTrendData<SalaryRow[]>('/api/trend/salary?limit=6', controller.signal),
+      loadTrendData<GrowthRow[]>('/api/trend/growth?months=6', controller.signal),
     ]).then(([sk, co, sa, gr]) => {
-      setSkills(sk)
-      setConcepts(co)
-      setSalary(sa)
-      setGrowth(gr)
+      if (controller.signal.aborted) return
+      setSkills(sk); setConcepts(co); setSalary(sa); setGrowth(gr)
     }).catch(() => {
-      setSkills([]); setConcepts([]); setSalary([]); setGrowth([])
-      setTrendError('趋势数据暂不可用，请稍后重试')
-    })
-      .finally(() => setTrendLoading(false))
-  }, [tab])
+      if (!controller.signal.aborted) setTrendError('趋势数据刷新失败，当前保留上次结果，请重试')
+    }).finally(() => { if (!controller.signal.aborted) setTrendLoading(false) })
+    return () => controller.abort()
+  }, [tab, revision])
 
   useEffect(() => {
     if (tab !== 'discovery') return
-    setNewJobsLoading(true)
-    fetch('/api/trend/new-jobs?limit=20')
-      .then(r => r.json())
-      .then(d => setNewJobs(d.data || []))
-      .catch(err => console.error('new-jobs err', err))
-      .finally(() => setNewJobsLoading(false))
-  }, [tab])
+    const controller = new AbortController()
+    setNewJobsLoading(true); setDetailError('')
+    loadTrendData<NewJob[]>('/api/trend/new-jobs?limit=20', controller.signal)
+      .then(data => { if (!controller.signal.aborted) setNewJobs(data) })
+      .catch(() => { if (!controller.signal.aborted) setDetailError('岗位候选刷新失败，请重试') })
+      .finally(() => { if (!controller.signal.aborted) setNewJobsLoading(false) })
+    return () => controller.abort()
+  }, [tab, revision])
 
   useEffect(() => {
     if (tab !== 'update') return
-    setChangesLoading(true)
-    fetch('/api/trend/skill-changes?limit=30')
-      .then(r => r.json())
-      .then(d => {
-        const list: SkillChange[] = d.data || []
+    const controller = new AbortController()
+    setChangesLoading(true); setDetailError('')
+    loadTrendData<SkillChange[]>('/api/trend/skill-changes?limit=30', controller.signal)
+      .then(list => {
+        if (controller.signal.aborted) return
         setSkillChanges(list)
-        if (list.length > 0) setSelectedChange(list[0])
+        setSelectedChange(previous => list.find(item => item.job_id === previous?.job_id) || list[0] || null)
       })
-      .catch(err => console.error('changes err', err))
-      .finally(() => setChangesLoading(false))
-  }, [tab])
+      .catch(() => { if (!controller.signal.aborted) setDetailError('技能差异刷新失败，请重试') })
+      .finally(() => { if (!controller.signal.aborted) setChangesLoading(false) })
+    return () => controller.abort()
+  }, [tab, revision])
+
+  useEffect(() => {
+    if (!historyFor) return
+    const controller = new AbortController()
+    setHistoryLoading(true)
+    loadTrendData<SkillChange[]>(`/api/trend/skill-changes?job_id=${historyFor.jobId}`, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setHistory(data) })
+      .catch(() => { if (!controller.signal.aborted) { setHistory([]); setDetailError('岗位历史刷新失败，请重试') } })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false) })
+    return () => controller.abort()
+  }, [historyFor, revision])
 
   const openHistory = (jobId: number, jobTitle: string) => {
+    setHistory([])
     setHistoryFor({ jobId, jobTitle })
-    setHistoryLoading(true)
-    fetch(`/api/trend/skill-changes?job_id=${jobId}`)
-      .then(r => r.json())
-      .then(d => setHistory(d.data || []))
-      .catch(err => console.error('history err', err))
-      .finally(() => setHistoryLoading(false))
   }
 
   // 打开演化轨迹模态框(真实数据,JobEvolutionTimeline 走 /api/kg/*)
@@ -137,11 +155,11 @@ export default function Trend() {
 
   return (
     <div className="space-y-6 px-6 py-8 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--color-on-surface)' }}>趋势洞察</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold whitespace-nowrap" style={{ color: 'var(--color-on-surface)' }}>趋势洞察</h1>
+        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1">
           {(['visuals', 'trend', 'discovery', 'update'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold"
+            <button key={t} onClick={() => setTab(t)} className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold"
               style={{ background: tab === t ? 'var(--color-primary)' : 'var(--color-surface)', color: tab === t ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)', border: tab === t ? 'none' : '1px solid var(--color-outline-variant)' }}>
               {t === 'visuals' ? '求职数据观察' : t === 'trend' ? '已有指标' : t === 'discovery' ? '新岗位候选' : '技能演化'}
             </button>
@@ -149,21 +167,27 @@ export default function Trend() {
         </div>
       </div>
 
-      {tab === 'visuals' && <JobseekerInsights />}
+      <div className="text-xs rounded-xl border p-3 flex items-center justify-between gap-3" style={{ borderColor: 'var(--color-outline-variant)' }}>
+        <span>可见时每分钟刷新；读取最新已保存数据。{statusError || (tab === 'discovery' ? `AI候选最近记录：${sourceTime(sourceStatus.ai_candidates)}（北京时间）。没有新分析记录时保留历史，不代表近期新发现。` : tab === 'update' ? `差异最近记录：${sourceTime(sourceStatus.skill_changes)}；真实观测：${sourceTime(sourceStatus.observations)}（北京时间）。` : tab === 'trend' ? `招聘采集：${sourceTime(sourceStatus.recruitment)}；薪资样本：${sourceTime(sourceStatus.salary)}；AI候选：${sourceTime(sourceStatus.ai_candidates)}（北京时间）。各图数据源更新时间不同。` : '各数据源更新时间见下方。')}</span>
+        <button className="shrink-0 underline" onClick={refresh}>刷新全部</button>
+      </div>
+
+      {detailError && (tab === 'update' || tab === 'discovery') && <p role="alert" className="text-xs text-red-500">{detailError}</p>}
+      {tab === 'visuals' && <JobseekerInsights refreshKey={revision} onRefresh={refresh} />}
 
       {tab === 'trend' && (
         <div className="space-y-6">
           {trendError && <div role="alert" className="text-sm" style={{ color: 'var(--accent-red)' }}>{trendError}</div>}
           {trendLoading && (
             <div className="text-sm text-center py-4" style={{ color: 'var(--color-on-surface-variant)' }}>
-              正在拉取 Neo4j 热度图谱…
+              正在读取近期招聘统计…
             </div>
           )}
           <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
             <div className="flex items-center gap-2 mb-6">
               <LineChart className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
               <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>
-                Top {top5Skills.length} 技能当前热度（Neo4j hot_score）
+                Top {top5Skills.length} 技能招聘提及数（近30天）
               </h2>
             </div>
             {top5Skills.length > 0 ? (
@@ -180,11 +204,11 @@ export default function Trend() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>这是当前图谱的热度排序，缺少按月观测时不绘制历史趋势。</p>
+                <p className="text-xs mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>每个来源链接去重后按技能提及数排序；统计近30天采集样本，不等同市场需求增速。最近采集：{sourceTime(skills[0]?.latest_collection)}（北京时间）。</p>
               </>
             ) : (
               <div className="text-sm py-8 text-center" style={{ color: 'var(--color-on-surface-variant)' }}>
-                暂无热度数据 — 等跑几轮实体抽取(每小时 :15)就有了
+                近30天暂无可统计的技术招聘技能标签
               </div>
             )}
           </div>
@@ -193,7 +217,7 @@ export default function Trend() {
             <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="h-5 w-5" style={{ color: 'var(--accent-purple)' }} />
-                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>热门岗位薪资(K)</h2>
+                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>重复标题岗位平均薪资(K)</h2>
               </div>
               {salary.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
@@ -239,7 +263,7 @@ export default function Trend() {
             <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
-                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>热门趋势概念</h2>
+                <h2 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>招聘中的概念提及（近30天）</h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 {concepts.map(c => (
@@ -306,7 +330,7 @@ export default function Trend() {
                   </div>
                 )}
                 <div className="flex gap-4 text-xs mt-3 items-center" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  <span>📅 {job.crawl_time || '最近一轮 AI 抽取'}</span>
+                  <span>📅 {job.crawl_time || '采集时间未记录'}</span>
                   <button onClick={() => openEvolution(job.id, job.title)}
                     className="ml-auto text-xs px-3 py-1 rounded-lg flex items-center gap-1 font-semibold"
                     style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)', border: '1px solid var(--accent-green)' }}
@@ -323,7 +347,7 @@ export default function Trend() {
 
       {tab === 'update' && (
         <div className="space-y-4">
-          <SkillChangeRiver />
+          <SkillChangeRiver refreshKey={revision} />
           {changesLoading && (
             <div className="text-sm text-center py-4" style={{ color: 'var(--color-on-surface-variant)' }}>
               拉取能力 diff…
@@ -512,7 +536,7 @@ export default function Trend() {
               </button>
             </div>
             <div className="flex-1 min-h-0 p-3">
-              <JobEvolutionTimeline jobId={evolutionFor.jobId} jobTitle={evolutionFor.jobTitle} height={420} />
+              <JobEvolutionTimeline jobId={evolutionFor.jobId} refreshKey={revision} jobTitle={evolutionFor.jobTitle} height={420} />
             </div>
           </div>
         </div>

@@ -38,6 +38,21 @@ def _ok(data, message: str = 'ok'):
     return {'success': True, 'data': data, 'message': message}
 
 
+@router.get('/status')
+def source_status():
+    """Data timestamps, not a claim that any scheduler is healthy."""
+    with get_session() as session:
+        row = session.execute(text('''
+            SELECT
+              (SELECT MAX(crawl_time) FROM jobs WHERE data_type=1 AND source<>'ai_discovered') AS recruitment,
+              (SELECT MAX(crawl_time) FROM jobs WHERE data_type=1 AND salary_min>0 AND salary_max>=salary_min AND source<>'ai_discovered') AS salary,
+              (SELECT MAX(crawl_time) FROM jobs WHERE source='ai_discovered') AS ai_candidates,
+              (SELECT MAX(observed_at) FROM job_observations) AS observations,
+              (SELECT MAX(created_at) FROM job_skill_changes) AS skill_changes
+        ''')).mappings().one()
+    return _ok({k: str(v) if v else None for k, v in row.items()})
+
+
 # ────────────────────────────────────────────────────────────
 # 技能 / 概念热度(Neo4j)
 # ────────────────────────────────────────────────────────────
@@ -47,51 +62,45 @@ async def trending_skills(
     limit: int = Query(20, ge=1, le=100),
     type: str = Query('all', description='skill/tool/concept/framework/all'),
 ):
-    """Top N 技能/工具热度(Neo4j 真实 hot_score)。
+    """Recent recruitment mention counts; hot_score retained as a compatibility key."""
+    # Keep existing graph taxonomy filters, but never present old Entity scores
+    # as current demand. Count real, deduplicated recent recruitment evidence.
+    names = None
+    if type != 'all':
+        from services.skill_synonyms import canonical_name
+        with get_neo4j_driver().session() as graph:
+            names = {canonical_name(r['name']) for r in graph.run(
+                'MATCH (e:Entity {type:$type}) RETURN e.name AS name', type=type)}
+    data = _recent_recruitment_heat()
+    return _ok([r for r in data if names is None or r['name'] in names][:limit])
 
-    返回:[{name, type, hot_score, mention_count, aliases, is_real}, ...]
-    """
-    driver = get_neo4j_driver()
-    types = ['skill', 'tool', 'framework'] if type == 'all' else [type]
-    cypher = """
-    MATCH (e:Entity)
-    WHERE e.type IN $types
-    RETURN e.name AS name, e.type AS type, e.hot_score AS hot_score,
-           e.mention_count AS mention_count, e.aliases AS aliases
-    ORDER BY coalesce(e.hot_score, 0) DESC, coalesce(e.mention_count, 0) DESC
-    LIMIT $limit
-    """
-    with driver.session() as session:
-        rows = session.run(cypher, types=types, limit=limit)
-        data = [{
-            'name': r['name'],
-            'type': r['type'],
-            'hot_score': float(r['hot_score'] or 0),
-            'mention_count': int(r['mention_count'] or 0),
-            'aliases': list(r['aliases'] or []),
-            'is_real': True,
-        } for r in rows]
-    return _ok(data)
+
+def _recent_recruitment_heat():
+    from services.jobseeker_visuals import prepare, aggregate
+    with get_session() as session:
+        rows = session.execute(text('SELECT title,source,source_url,company_name,city,skill_tags,experience,'
+                                    'salary_min,salary_max,crawl_time FROM jobs WHERE data_type=1 '
+                                    'AND crawl_time>=UTC_TIMESTAMP()-INTERVAL 30 DAY '
+                                    'AND crawl_time<=UTC_TIMESTAMP()')).mappings().all()
+    prepared = prepare(rows)
+    summary = aggregate(prepared)
+    counts = Counter(s for row in prepared for s in row['skills'])
+    return [{'name': name, 'type': 'skill', 'hot_score': count, 'mention_count': count,
+             'aliases': [], 'is_real': True, 'sample_count': len(prepared),
+             'latest_collection': summary['latest_collection'], 'window_days': 30,
+             'method': '近30天可追溯技术招聘样本，同一来源链接去重；每项技能每个岗位计一次。'}
+            for name, count in counts.most_common()]
 
 
 @router.get('/concepts')
 async def trending_concepts(limit: int = Query(15, ge=1, le=50)):
-    """Top 趋势概念(MCP / Agent / RAG 等)。"""
+    """Existing concept taxonomy ranked by recent recruitment mentions."""
     driver = get_neo4j_driver()
-    cypher = """
-    MATCH (e:Entity {type: 'concept'})
-    RETURN e.name AS name, e.hot_score AS hot_score, e.mention_count AS mention_count
-    ORDER BY coalesce(e.hot_score, 0) DESC
-    LIMIT $limit
-    """
+    from services.skill_synonyms import canonical_name
+    cypher = "MATCH (e:Entity {type: 'concept'}) RETURN e.name AS name"
     with driver.session() as session:
-        rows = session.run(cypher, limit=limit)
-        data = [{
-            'name': r['name'],
-            'hot_score': float(r['hot_score'] or 0),
-            'mention_count': int(r['mention_count'] or 0),
-        } for r in rows]
-    return _ok(data)
+        names = {canonical_name(r['name']) for r in session.run(cypher)}
+    return _ok([{**r, 'type': 'concept'} for r in _recent_recruitment_heat() if r['name'] in names][:limit])
 
 
 @router.get('/salary')

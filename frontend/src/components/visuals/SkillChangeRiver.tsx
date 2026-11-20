@@ -9,7 +9,7 @@ type RiverData = {
   windows: ({ date: string; samples: number; sources: string[]; run_ids: string[] } & Record<Kind, Record<string, number>>)[]
 }
 
-export default function SkillChangeRiver({ scopeNote = '' }: { scopeNote?: string }) {
+export default function SkillChangeRiver({ scopeNote = '', refreshKey = 0 }: { scopeNote?: string; refreshKey?: number }) {
   const [data, setData] = useState<RiverData | null>(null)
   const [kind, setKind] = useState<Kind>('added')
   const [job, setJob] = useState('')
@@ -25,7 +25,7 @@ export default function SkillChangeRiver({ scopeNote = '' }: { scopeNote?: strin
       .catch(e => { if (!controller.signal.aborted) setError(e.message || '技能演化数据读取失败') })
       .finally(() => window.clearTimeout(timeout))
     return () => { controller.abort(); window.clearTimeout(timeout) }
-  }, [retry])
+  }, [retry, refreshKey])
   // Filtering is requested from the same aggregate endpoint so daily de-duplication stays consistent.
   const [filtered, setFiltered] = useState<RiverData | null>(null)
   const [filterError, setFilterError] = useState('')
@@ -39,7 +39,7 @@ export default function SkillChangeRiver({ scopeNote = '' }: { scopeNote?: strin
       .catch(e => { if (!controller.signal.aborted) setFilterError(e.message) })
       .finally(() => window.clearTimeout(timeout))
     return () => { controller.abort(); window.clearTimeout(timeout) }
-  }, [job, retry])
+  }, [job, retry, refreshKey])
   const active = job ? filtered : data
   const labels = { added: '候选新增', removed: '候选缺失', modified: '候选修改' }
   return <VisualCard title="技能演化 · 主题河流" description="按真实差异记录日期，观察不同技能涉及的岗位数量；下方可查看具体差异与来源。">

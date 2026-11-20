@@ -68,6 +68,7 @@ def aggregate(rows):
     return {
         'total_jobs': len(rows), 'companies': len({str(r['company_name']).strip() for r in rows if r.get('company_name')}),
         'salary_samples': sum(r['salary_mid_k'] is not None for r in rows), 'latest_collection': latest,
+        'latest_salary_collection': max((str(r['crawl_time']) for r in rows if r['salary_mid_k'] is not None and r.get('crawl_time')), default=None),
         'cities': sorted(city_stats, key=lambda c: (-c['jobs'], c['city'])),
         'skills': [{'name': name, 'count': count, 'rate': round(100 * count / len(rows), 1)} for name, count in counts.most_common(20)],
         'sources': dict(Counter(r['source'] for r in rows)),
@@ -111,10 +112,15 @@ def load_visuals(family='', experience='', city='', skill=''):
         families = sorted({classify_title(r['title'])[0] for r in rows if classify_title(r['title'])})
         prepared = prepare(rows, family, experience)
         scoped = [r for r in prepared if not city or r['city'] == city]
-        observations = session.execute(text('SELECT source,source_url,title,company_name,observed_at,skill_tags FROM job_observations ORDER BY observed_at')).mappings().all()
+        observations = session.execute(text('SELECT source,source_url,title,company_name,observed_at,skill_tags,extraction FROM job_observations ORDER BY observed_at')).mappings().all()
     # A dated current row is not historical evidence. Only append-only observations count.
     windows = defaultdict(dict)
     for r in observations:
+        extraction = r.get('extraction') or {}
+        if isinstance(extraction, str):
+            extraction = json.loads(extraction)
+        if extraction.get('description_scope') != 'full_public':
+            continue
         match = classify_title(r['title'])
         if not match or not r['source_url'] or not r['observed_at'] or (family and match[0] != family):
             continue
@@ -147,4 +153,4 @@ def load_visuals(family='', experience='', city='', skill=''):
                          for r in evidence[:30]],
             'evidence_total': len(evidence), 'generated_at': datetime.now(timezone.utc).isoformat(),
             'method': '有原始链接且能识别技术职能的招聘记录；按来源与链接去重。薪资为招聘月薪上下限中点，非实际工资。企业数按名称去重，仅代表本次采集样本。',
-            'history_note': '技能演化仅使用实际留存的重复观测；至少两个窗口才绘制河流。城市或经验筛选下，旧历史记录字段不足，暂不绘制。'}
+            'history_note': '技能演化仅使用完整公开正文的真实留存观测；按来源链接每周保留最后一次。至少两个周窗口才绘制河流。城市或经验筛选下，历史字段不足，暂不绘制。'}

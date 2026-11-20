@@ -35,6 +35,7 @@ interface JobChange {
 interface SalaryPoint { date: string; value: number; title?: string; source?: string }
 
 interface Props {
+  refreshKey?: number
   jobId?: number
   jobTitle?: string
   height?: number
@@ -69,7 +70,7 @@ function bucketByDay<T extends { date: string }>(items: T[]): T[] {
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
-export default function JobEvolutionTimeline({ jobId, jobTitle, height = 220 }: Props) {
+export default function JobEvolutionTimeline({ jobId, jobTitle, height = 220, refreshKey = 0 }: Props) {
   const [tab, setTab] = useState<Tab>('skill')
 
   const [salaryData, setSalaryData] = useState<SalaryPoint[]>([])
@@ -100,7 +101,7 @@ export default function JobEvolutionTimeline({ jobId, jobTitle, height = 220 }: 
       setSkillsNow(tags)
     }).catch(e => setError(e?.message || '加载失败'))
       .finally(() => setLoading(false))
-  }, [jobId])
+  }, [jobId, refreshKey])
 
   if (!jobId) {
     return (
