@@ -132,7 +132,8 @@ def main():
         agent_module.stream_report=report
         instance=agent_module.JobAgent();instance._plan=planner
         instance._executor={"semantic_search":search,"get_job_details":details}
-        events=[e async for e in instance.astream("test")]
+        # Exercise the evidence execution branch, not the newer direct-chat route.
+        events=[e async for e in instance.astream("查询Python岗位")]
         return calls,events
     calls,events=asyncio.run(run_agent([{"id":77}]))
     check("agent executes bound dependency", calls==[{"job_id":77}])
