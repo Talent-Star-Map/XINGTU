@@ -129,6 +129,8 @@ def connection_config():
         'NEO4J_DATABASE': api.get('NEO4J_DATABASE', 'neo4j'),
         'MONGO_USER': mongo['MONGO_INITDB_ROOT_USERNAME'],
         'MONGO_PASSWORD': mongo['MONGO_INITDB_ROOT_PASSWORD'],
+        'MONGO_URI': 'mongodb://' + quote(mongo['MONGO_INITDB_ROOT_USERNAME'], safe='') + ':' +
+                     quote(mongo['MONGO_INITDB_ROOT_PASSWORD'], safe='') + '@127.0.0.1:37017/?authSource=admin',
     }
 
 
