@@ -1,0 +1,76 @@
+.xiaogui-pet { position: fixed; z-index: 85; isolation: isolate; transition: left 2.8s ease-in-out, top .2s ease; font-family: Inter, 'Microsoft YaHei', sans-serif; color: #302a48; }
+.xiaogui-pet.is-dragging { transition: none; }
+.xiaogui-pet.is-paused { transition: none; }
+.xiaogui-character { width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; display: block; border-radius: 24px; outline-offset: 3px; }
+.xiaogui-character:active { cursor: grabbing; }
+.xiaogui-character:focus-visible { outline: 2px solid #8c7bce; }
+.xiaogui-character.is-collapsed { background: #f5f1ff; border: 1px solid #d8ccf4; box-shadow: 0 4px 20px #2c1e521c; color: #7053ac; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 18px; font-size: 11px; }
+.xiaogui-portrait { display: block; position: relative; width: 34px; height: 34px; flex-shrink: 0; overflow: hidden; border-radius: 50%; background: #e9e0f9; pointer-events: none; }
+.xiaogui-portrait img { position: absolute; width: 185%; height: 185%; max-width: none; left: -42%; top: -16%; object-fit: contain; }
+.xiaogui-sprite { display: block; position: relative; width: 100%; height: 100%; transform-origin: 50% 90%; filter: drop-shadow(0 5px 4px #382b5724); }
+.xiaogui-sprite img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.xiaogui-sprite--idle.is-animated { animation: xiaogui-breathe 4s ease-in-out infinite; }
+.xiaogui-sprite--wave.is-animated { animation: xiaogui-wave .65s ease-in-out infinite alternate; }
+.xiaogui-sprite--walk.is-animated { animation: xiaogui-walk .42s ease-in-out infinite alternate; }
+.xiaogui-sprite--sleep.is-animated { animation: xiaogui-sleep 4.8s ease-in-out infinite; }
+.xiaogui-sprite--eat.is-animated { animation: xiaogui-nibble 1.2s ease-in-out infinite; }
+.xiaogui-chew { animation: xiaogui-chew 2.4s steps(1, end) infinite; }
+.xiaogui-fallback { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; color: #8974ce; font-size: 64px; background: #f2edfc; }
+.xiaogui-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.xiaogui-bubble { position: absolute; bottom: calc(100% + 8px); box-sizing: border-box; padding: 12px 16px; background: #fff; color: #524368; border: 1px solid #ddd2ee; box-shadow: 0 8px 24px #37244d15; font-size: 14px; line-height: 1.7; border-radius: 18px 18px 18px 5px; pointer-events: none; }
+.xiaogui-bubble.below { bottom: auto; top: calc(100% + 8px); }
+.xiaogui-panel { box-sizing: border-box; position: absolute; background: #fff; border: 1px solid #e4ddef; border-radius: 22px; box-shadow: 0 16px 60px #36234f24, 0 2px 8px #36234f0a; padding: 16px; max-height: calc(100dvh - 32px); overflow-y: auto; cursor: default; }
+.xiaogui-panel.above { bottom: calc(100% + 10px); }
+.xiaogui-panel.below { top: calc(100% + 10px); }
+.xiaogui-panel header { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; }
+.xiaogui-avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 14px; color: #8b6bcc; background: #f0e9fb; font-size: 26px; }
+.xiaogui-panel header div { flex: 1; }
+.xiaogui-panel strong { display: block; font-size: 16px; }
+.xiaogui-panel header div > span { display: block; font-size: 12px; color: #82778f; margin-top: 2px; }
+.xiaogui-panel button { cursor: pointer; }
+.xiaogui-panel button:focus-visible, .xiaogui-panel input:focus-visible { outline: 2px solid #8c7bce; outline-offset: 3px; }
+.xiaogui-panel header > button { border: 0; color: #82778f; background: #f6f3fa; border-radius: 50%; padding: 8px; }
+.xiaogui-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.xiaogui-actions button { padding: 12px 2px; display: flex; flex-direction: column; align-items: center; gap: 8px; border-radius: 12px; border: 1px solid transparent; background: #f8f5fc; color: #665080; font-size: 13px; }
+.xiaogui-actions button:hover, .xiaogui-actions button[aria-pressed=true] { background: #eee6fb; border-color: #d7c8ef; }
+.xiaogui-size, .xiaogui-setting { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding: 11px 0; border-bottom: 1px solid #f0ecf5; }
+.xiaogui-size > div { display: flex; gap: 3px; background: #f6f3fa; padding: 3px; border-radius: 9px; }
+.xiaogui-size button { background: transparent; border: 0; color: #81728e; padding: 3px 10px; border-radius: 6px; }
+.xiaogui-size button[aria-pressed=true] { background: #fff; color: #6f4da2; box-shadow: 0 1px 5px #39214912; }
+.xiaogui-setting input { accent-color: #8a68c1; width: 17px; height: 17px; cursor: pointer; }
+.xiaogui-panel footer { display: flex; justify-content: space-between; padding-top: 12px; gap: 8px; }
+.xiaogui-panel footer button, .xiaogui-wake { display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: #f5f1fa; color: #746084; padding: 8px 10px; border-radius: 9px; font-size: 12px; }
+.xiaogui-wake { width: 100%; margin-top: 8px; }
+.xiaogui-panel p { font-size: 11px; color: #978ba4; margin: 10px 0 0; text-align: center; }
+@keyframes xiaogui-breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-3px) scaleY(1.015); } }
+@keyframes xiaogui-wave { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-3px); } }
+@keyframes xiaogui-walk { from { transform: translateY(-3px) rotate(-3deg); } to { transform: translateY(1px) rotate(3deg); } }
+@keyframes xiaogui-sleep { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.97); } }
+@keyframes xiaogui-nibble { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes xiaogui-chew { 0%, 44% { opacity: 0; } 45%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .xiaogui-pet { transition: none; } .xiaogui-sprite, .xiaogui-sprite img { animation: none !important; } .xiaogui-chew { display: none; } }
+@media print { .xiaogui-pet { display: none !important; } }
+
+.companion-room { height: 100%; overflow: auto; background: #f6f3fc; color: #30273e; font-family: Inter, 'Microsoft YaHei', sans-serif; }
+.companion-room-nav { display: flex; justify-content: space-between; align-items: center; padding: 24px 5vw; border-bottom: 1px solid #e4ddef; }
+.companion-room-nav a { color: #78638d; font-size: 14px; text-decoration: none; }
+.companion-room-nav strong { letter-spacing: .12em; }
+.companion-room-hero { max-width: 1120px; margin: 0 auto; padding: 64px 40px 40px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 48px; }
+.companion-room-eyebrow { font-size: 12px; letter-spacing: .25em; color: #8b70b1; font-weight: 600; }
+.companion-room h1 { font-size: clamp(36px, 4vw, 60px); line-height: 1.2; letter-spacing: -.04em; margin: 20px 0; font-weight: 700; }
+.companion-room-copy { color: #81708c; font-size: 16px; line-height: 1.9; max-width: 370px; }
+.companion-room-tag { display: inline-block; background: #eee7f8; color: #8b6bb1; font-size: 12px; padding: 7px 12px; border-radius: 20px; margin-top: 20px; }
+.companion-stage { aspect-ratio: 1; display: grid; place-items: center; background: radial-gradient(ellipse at center, #fff 0%, #efe8fa 65%, transparent 70%); position: relative; }
+.companion-stage > .xiaogui-sprite { width: 100%; height: 100%; }
+.companion-stage-label { position: absolute; bottom: -6px; font-size: 13px; color: #8b789c; letter-spacing: .1em; }
+.companion-room-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.companion-room-actions button { border: 1px solid #dfd2ed; background: #fff; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #746084; cursor: pointer; }
+.companion-room-actions button[aria-pressed=true] { color: #fff; background: #8a6ab0; border-color: #8a6ab0; }
+.companion-room-gallery { max-width: 1120px; margin: 0 auto; padding: 24px 40px 70px; }
+.companion-room-gallery h2 { font-size: 20px; margin-bottom: 8px; }
+.companion-room-gallery > p { font-size: 14px; color: #8b789c; line-height: 1.8; }
+.companion-gallery-grid { margin-top: 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.companion-gallery-grid button { border: 1px solid #e6deef; border-radius: 20px; background: #ffffffa6; padding: 12px; cursor: pointer; color: #756285; font-size: 14px; }
+.companion-gallery-grid button[aria-pressed=true] { border-color: #a38ac2; box-shadow: 0 0 0 2px #ad97c425; }
+.companion-gallery-grid .xiaogui-sprite { height: auto; aspect-ratio: 1; margin-bottom: 12px; }
+@media (max-width: 640px) { .companion-room-hero { grid-template-columns: 1fr; padding: 32px 24px 24px; gap: 24px; } .companion-stage { width: min(100%, 340px); margin: 0 auto; } .companion-gallery-grid { grid-template-columns: repeat(2, 1fr); } .companion-room-gallery { padding: 24px 24px 80px; } }

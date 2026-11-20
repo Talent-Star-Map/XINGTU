@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import RoleSelect from './pages/RoleSelect'
 import Login from './pages/Login'
+import XiaoguiPet from './components/companion/XiaoguiPet'
 
 // 三个 Shell + 简历打印按需加载：登录/角色选择页不再下载图谱(Three.js)、
 // 简历编辑器等重库，首屏体积大幅下降（2.3MB → 数百 KB）
@@ -11,6 +12,7 @@ const AdminShell = lazy(() => import('./components/AdminShell'))
 const ResumePrint = lazy(() => import('./pages/ResumePrint'))
 const SharedResume = lazy(() => import('./pages/SharedResume'))
 const ResumeAttachmentReader = lazy(() => import('./pages/jobseeker/ResumeAttachmentReader'))
+const CompanionRoom = lazy(() => import('./pages/CompanionRoom'))
 
 export default function App() {
   // 角色类型扩展为三态：求职者 / 企业 / 管理员
@@ -51,6 +53,7 @@ export default function App() {
               鉴权在服务端通过 print_token(单次消费、5 分钟过期)完成,详见
               backend/services/print_token.py + backend/routers/resume_center.py */}
           <Routes>
+            <Route path="/companion" element={<CompanionRoom />} />
             <Route path="/print/:token" element={<ResumePrint />} />
             {/* /share/:token — 简历中心生成的公开分享链接，免登录查看 */}
             <Route path="/share/:token" element={<SharedResume />} />
@@ -75,6 +78,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </div>
+      <XiaoguiPet />
     </div>
   )
 }
