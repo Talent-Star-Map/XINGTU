@@ -21,11 +21,13 @@ export class PetVideoDeck {
   private callbacks: VideoDeckCallbacks
   private base: URL
   private rateMultiplier: number
+  private delivery: 'buffered' | 'progressive'
 
-  constructor(container: HTMLElement, base: string | URL, callbacks: VideoDeckCallbacks, rateMultiplier = 1) {
+  constructor(container: HTMLElement, base: string | URL, callbacks: VideoDeckCallbacks, rateMultiplier = 1, delivery: 'buffered' | 'progressive' = 'buffered') {
     this.callbacks = callbacks
     this.base = new URL(base)
     this.rateMultiplier = rateMultiplier
+    this.delivery = delivery
     this.videos = [document.createElement('video'), document.createElement('video')]
     if (getComputedStyle(container).position === 'static') container.style.position = 'relative'
     for (const video of this.videos) {
@@ -55,12 +57,17 @@ export class PetVideoDeck {
     try {
       const url = new URL(clip.src, this.base)
       if (url.protocol !== this.base.protocol || url.host !== this.base.host || url.username || url.password) throw new Error('动作素材必须来自桌宠自己的素材目录')
-      const response = await fetch(url, { signal: request.controller.signal, credentials: 'same-origin' })
-      if (!response.ok) throw new Error(`动作素材请求失败：${response.status}`)
-      const blob = await response.blob()
-      if (!current()) return
-      this.urls[index] = URL.createObjectURL(blob)
-      video.src = this.urls[index]!
+      if (this.delivery === 'progressive') {
+        // The website starts from decoded media while HTTP range loading continues.
+        video.src = url.href
+      } else {
+        const response = await fetch(url, { signal: request.controller.signal, credentials: 'same-origin' })
+        if (!response.ok) throw new Error(`动作素材请求失败：${response.status}`)
+        const blob = await response.blob()
+        if (!current()) return
+        this.urls[index] = URL.createObjectURL(blob)
+        video.src = this.urls[index]!
+      }
       await this.firstFrame(video, request.controller.signal)
       if (!current()) return
       const travelEnd = clip.travel ? ('keyframes' in clip.travel ? clip.travel.keyframes[clip.travel.keyframes.length - 1].time : clip.travel.end) : 0

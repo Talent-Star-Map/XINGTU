@@ -71,7 +71,7 @@ export default function PetMotionSurface(props: PetMotionProps) {
           lastTravel = next
           if (delta) latest.current.onTravel?.(delta)
         },
-      })
+      }, 1, 'progressive')
       machine.current = current
       pause()
       current.start()
