@@ -6,6 +6,8 @@
 
 团队连接新机：首次双击 [Setup.cmd](deploy/team-access/Setup.cmd)，以后使用桌面 `XINGTU Web` / `XINGTU Graph`，连接在后台自动重连。Navicat、Neo4j Desktop 与本地热重载开发配置见 [团队便捷连接](deploy/team-access/README.md)。
 
+小星在网页内提供连续动作陪伴。浏览器切到后台后仍需桌面陪伴时，使用 [浏览器联动扩展](browser-companion/README.md) 与 [本地宿主](desktop-companion/README.md)；普通访客无需安装即可使用网页小星。
+
 ---
 
 ## 快速开始

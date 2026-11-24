@@ -1,0 +1,10 @@
+{
+  "defaultSite": "https://47.120.76.16/",
+  "origins": [
+    "https://47.120.76.16",
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "http://127.0.0.1:15185",
+    "http://localhost:15185"
+  ]
+}

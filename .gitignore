@@ -82,3 +82,7 @@ data/external/
 /backend/planner_debug.py
 /backend/scripts/seed_internet_jobs.py
 /ops/**/*.zip
+
+desktop-companion/.local-data/
+desktop-companion/native/*.exe
+desktop-companion/native/com.xingtu.companion.json

@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "星图 · 小星陪伴",
+  "version": "1.0.0",
+  "description": "打开星图时唤起小星，浏览器后台继续陪伴。",
+  "minimum_chrome_version": "105",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt/Mi06AAQcPek08vf4qoEWyHVtC05UOnwbNCtm3eSzy0ExU6YDyJ/W2Kh0TdUsv2XIJXp+2+44+o8RGHmC9OEd+ixMNpEu3Mu+HW5eKQm6VeFBScIY04Be/mmJI+LD5S5BicwHOxUquC4WXVzqe0UTSA4YVxCijnYDNM6XMGi2T/m/71jDpCgJZ4V6FOI6ue6jO7q+veLRMypMFo3KzEzSsKjKRwA1+FwmjjXA2SVog7v/8RvIDxwZHF4eqT7jXDBIELGYmTPbYKfih4pvBqNQUkJsps+68GYnlbSUw6qH1ranqRF098DRvYWFKtalQIEgap/JJcLdef27taU2GtQwIDAQAB",
+  "permissions": [
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "https://47.120.76.16/*",
+    "http://127.0.0.1:5173/*",
+    "http://localhost:5173/*",
+    "http://127.0.0.1:15185/*",
+    "http://localhost:15185/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://47.120.76.16/*",
+        "http://127.0.0.1:5173/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1:15185/*",
+        "http://localhost:15185/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_title": "打开星图与小星"
+  }
+}

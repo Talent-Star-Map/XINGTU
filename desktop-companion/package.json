@@ -1,0 +1,14 @@
+{
+  "name": "xiaoxing-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "npm run build && electron ."
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "esbuild": "0.28.2"
+  }
+}
