@@ -281,6 +281,26 @@ export default function ResumeCenter() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
+  // Exact assistant-created resume, including refresh and back navigation.
+  useEffect(() => {
+    let alive = true
+    const openLinked = async () => {
+      const id = new URLSearchParams(window.location.hash.split('?')[1] || '').get('resumeId')
+      if (!id || !/^[1-9]\d*$/.test(id)) return
+      const actor = localStorage.getItem('xingtu_token')
+      try {
+        const response = await fetch(`/api/resume-center/${id}`)
+        const data = await response.json()
+        if (!alive || localStorage.getItem('xingtu_token') !== actor) return
+        if (response.ok && data.success) setEditing(data.data)
+        else showToast('这份简历不存在或无权访问')
+      } catch { if (alive) showToast('读取简历失败，请重试') }
+    }
+    void openLinked()
+    window.addEventListener('hashchange', openLinked)
+    return () => { alive = false; window.removeEventListener('hashchange', openLinked) }
+  }, [])
+
   // 视图偏好持久化
   useEffect(() => {
     const stored = localStorage.getItem(VIEW_PREF_KEY)

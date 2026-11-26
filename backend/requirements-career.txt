@@ -1,0 +1,4 @@
+# Install only after the existing runtime constraints have passed a dry-run.
+# Real official embedded SDK, fixed immutable revision. No GPU inference packages.
+deerflow-extension-api @ git+https://github.com/bytedance/deer-flow.git@9a1e1c43981324917c81727da2e8be280683c807#subdirectory=backend/packages/extension-api
+deerflow-harness @ git+https://github.com/bytedance/deer-flow.git@9a1e1c43981324917c81727da2e8be280683c807#subdirectory=backend/packages/harness

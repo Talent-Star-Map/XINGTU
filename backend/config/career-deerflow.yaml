@@ -1,0 +1,31 @@
+# Embedded SDK only. No shell, file, browser, or arbitrary HTTP tools exposed.
+config_version: 68
+models:
+  - name: xingtu-career
+    display_name: 小星岗位助手
+    use: services.career_model:CareerChatModel
+    model: configured-by-xingtu-admin
+    supports_thinking: false
+    supports_vision: false
+    max_tokens: 3500
+tools: []
+tool_groups: []
+sandbox:
+  use: deerflow.sandbox.local:LocalSandboxProvider
+  prewarm: false
+memory:
+  enabled: false
+skills:
+  path: ./skills/career
+title:
+  enabled: false
+task_continuity:
+  enabled: false
+recursion_limit: 32
+max_recursion_limit: 40
+token_usage:
+  enabled: true
+token_budget:
+  enabled: true
+  max_tokens: 16000
+  max_output_tokens: 5000

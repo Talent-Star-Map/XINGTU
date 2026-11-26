@@ -15,14 +15,14 @@ const PAGE_KEYS: JSPage[] = [
 const isPage = (v: string): v is JSPage => (PAGE_KEYS as string[]).includes(v)
 
 const readHash = (): JSPage => {
-  const h = window.location.hash.replace(/^#\/?/, '')
+  const h = window.location.hash.replace(/^#\/?/, '').split('?')[0]
   return isPage(h) ? h : 'dashboard'
 }
 
 const navItems: { key: JSPage; icon: any; label: string }[] = [
   { key: 'dashboard', icon: LayoutDashboard, label: '工作台' },
   { key: 'skill-graph', icon: Share2, label: '岗位图谱' },
-  { key: 'ai-chat', icon: BrainCircuit, label: '智能问答' },
+  { key: 'ai-chat', icon: BrainCircuit, label: '智能助手' },
   { key: 'match', icon: LineChart, label: '匹配' },
   { key: 'learning', icon: BookOpen, label: '学习' },
   { key: 'trend', icon: TrendingUp, label: '趋势' },

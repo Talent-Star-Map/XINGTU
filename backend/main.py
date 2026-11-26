@@ -31,6 +31,7 @@ from routers.trend import router as trend_router
 from routers.data_board import router as data_board_router
 from routers.collector_observations import router as collector_observations_router
 from routers.job_graph_explorer import router as job_graph_explorer_router
+from routers.career_assistant import router as career_assistant_router
 import os
 
 @asynccontextmanager
@@ -85,6 +86,7 @@ app.include_router(trend_router)
 app.include_router(data_board_router)
 app.include_router(collector_observations_router)
 app.include_router(job_graph_explorer_router)
+app.include_router(career_assistant_router)
 from routers.classification_review import router as classification_review_router
 app.include_router(classification_review_router)
 

@@ -91,3 +91,8 @@ desktop-companion/native/com.xingtu.companion.json
 backend/resources/interview-models/
 frontend/public/models/interview/wasm/
 *.download
+
+# Isolated optional career-agent environment and SDK working state.
+backend/.career-venv/
+backend/.deer-flow/
+.deer-flow/

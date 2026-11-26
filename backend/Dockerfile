@@ -34,5 +34,16 @@ COPY requirements.txt runtime-constraints.txt ./
 # pip 走国内镜像，避免下载慢/挂死
 RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt -c runtime-constraints.txt
 COPY . .
+# Optional official agent SDK gets its own environment: its Starlette/MCP
+# dependencies must never upgrade the application's pinned FastAPI runtime.
+ARG INSTALL_CAREER_SDK=0
+RUN if [ "$INSTALL_CAREER_SDK" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends git \
+      && CAREER_SDK_ENV=/opt/career-sdk python scripts/install_career_sdk.py \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+ENV CAREER_SDK_PYTHON=/opt/career-sdk/bin/python \
+    DEER_FLOW_HOME=/app/uploads/.career-runtime \
+    DEER_FLOW_DATE_TIMEZONE=Asia/Shanghai
 EXPOSE 8081
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8081"]

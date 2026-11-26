@@ -112,7 +112,7 @@ def access_policy(method: str, path: str) -> str:
         return 'admin'
     if path.startswith('/api/enterprise'):
         return 'enterprise'
-    if (path.startswith(('/api/jobseeker', '/api/apply', '/api/learning', '/api/match', '/api/resume-center', '/api/kg/personal'))
+    if (path.startswith(('/api/jobseeker', '/api/apply', '/api/learning', '/api/match', '/api/resume-center', '/api/kg/personal', '/api/career-assistant'))
             or path.startswith('/api/auth/resume-')):
         return 'jobseeker'
     return 'user'
