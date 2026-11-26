@@ -47,7 +47,12 @@ export class InterviewVoice {
         this.resolvePlaying = resolve
         const source = this.context!.createBufferSource()
         this.source = source; source.buffer = buffer; source.connect(this.context!.destination)
-        source.onended = () => { source.disconnect(); this.resolvePlaying = null; resolve() }
+        source.onended = () => {
+          source.disconnect()
+          if (generation === this.generation) { this.source = null; this.status(false) }
+          if (generation === this.generation) this.resolvePlaying = null
+          resolve()
+        }
         if (this.started) { this.latency(Math.round(performance.now() - this.started)); this.started = 0 }
         this.status(true); source.start()
       })

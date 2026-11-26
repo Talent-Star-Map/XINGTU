@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Video, Mic, MicOff, Volume2, VolumeX, ArrowRight, RotateCcw, Download, Loader2, CheckCircle2, Camera, CameraOff, Send, Settings2, Sparkles, MessageCircle, Check, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import GraphRolePicker from '../../components/interview/GraphRolePicker'
 import { InterviewVoice } from '../../lib/interviewVoice'
+import { useInterviewMedia } from '../../components/interview/useInterviewMedia'
 import { JSNav } from '../../lib/NavContext'
 
 type Turn = { question: string; answer: string; main_index?: number }
 type Report = { summary: string; notice: string; items: { index: number; quote: string; strength: string; improvement: string; outline: string }[] }
-type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: any) => void) | null; onerror: ((event: any) => void) | null; onend: (() => void) | null; start: () => void; stop: () => void; abort: () => void }
 const asset = `${import.meta.env.BASE_URL}media/interview/interviewer-720p.mp4`
 const surface = { background: 'var(--color-surface)', borderColor: 'var(--color-outline-variant)' }
 const primary = { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
@@ -41,16 +41,11 @@ export default function Interview() {
   const shouldFollow = useRef(true)
   const answerRef = useRef('')
   const silenceTimer = useRef<number | undefined>(undefined)
-  const submitOnEnd = useRef(false)
   const actions = useRef<{ advance: () => void; listen: () => void }>({ advance: () => {}, listen: () => {} })
   const autoAllowed = useRef(true)
-  const preparingMedia = useRef(false)
   const speechGeneration = useRef(0)
   const live = useRef({ busy: false, playing: false, question: '', stage: 'setup' })
-  const capturing = useRef(false)
-  const restartTimer = useRef<number | undefined>(undefined)
   const interrupted = useRef(false)
-  const micActions = useRef({ stopAudio: () => {}, abortReply: () => {} })
   const [question, setQuestion] = useState('')
   const [focus, setFocus] = useState('')
   const [history, setHistory] = useState<Turn[]>([])
@@ -71,18 +66,14 @@ export default function Interview() {
   const voice = useRef<InterviewVoice | null>(null)
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
-  const [camera, setCamera] = useState(false)
   const [largePreview, setLargePreview] = useState(true)
   const [elapsed, setElapsed] = useState(0)
   const avatar = useRef<HTMLVideoElement>(null)
   const preview = useRef<HTMLVideoElement>(null)
-  const stream = useRef<MediaStream | null>(null)
-  const recognition = useRef<Recognition | null>(null)
   const controller = useRef<AbortController | null>(null)
   const alive = useRef(true)
   const locked = useRef(false)
   const speechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window
-  const RecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
   useEffect(() => {
     if (!speechAvailable) return
@@ -101,16 +92,48 @@ export default function Interview() {
     speechGeneration.current++
     if (speechAvailable) window.speechSynthesis.cancel()
     voice.current?.stop()
-    if (avatar.current) { avatar.current.muted = true; if (stage !== 'session') avatar.current.pause() }
+    if (avatar.current) { avatar.current.muted = true; avatar.current.pause() }
     setSpeaking(false); setIntro(false); setAudioPending(false)
   }
   const stopListening = () => {
     clearTimeout(silenceTimer.current)
-    submitOnEnd.current = false
-    capturing.current = false
-    recognition.current?.abort()
     setListening(false)
   }
+  const guardPaused = useRef(false)
+  const media = useInterviewMedia(preview, stage === 'session', autoMic,
+    text => {
+      if (live.current.stage !== 'session' || !autoAllowed.current) return
+      const heard = text.trim()
+      if (!heard) return
+      const canonical = (value: string) => value.replace(/[\s，。！？、；：,.!?]/g, '')
+      if (live.current.playing && canonical(live.current.question).includes(canonical(heard))) return
+      // Only verified, substantial transcriptions can interrupt; no interim noise triggers.
+      if (live.current.playing || live.current.busy) {
+        if (canonical(heard).length < 4) return
+        interrupted.current = true; stopVoice(); controller.current?.abort()
+      }
+      answerRef.current = (answerRef.current + heard).slice(0, 6000)
+      setAnswer(answerRef.current); setInterim('')
+      clearTimeout(silenceTimer.current)
+      silenceTimer.current = window.setTimeout(() => {
+        if (autoAllowed.current && !live.current.busy) actions.current.advance()
+      }, 650)
+    },
+    () => clearTimeout(silenceTimer.current),
+    () => {
+      guardPaused.current = true; interrupted.current = true; clearTimeout(silenceTimer.current); stopVoice(); controller.current?.abort()
+    })
+  const camera = media.camera
+  useEffect(() => { setListening(media.listening) }, [media.listening])
+  useEffect(() => {
+    if (!media.allowed || !guardPaused.current || busy || stage !== 'session' || !autoMic) return
+    guardPaused.current = false
+    const timer = window.setTimeout(() => {
+      if (answerRef.current.trim()) actions.current.advance()
+      else if (question) speak(question)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [media.allowed, busy, stage, autoMic, question])
   useEffect(() => {
     alive.current = true
     voice.current = new InterviewVoice(v => { if (alive.current) setSpeaking(v) }, message => { if (alive.current) { setError(message); setAudioPending(false) } }, ms => { if (alive.current) setFirstAudio(ms) })
@@ -120,12 +143,9 @@ export default function Interview() {
     return () => {
       alive.current = false
       clearTimeout(silenceTimer.current)
-      clearTimeout(restartTimer.current)
       statusController.abort()
       voice.current?.dispose()
       controller.current?.abort()
-      recognition.current?.abort()
-      stream.current?.getTracks().forEach(track => track.stop())
       if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     }
   }, [])
@@ -141,11 +161,13 @@ export default function Interview() {
   }, [profileRevision, params.interviewRole])
 
   useEffect(() => {
-    if (avatar.current) {
-      avatar.current.muted = true; avatar.current.loop = stage === 'session'
-      if (stage === 'session') void avatar.current.play().catch(() => {})
-      else avatar.current.pause()
-    }
+    if (!avatar.current || intro) return
+    avatar.current.muted = true
+    avatar.current.loop = speaking
+    if (speaking) void avatar.current.play().catch(() => {})
+    else avatar.current.pause()
+  }, [speaking, intro])
+  useEffect(() => {
     if (stage !== 'session') return
     const timer = window.setInterval(() => setElapsed(v => v + 1), 1000)
     return () => clearInterval(timer)
@@ -161,17 +183,19 @@ export default function Interview() {
     if (shouldFollow.current) bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [history, question, interim, busy])
   useEffect(() => {
-    if (stage !== 'session' || !autoMic || error || !RecognitionAPI) return
+    if (stage !== 'session' || !autoMic || error) return
     const timer = window.setTimeout(() => actions.current.listen(), 150)
     return () => clearTimeout(timer)
   }, [stage, autoMic, error])
   useEffect(() => {
     if (stage !== 'session' || busy || !autoMic || !answerRef.current.trim()) return
-    const timer = window.setTimeout(() => { if (alive.current && autoAllowed.current) actions.current.advance() }, 2800)
-    return () => clearTimeout(timer)
-  }, [stage, busy, autoMic])
+    clearTimeout(silenceTimer.current)
+    silenceTimer.current = window.setTimeout(() => { if (alive.current && autoAllowed.current && media.allowed && !media.processing) actions.current.advance() }, 900)
+    return () => clearTimeout(silenceTimer.current)
+  }, [stage, busy, autoMic, media.allowed, media.processing])
 
   function speak(text: string) {
+    if (stage === 'session' && !media.allowed) return
     stopVoice()
     if (voiceEngine === 'edge-tts') {
       voice.current?.begin()
@@ -206,60 +230,15 @@ export default function Interview() {
     void avatar.current.play().catch(() => { setSpeaking(false); setIntro(false); setError('视频播放失败，请重试或直接开始面试。') })
   }
   function startListening() {
-    if (!RecognitionAPI || capturing.current || !autoAllowed.current || live.current.stage !== 'session') return
-    setInterim('')
-    const rec: Recognition = new RecognitionAPI()
-    rec.lang = 'zh-CN'; rec.continuous = true; rec.interimResults = true
-    rec.onresult = event => {
-      let final = '', partial = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) final += event.results[i][0].transcript
-        else partial += event.results[i][0].transcript
-      }
-      if (!alive.current || !autoAllowed.current) return
-      const heard = (final || partial).trim()
-      // Suppress exact playback echoes; headphones remain recommended for reliable interruption.
-      if (live.current.playing && heard.length > 3 && live.current.question.includes(heard)) return
-      if (heard && (live.current.playing || live.current.busy)) {
-        interrupted.current = true
-        micActions.current.stopAudio()
-        micActions.current.abortReply()
-      }
-      if (final) {
-        answerRef.current = (answerRef.current + final).slice(0, 6000)
-        setAnswer(answerRef.current)
-      }
-      clearTimeout(silenceTimer.current)
-      if (final || partial) silenceTimer.current = window.setTimeout(() => {
-        if (!autoAllowed.current || !answerRef.current.trim()) return
-        if (!live.current.busy) actions.current.advance()
-      }, 2600)
-      setInterim(partial)
-    }
-    rec.onerror = event => { if (alive.current) { submitOnEnd.current = false; clearTimeout(silenceTimer.current); autoAllowed.current = false; setAutoMic(false); setListening(false); setInterim(''); setError(event.error === 'not-allowed' ? '麦克风未获授权，请允许麦克风后恢复。' : '语音识别中断，请恢复麦克风重试。') } }
-    rec.onend = () => {
-      capturing.current = false
-      if (!alive.current) return
-      setListening(false); setInterim('')
-      if (autoAllowed.current && live.current.stage === 'session') {
-        clearTimeout(restartTimer.current)
-        restartTimer.current = window.setTimeout(() => { if (alive.current) actions.current.listen() }, 200)
-      }
-    }
-    recognition.current = rec
-    try { rec.start(); capturing.current = true; setListening(true) } catch { setError('无法启动语音识别，请检查麦克风权限后重试。') }
+    if (media.allowed && autoAllowed.current && live.current.stage === 'session') setListening(true)
   }
   async function toggleCamera() {
-    if (camera) { stream.current?.getTracks().forEach(t => t.stop()); stream.current = null; setCamera(false); return }
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      if (!alive.current) { media.getTracks().forEach(t => t.stop()); return }
-      stream.current = media; setCamera(true)
-      if (preview.current) { preview.current.srcObject = media; await preview.current.play() }
-    } catch { if (alive.current) setError('摄像头不可用。可以关闭预览继续面试。') }
+    if (media.camera) { stopVoice(); controller.current?.abort(); media.stop() }
+    else await media.prepare()
   }
   async function advance() {
     if (locked.current) return
+    if (!media.allowed) { setNotice('请保持本人在画面中并完成声音核验后继续。'); return }
     const starting = stage === 'setup'
     interrupted.current = false
     if (starting ? !role.trim() : !answerRef.current.trim()) return
@@ -278,7 +257,6 @@ export default function Interview() {
     const previousStage = stage
     shouldFollow.current = true
     setStage('session'); setQuestion(''); setFocus('自由交流'); setFirstAudio(null); setFirstToken(null)
-    if (avatar.current) { avatar.current.muted = true; avatar.current.loop = true; void avatar.current.play().catch(() => {}) }
     if (voiceEngine === 'edge-tts') { voice.current?.begin(); setAudioPending(true) }
     let activeContext = contextId
     let full = '', completed = false, interviewDone = false
@@ -323,11 +301,11 @@ export default function Interview() {
         autoAllowed.current = false; setAutoMic(false)
         const result = await request('report', { role: role.trim(), difficulty, history: nextHistory }, ctrl.signal)
         setReport(result); setStage('report'); stopListening(); stopVoice()
-        stream.current?.getTracks().forEach(t => t.stop()); stream.current = null; setCamera(false)
+        media.stop()
       }
     } catch (e) {
       stopVoice()
-      if (alive.current) { if (!committed) { answerRef.current = [submittedAnswer, answerRef.current].filter(Boolean).join(' '); setAnswer(answerRef.current); setStage(previousStage); setQuestion(previousQuestion); setMainIndex(previousMainIndex); if (previousStage === 'setup') { stream.current?.getTracks().forEach(t => t.stop()); stream.current = null; setCamera(false) } } setError(e instanceof Error && e.name !== 'AbortError' ? e.message : (interrupted.current ? '' : '请求超时，请重试；你的回答仍在。')) }
+      if (alive.current) { if (!committed) { answerRef.current = [submittedAnswer, answerRef.current].filter(Boolean).join(' '); setAnswer(answerRef.current); setStage(previousStage); setQuestion(previousQuestion); setMainIndex(previousMainIndex); if (previousStage === 'setup') { media.stop() } } setError(e instanceof Error && e.name !== 'AbortError' ? e.message : (interrupted.current ? '' : '请求超时，请重试；你的回答仍在。')) }
     } finally {
       void reader?.cancel().catch(() => {}); clearTimeout(timer); locked.current = false
       if (alive.current) setBusy(false)
@@ -343,15 +321,15 @@ export default function Interview() {
     try {
       const result: Report = await request('report', { role: role.trim(), background, difficulty, history: turns }, ctrl.signal)
       setHistory(turns); setReport(result); setStage('report')
-      stream.current?.getTracks().forEach(t => t.stop()); stream.current = null; setCamera(false)
+      media.stop()
     } catch (e) { if (alive.current) setError(e instanceof Error && e.name !== 'AbortError' ? e.message : '报告生成超时，请重试。') }
     finally { clearTimeout(timer); locked.current = false; if (alive.current) setBusy(false) }
   }
 
   function reset() {
-    stopVoice(); stopListening(); stream.current?.getTracks().forEach(t => t.stop()); stream.current = null
+    stopVoice(); stopListening(); media.stop()
     autoAllowed.current = true; setAutoMic(true); setPrepared(null); setContextId(''); setMainIndex(1); answerRef.current = '';
-    setCamera(false); setStage('setup'); setHistory([]); setReport(null); setAnswer(''); setElapsed(0); setError('')
+    setStage('setup'); setHistory([]); setReport(null); setAnswer(''); setElapsed(0); setError('')
   }
   async function download() {
     if (!report || locked.current) return
@@ -392,30 +370,20 @@ export default function Interview() {
   }
 
   live.current = { busy, playing: speaking || audioPending, question, stage }
-  micActions.current = { stopAudio: stopVoice, abortReply: () => controller.current?.abort() }
   actions.current = { advance: () => { void advance() }, listen: startListening }
   async function startRoom() {
-    if (busy || preparingMedia.current || !role.trim()) return
-    preparingMedia.current = true; setBusy(true)
+    if (busy || media.loading || !role.trim()) return
+    if (!media.camera) { await media.prepare(); return }
+    if (!media.allowed) { setNotice('请正对摄像头，并完整朗读随机口令。'); return }
     autoAllowed.current = true; setAutoMic(true); setNotice('')
-    // User gesture unlocks sound; camera prompt happens on this same explicit start action.
     if (voiceEngine === 'edge-tts') voice.current?.unlock()
-    if (!stream.current) {
-      try {
-        const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        if (!alive.current) { media.getTracks().forEach(t => t.stop()); preparingMedia.current = false; return }
-        stream.current = media; setCamera(true)
-        if (preview.current) { preview.current.srcObject = media; void preview.current.play().catch(() => {}) }
-      } catch { setNotice('摄像头未开启，可继续语音面试。') }
-    }
-    preparingMedia.current = false
-    if (alive.current) void advance()
+    await advance()
   }
   function toggleAuto() {
     if (autoMic) { autoAllowed.current = false; setAutoMic(false); stopListening() }
     else { autoAllowed.current = true; setAutoMic(true); setError('') }
   }
-  const status = busy ? '面试官正在思考' : audioPending || speaking ? '面试官正在说话' : listening ? '正在聆听你的回答' : stage === 'report' ? '本次面试已完成' : '准备就绪'
+  const status = stage === 'session' && !media.allowed ? '面试已暂停 · 请检查画面与声音' : media.processing ? '正在识别与核对声音' : busy ? '面试官正在思考' : audioPending || speaking ? '面试官正在说话' : listening ? '正在聆听你的回答' : stage === 'report' ? '本次面试已完成' : '准备就绪'
 
   return <div className="mx-auto flex h-full min-h-[680px] max-w-[1400px] flex-col gap-4 p-4 md:p-6">
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -432,32 +400,40 @@ export default function Interview() {
     <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border" style={surface}>
         <div className="relative min-h-[260px] flex-1 overflow-hidden bg-[#080c1b]">
-          <video ref={avatar} src={asset} preload="auto" playsInline muted onError={() => setMediaError(true)} onEnded={() => { if (intro) { setSpeaking(false); setIntro(false) } }} className="absolute inset-0 h-full w-full object-contain" aria-label="面试官" />
+          <video ref={avatar} src={asset} preload="auto" playsInline muted onError={() => setMediaError(true)} onEnded={() => { if (intro) { setSpeaking(false); setIntro(false) } }} className={`absolute inset-0 h-full w-full object-contain ${speaking || intro ? '' : 'invisible'}`} aria-label="面试官" />
+          {!speaking && !intro && <img src={`${import.meta.env.BASE_URL}media/interview/interviewer-idle.jpg`} alt="面试官正在倾听" className="absolute inset-0 h-full w-full object-contain" />}
           <span className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-[11px] text-white"><span className={`h-1.5 w-1.5 rounded-full ${speaking || listening ? 'animate-pulse bg-emerald-400' : 'bg-slate-400'}`} />{status}</span>
           {mediaError && <span className="absolute inset-0 flex items-center justify-center text-sm text-white">形象加载失败，不影响面试对话</span>}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-4 text-white"><h2 className="font-semibold">星图面试官</h2><p className="mt-1 text-[10px] text-white/60">AI合成形象</p></div>
         </div>
-        <div className="shrink-0 space-y-3 p-4"><div className="flex items-center gap-2 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-500" />{stage === 'setup' ? '选择岗位，即可开始' : status}</div>{stage === 'session' && <div className="flex gap-2"><button onClick={() => { stopVoice(); controller.current?.abort() }} className="flex flex-1 items-center justify-center gap-2 rounded-lg border p-2 text-xs" style={surface}><VolumeX className="h-3.5 w-3.5" />打断</button><button disabled={busy || (!history.length && !answer.trim())} onClick={finishInterview} className="flex-1 rounded-lg border p-2 text-xs disabled:opacity-40" style={surface}>结束面试</button></div>}</div>
+        <div className="shrink-0 space-y-3 p-4"><div className="flex items-center gap-2 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-500" />{stage === 'setup' ? '选择岗位，检查设备后开始' : status}</div>{stage === 'session' && <div className="flex gap-2"><button onClick={() => { stopVoice(); controller.current?.abort() }} className="flex flex-1 items-center justify-center gap-2 rounded-lg border p-2 text-xs" style={surface}><VolumeX className="h-3.5 w-3.5" />打断</button><button disabled={busy || (!history.length && !answer.trim())} onClick={finishInterview} className="flex-1 rounded-lg border p-2 text-xs disabled:opacity-40" style={surface}>结束面试</button></div>}</div>
       </aside>
       <main className="flex min-h-[540px] min-w-0 flex-col overflow-hidden rounded-2xl border" style={surface}>
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-5 py-3" style={{ borderColor: 'var(--color-outline-variant)' }}><div className="flex items-center gap-2 text-sm font-semibold"><MessageCircle className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />{stage === 'setup' ? '今天，想挑战哪个岗位？' : `${role} · 面试现场`}</div><span className="text-[10px] opacity-50">{stage === 'setup' ? '资料自动准备，无需重复填写' : '语音面试 · 实时字幕'}</span></div>
-        <div className={`${stage === 'setup' ? 'hidden' : ''} relative shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950`}>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-5 py-3" style={{ borderColor: 'var(--color-outline-variant)' }}><div className="flex items-center gap-2 text-sm font-semibold"><MessageCircle className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />{stage === 'setup' ? '今天，想挑战哪个岗位？' : `${role} · 面试现场`}</div><span className="text-[10px] opacity-50">{stage === 'setup' ? '检查设备与声音后开始' : '语音面试 · 分段识别'}</span></div>
+        <div className={`${stage === 'setup' && !camera ? 'hidden' : ''} relative shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950`}>
           <div className={largePreview ? 'flex h-[340px] items-center justify-center md:h-[min(48vh,460px)]' : 'flex h-[240px] items-center justify-center md:h-[min(36vh,340px)]'}>
             <video ref={preview} muted playsInline className="h-full w-full object-contain" style={{ transform: 'scaleX(-1)' }} />
           </div>
-          {!camera && <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs text-slate-400"><CameraOff className="h-4 w-4" />{stage === 'report' ? '摄像头已关闭' : '摄像头未开启，可继续面试'}</div>}
+          {!camera && <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs text-slate-400"><CameraOff className="h-4 w-4" />{stage === 'report' ? '摄像头已关闭' : '摄像头未开启，面试已暂停'}</div>}
           <span className="absolute bottom-3 left-3 rounded-full bg-black/50 px-3 py-1.5 text-[11px] text-white/80">我的画面 · 仅本地预览</span>
           <button onClick={() => setLargePreview(v => !v)} aria-label={largePreview ? '缩小我的画面' : '放大我的画面'} aria-pressed={largePreview} className="absolute right-14 top-3 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-2 text-xs text-white">{largePreview ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}{largePreview ? '缩小' : '放大'}</button><button onClick={toggleCamera} className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white" aria-label={camera ? '关闭摄像头' : '开启摄像头'}>{camera ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}</button>
         </div>
+        {(camera || media.error) && stage !== 'report' && <section className="shrink-0 space-y-2 border-b px-5 py-3 text-xs" style={surface}>
+          <p role="status" className={media.vision.allowed ? 'text-emerald-600' : 'text-amber-700'}>{media.vision.allowed ? '本人画面检测正常' : media.vision.message}{media.processing ? ' · 正在识别与核验，请稍候' : ''}</p>
+          {media.challenge && <div className="rounded-xl bg-blue-50 p-3 leading-6 text-blue-950"><strong>{media.enrolled ? '请朗读随机口令，复核后继续' : '录入本次练习声音 · 请完整朗读（至少 4 秒）'}</strong><p className="text-base font-semibold">{media.challenge.phrase}</p><p>读完后停顿即可提交。请保持本人在画面中。</p><button disabled={media.processing || media.loading} onClick={media.newChallenge} className="underline disabled:opacity-40">更换口令</button></div>}
+          {media.error && <p role="alert" className="text-amber-700">{media.error} <button disabled={media.loading || media.processing} onClick={media.prepare} className="underline">重新检查设备</button></p>}
+          <p>浏览器语音识别 · 本平台仅做本次声音比对</p>
+          {media.enrolled && !media.challenge && <p className="text-emerald-600">本次声音已录入；回答时比对声音，定期随机口令复核。</p>}
+        </section>}
         <div ref={scrollArea} onScroll={() => { const el = scrollArea.current; if (el) shouldFollow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100 }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 md:p-5">
           {stage === 'setup' ? <div className="space-y-5">
-            <div className="rounded-2xl p-4" style={{ background: 'var(--color-primary-fixed)' }}><div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-primary)' }}><Sparkles className="h-4 w-4" />你只需要选岗位，剩下的交给我</div><p className="mt-2 text-xs leading-6 opacity-70">我会结合你的个人资料、最近简历和岗位技能准备问题。开始后自动开启摄像头预览，听完问题即可回答，我会持续聆听，回答停顿后自动接话，你也可以直接开口提问。</p></div>
+            <div className="rounded-2xl p-4" style={{ background: 'var(--color-primary-fixed)' }}><div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-primary)' }}><Sparkles className="h-4 w-4" />你只需要选岗位，剩下的交给我</div><p className="mt-2 text-xs leading-6 opacity-70">我会结合你的个人资料、最近简历和岗位技能准备问题。先检查摄像头、麦克风并朗读随机口令录入声音。听完问题即可回答；离开画面、出现多人或检测到疑似手机时暂停，恢复后继续。</p></div>
             <GraphRolePicker value={role} onChange={setRole} />
             {profileError && <div role="alert" className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900"><span>{profileError}</span><button onClick={() => setProfileRevision(v => v+1)} className="shrink-0 font-semibold underline">重新读取资料</button></div>}
             <label className="flex items-center gap-3 rounded-xl border px-4 py-3" style={surface}><span className="shrink-0 text-xs opacity-60">目标岗位</span><input aria-label="目标岗位" value={role} onChange={e => setRole(e.target.value)} maxLength={120} placeholder="也可以输入其他岗位" className="min-w-0 flex-1 bg-transparent text-sm outline-none" /><Check className="h-4 w-4" style={{ color: 'var(--color-primary)' }} /></label>
             <div className="divide-y rounded-xl border px-4 text-xs" style={surface}>{[['个人资料', profileLoading ? '正在读取…' : profileError ? '读取失败，请重试' : profileInfo?.profile_available ? '已读取，开始时自动关联' : '尚未完善，可直接练习'], ['最近简历', profileLoading ? '正在读取…' : profileError ? '读取失败，暂无法确认简历' : profileInfo?.resume_title || '暂无简历，按岗位通用要求练习'], ['岗位技能', '开始时检索岗位技能要求'], ['面试题库', '按岗位和技能检索匹配题目']].map(([label,value]) => <div key={label} className="flex items-center justify-between gap-3 py-3"><span className="shrink-0 opacity-50">{label}</span><span className="truncate">{value}</span></div>)}</div>
             <div className="flex items-center justify-between text-xs"><span className="opacity-60">本次主问题数量</span><div className="flex gap-1">{[6,7,8].map(n => <button key={n} aria-pressed={targetCount === n} onClick={() => setTargetCount(n)} className="rounded-lg border px-3 py-1.5" style={targetCount === n ? primary : surface}>{n} 道</button>)}</div></div>
-            <p className="text-[11px] leading-5 opacity-50">点击开始会申请设备权限；摄像头不上传、不录像。相关资料和回答文字用于 AI 出题与反馈，语音识别可能由浏览器服务处理。面试全程使用语音，请先允许麦克风权限；建议佩戴耳机避免扬声器回声。</p>
+            <p className="text-[11px] leading-5 opacity-50">检查设备将申请摄像头和麦克风权限。画面检测在本地运行，不上传视频；降噪后的浏览器服务负责语音转写，降噪分段录音发送到本平台仅做声音比对，录音不落盘，声纹仅在本次会话中临时保存，结束即清除。声音比对和随机口令不能保证识别克隆声音，画面提醒也不作为作弊结论。建议佩戴耳机。</p>
           </div> : <div className="space-y-5">
             {prepared && <div className="text-center text-[10px] leading-5 opacity-50">已准备 {targetCount} 道主问题 · {prepared.resume_title ? '已关联最近简历' : '通用岗位练习'} · {prepared.job_evidence_count} 条岗位证据 · {prepared.question_bank_count} 道匹配题</div>}
             {stage === 'session' && <section aria-label="面试官字幕" className="space-y-4 py-3">
@@ -470,10 +446,10 @@ export default function Interview() {
           <div ref={bottom} />
         </div>
         <footer className="shrink-0 border-t p-4" style={{ borderColor: 'var(--color-outline-variant)' }}>
-          {stage === 'setup' ? <button onClick={startRoom} disabled={busy || !role.trim() || !RecognitionAPI} className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm font-semibold disabled:opacity-40" style={primary}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}开始面试 · 自动准备资料</button> : stage === 'report' ? <div className="flex flex-wrap gap-2"><button onClick={download} disabled={downloading} className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs disabled:opacity-50" style={primary}>{downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{downloading ? '正在导出…' : '下载 PDF 报告'}</button><button onClick={reset} disabled={downloading} className="rounded-lg border px-4 py-2 text-xs" style={surface}>再练一次</button><button onClick={() => setPage('learning')} className="rounded-lg border px-4 py-2 text-xs" style={surface}>去学习中心</button></div> : <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3"><button disabled={!RecognitionAPI} onClick={toggleAuto} aria-label={autoMic ? '暂停麦克风' : '恢复麦克风'} className="rounded-full border p-3" style={autoMic ? primary : surface}>{autoMic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button><div><p className="text-xs font-medium">{autoMic ? '持续聆听中' : '麦克风已暂停'}</p><p className="mt-1 text-[10px] opacity-50">直接开口回答或提问 · 停顿后面试官自动接话</p></div></div>
+          {stage === 'setup' ? <button onClick={startRoom} disabled={busy || media.loading || media.processing || !role.trim()} className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm font-semibold disabled:opacity-40" style={primary}>{busy || media.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}{media.loading ? '正在检查设备…' : media.allowed ? '开始面试 · 自动准备资料' : camera ? '请完成画面与声音核验' : '同意本次声音核验并检查设备'}</button> : stage === 'report' ? <div className="flex flex-wrap gap-2"><button onClick={download} disabled={downloading} className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs disabled:opacity-50" style={primary}>{downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{downloading ? '正在导出…' : '下载 PDF 报告'}</button><button onClick={reset} disabled={downloading} className="rounded-lg border px-4 py-2 text-xs" style={surface}>再练一次</button><button onClick={() => setPage('learning')} className="rounded-lg border px-4 py-2 text-xs" style={surface}>去学习中心</button></div> : <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3"><button disabled={!media.allowed} onClick={toggleAuto} aria-label={autoMic ? '暂停麦克风' : '恢复麦克风'} className="rounded-full border p-3" style={autoMic ? primary : surface}>{autoMic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button><div><p className="text-xs font-medium">{autoMic ? '降噪聆听中' : '麦克风已暂停'}</p><p className="mt-1 text-[10px] opacity-50">降噪已开启 · 声音核对后接话 · 可手动打断</p></div></div>
             <button disabled={busy || !question} onClick={() => speak(question)} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs" style={surface}><Volume2 className="h-4 w-4" />再听一遍</button>
-            {!RecognitionAPI && <p className="w-full text-xs text-amber-700">此浏览器不支持语音识别，请使用支持中文语音识别的浏览器继续。</p>}
+
           </div>}
 
         </footer>

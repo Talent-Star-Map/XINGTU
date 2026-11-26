@@ -12,6 +12,8 @@ from auth_guard import require_jobseeker
 from services.llm import complete, stream_complete, LLMTier
 
 router = APIRouter(prefix='/api/interview', tags=['模拟面试'])
+from routers.interview_media import router as media_router
+router.include_router(media_router)
 logger = logging.getLogger(__name__)
 REPORT_NOTICE = 'AI 练习反馈，仅基于本次回答；引用已匹配原文，不代表评价已通过人工核验。'
 

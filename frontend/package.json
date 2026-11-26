@@ -6,13 +6,16 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "npm run prepare:interview && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "prepare:interview": "node scripts/prepare-interview.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.17",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
+    "@sapphi-red/web-noise-suppressor": "^0.4.2",
     "@types/three": "^0.185.1",
     "clsx": "^2.1.0",
     "d3-force": "^3.0.0",

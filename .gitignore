@@ -86,3 +86,8 @@ data/external/
 desktop-companion/.local-data/
 desktop-companion/native/*.exe
 desktop-companion/native/com.xingtu.companion.json
+
+# Downloaded interview runtime assets (setup scripts reproduce these).
+backend/resources/interview-models/
+frontend/public/models/interview/wasm/
+*.download

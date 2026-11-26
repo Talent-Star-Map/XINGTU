@@ -1,0 +1,3 @@
+# Optional CPU inference. Install in the server's existing virtual environment.
+sherpa-onnx>=1.12.15,<3
+numpy>=1.26,<3
