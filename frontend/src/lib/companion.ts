@@ -5,6 +5,7 @@ export type PetPreferences = { position: Point | null; size: PetSize; collapsed:
 
 export const PET_STORAGE_KEY = 'xingtu_xiaogui_v1'
 export const PET_SIZES: Record<PetSize, number> = { small: 140, medium: 196, large: 260 }
+export const PET_PANEL_SCALES: Record<PetSize, number> = { small: 0.82, medium: 1, large: 1.16 }
 export const PET_DEFAULTS: PetPreferences = { position: null, size: 'medium', collapsed: false, wander: false }
 export const PET_LABELS: Record<PetAction, string> = { idle: '陪着你', wave: '打个招呼', walk: '散散步', sleep: '睡个好觉', eat: '开饭啦' }
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { Hand, Moon, Utensils, Footprints, Minimize2, X, RotateCcw } from 'lucide-react'
-import { clampPetPosition, PET_DEFAULTS, PET_LABELS, PET_SIZES, PET_STORAGE_KEY, petAsset, readPetPreferences, type PetAction, type PetPreferences, type Point } from '../../lib/companion'
+import { clampPetPosition, PET_DEFAULTS, PET_LABELS, PET_SIZES, PET_PANEL_SCALES, PET_STORAGE_KEY, petAsset, readPetPreferences, type PetAction, type PetPreferences, type Point } from '../../lib/companion'
 import PetMotionSurface, { displayPetAction, type PetCommand, type PetMotionAvailability } from './PetMotionSurface'
 import type { MotionSnapshot } from '../../lib/companionMotion'
 import { useDesktopCompanion } from '../../lib/companionBridge'
@@ -76,6 +76,8 @@ export default function XiaoguiPet() {
   const root = useRef<HTMLDivElement>(null)
   const size = PET_SIZES[preferences.size]
   const effectiveSize = preferences.collapsed ? 52 : size
+  const view = petViewport()
+  const panelScale = Math.min(PET_PANEL_SCALES[preferences.size], Math.max(0.1, (view.width - 24) / 360))
   const enabled = !desktopCompanion && !/^\/(print|share|resume-reader)(\/|$)/.test(pathname)
   const animated = !paused && pageVisible
 
@@ -150,7 +152,7 @@ export default function XiaoguiPet() {
     const observer = new ResizeObserver(measure)
     observer.observe(panel)
     return () => observer.disconnect()
-  }, [open, panelMode])
+  }, [open, panelMode, panelScale, view.height])
 
   useEffect(() => {
     if (!motion.ready || !preferences.wander || preferences.collapsed || !animated || dragging || open || action !== 'idle' || queued || !enabled) return
@@ -202,8 +204,7 @@ export default function XiaoguiPet() {
   }
 
   if (!enabled) return null
-  const view = petViewport()
-  const panelWidth = Math.min(360, view.width - 24)
+  const panelWidth = 360 * panelScale
   const panelLeft = Math.max(12, Math.min(position.x + effectiveSize / 2 - panelWidth / 2, view.width - panelWidth - 12)) - position.x
   const actualPanelHeight = Math.min(panelHeight, view.height - 24)
   const fitTop = (top: number) => Math.max(12, Math.min(top, view.height - actualPanelHeight - 12))
@@ -218,7 +219,7 @@ export default function XiaoguiPet() {
   return createPortal(<div ref={root} className={`xiaogui-pet${dragging ? ' is-dragging' : ''}${animated ? '' : ' is-paused'}`} style={{ left: position.x, top: position.y, width: effectiveSize, height: effectiveSize, '--pet-size': `${size}px` } as CSSProperties}>
     <div className="xiaogui-live" role="status" aria-live="polite">{bubble}</div>
     {bubble && !open && !preferences.collapsed && <div className={`xiaogui-bubble ${position.y < 100 ? 'below' : ''}`} aria-hidden="true" style={{ left: panelLeft, width: panelWidth }}>{bubble}</div>}
-    <section id="xiaogui-panel-content" hidden={!open || preferences.collapsed} className={`xiaogui-panel${panelMode === 'chat' ? ' xiaogui-panel--chat' : ''}`} aria-label="小星互动面板" style={{ position: 'fixed', left: panelX, top: panelTop, width: panelWidth, maxHeight: view.height - 24 }}>
+    <section id="xiaogui-panel-content" hidden={!open || preferences.collapsed} className={`xiaogui-panel${panelMode === 'chat' ? ' xiaogui-panel--chat' : ''}`} aria-label="小星互动面板" style={{ position: 'fixed', left: panelX, top: panelTop, width: 360, maxHeight: (view.height - 24) / panelScale, transform: `scale(${panelScale})`, transformOrigin: 'top left' }}>
       <header><span className="xiaogui-avatar"><PetPortrait /></span><div><strong>小星</strong><span>{queued ? '等这个动作做完就来' : PET_LABELS[action]} · 你的星图伙伴</span></div><button aria-label="关闭互动面板" onClick={() => setOpen(false)}><X size={16} /></button></header>
       <div className="xiaogui-tabs" role="tablist" aria-label="小星功能">
         <button id="xiaogui-chat-tab" role="tab" aria-selected={panelMode === 'chat'} aria-controls="xiaogui-chat-content" onClick={() => setPanelMode('chat')}>和小星聊天</button>
