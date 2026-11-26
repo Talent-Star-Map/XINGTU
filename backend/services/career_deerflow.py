@@ -96,6 +96,7 @@ def _run_domain(role,data):
 
 
 def _invoke(role, data):
+    os.environ.setdefault('DEER_FLOW_PROJECT_ROOT',str(Path(__file__).resolve().parents[1]))
     try:
         from deerflow.client import DeerFlowClient
         from langgraph.checkpoint.memory import InMemorySaver

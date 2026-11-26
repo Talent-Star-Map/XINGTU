@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler,HTTPServer
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 root=Path(__file__).resolve().parents[2]
-os.environ['DEER_FLOW_PROJECT_ROOT']=str(root/'backend')
+os.environ['DEER_FLOW_PROJECT_ROOT']=str(Path(__file__).resolve().parents[1])
 os.environ['DEER_FLOW_HOME']=str(root/'tmp/career-sdk/runtime-smoke')
 os.environ['DATABASE_URL']='sqlite://'
 os.environ['JWT_SECRET']='offline-sdk-check-only-long-secret'
