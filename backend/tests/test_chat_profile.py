@@ -66,7 +66,7 @@ class ProfileTests(unittest.IsolatedAsyncioTestCase):
         profiles = [{'status': 'ready', 'profile': {'skills': ['Python']}, 'sources': ['account']},
                     {'status': 'unavailable', 'profile': {}, 'sources': []}]
         seen = []
-        async def report(query, executions):
+        async def report(query, executions, mode='evidence'):
             seen.append((query, executions))
             yield '建议'
         with patch('services.job_agent.agent.get_user_profile', AsyncMock(side_effect=profiles)) as loader, patch('services.job_agent.agent.stream_report', report):

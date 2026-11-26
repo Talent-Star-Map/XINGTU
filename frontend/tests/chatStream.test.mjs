@@ -31,3 +31,20 @@ test('premature DONE is not reported as success', async () => {
   globalThis.fetch = async () => response('data: [DONE]\n\n')
   await assert.rejects(streamChat('继续', () => {}), /回答未完成/)
 })
+
+test('attachment IDs and reading phase survive streaming', async () => {
+  let body
+  globalThis.fetch = async (_, init) => {
+    body = JSON.parse(init.body)
+    return response('data: {"event":"materials_started"}\n\ndata: {"event":"report_done","answer":"结合材料的回答","references":[]}\n\ndata: [DONE]\n\n')
+  }
+  const events = []
+  await streamChat('分析材料', event => events.push(event), [], undefined, undefined, ['sample-id'])
+  assert.deepEqual(body.attachment_ids, ['sample-id'])
+  assert.equal(events[0].event, 'materials_started')
+})
+
+test('expired attachment error remains actionable', async () => {
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: '材料已过期或不可用，请重新上传' }), { status: 422 })
+  await assert.rejects(streamChat('分析材料', () => {}), /重新上传/)
+})

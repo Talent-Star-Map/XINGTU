@@ -26,6 +26,19 @@ async function postJson<T = any>(url: string, body: any): Promise<T> {
 }
 
 export const kgApi = {
+  uploadAttachment: async (file: File): Promise<ChatAttachment> => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch('/api/kg/chat/attachments', {
+      method: 'POST', headers: { Authorization: `Bearer ${TOKEN()}` }, body: form,
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(response.status === 401 ? '登录已失效，请重新登录' : data.detail || '材料上传失败，请重试')
+    return data.data
+  },
+  removeAttachment: (id: string) => fetch(`/api/kg/chat/attachments/${encodeURIComponent(id)}`, {
+    method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN()}` },
+  }),
   personalGraph: () => getJson('/api/kg/personal/graph'),
   overview: () => getJson('/api/kg/jobs/overview'),
   catalog: (includeUnverified = false, techStack = '', level = '') => {
@@ -61,12 +74,17 @@ export const kgApi = {
     getJson(`/api/kg/snapshot/at?date=${date}&limit=${limit}`),
   semanticSearch: (query: string, topK = 20, asOf?: string) =>
     postJson('/api/kg/semantic-search', { query, top_k: topK, as_of: asOf }),
+  catalogSearch: (query: string, topK = 8) =>
+    postJson('/api/kg/catalog-search', { query, top_k: topK }),
   personalRecommend: () => getJson('/api/kg/personal/recommend'),
   personalGap: (jobId: number) => getJson(`/api/kg/personal/gap?job_id=${jobId}`),
   chatTools: () => getJson('/api/kg/chat/tools'),
 }
 
+export type ChatAttachment = { id: string; name: string; kind: 'document' | 'image'; truncated: boolean; expires_in: number }
+
 export type KgEvent =
+  | { event: 'materials_started' }
   | { event: 'profile_ready'; status: 'ready' | 'empty' | 'unavailable'; sources: string[] }
   | { event: 'plan_started'; step: string }
   | { event: 'plan_ready'; plan_id: string; tasks: any[]; execution_mode: string }
@@ -86,6 +104,7 @@ export async function streamChat(
   history?: any[],
   jobId?: number,
   signal?: AbortSignal,
+  attachmentIds?: string[],
 ) {
   const resp = await fetch('/api/kg/chat', {
     method: 'POST',
@@ -93,11 +112,12 @@ export async function streamChat(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${TOKEN()}`,
     },
-    body: JSON.stringify({ message, history, job_id: jobId }),
+    body: JSON.stringify({ message, history, job_id: jobId, attachment_ids: attachmentIds || [] }),
     signal,
   })
   if (!resp.ok || !resp.body) {
-    throw new Error(resp.status === 401 ? '登录已失效，请重新登录' : resp.status === 422 ? '问题或对话过长，请缩短后重试' : '智能问答暂不可用，请稍后重试')
+    const error = await resp.json().catch(() => ({}))
+    throw new Error(resp.status === 401 ? '登录已失效，请重新登录' : typeof error.detail === 'string' ? error.detail : resp.status === 422 ? '问题、对话或附件无效，请检查后重试' : '智能问答暂不可用，请稍后重试')
   }
     const reader = resp.body.getReader()
     const decoder = new TextDecoder()

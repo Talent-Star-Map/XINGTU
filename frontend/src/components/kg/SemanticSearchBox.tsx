@@ -1,9 +1,9 @@
 /**
- * SemanticSearchBox — 顶栏 ⌘K 唤起的语义搜索框
- * 输入 → 调 /api/kg/semantic-search → 下拉结果 → 点击选中并跳到节点。
+ * SemanticSearchBox — 顶栏 ⌘K 唤起的岗位搜索框。
+ * 通过岗位目录搜索选择目标，避免等待语义向量生成。
  */
 import { useEffect, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { kgApi } from './api'
 
 interface Props {
@@ -17,6 +17,8 @@ export default function SemanticSearchBox({ onPick, label = '语义搜索', enab
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [results, setResults] = useState<any[]>([])
+  const [error, setError] = useState('')
+  const [revision, setRevision] = useState(0)
   const inpRef = useRef<HTMLInputElement>(null)
 
   // ⌘K / Ctrl+K 唤起
@@ -43,25 +45,30 @@ export default function SemanticSearchBox({ onPick, label = '语义搜索', enab
 
   // 防抖搜索
   useEffect(() => {
-    if (!q.trim()) { setResults([]); return }
+    let current = true
+    setResults([])
+    setError('')
+    if (!q.trim() || !open || !enabled) { setBusy(false); return }
+    setBusy(true)
     const t = setTimeout(async () => {
       setBusy(true)
       try {
-        const r = await kgApi.semanticSearch(q, 8)
-        setResults(r || [])
-      } catch (e) {
-        setResults([])
+        const r = await kgApi.catalogSearch(q.trim(), 8)
+        if (current) setResults(r || [])
+      } catch {
+        if (current) setError('岗位暂时读取失败，请检查连接后重试。')
       } finally {
-        setBusy(false)
+        if (current) setBusy(false)
       }
     }, 300)
-    return () => clearTimeout(t)
-  }, [q])
+    return () => { current = false; clearTimeout(t) }
+  }, [q, open, enabled, revision])
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
+        disabled={!enabled}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
         style={{ background: 'var(--color-surface-container)', color: 'var(--color-on-surface)' }}
       >
@@ -75,7 +82,7 @@ export default function SemanticSearchBox({ onPick, label = '语义搜索', enab
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-24" style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={() => setOpen(false)}>
-      <div
+      <div role="dialog" aria-modal="true" aria-label="选择岗位"
         className="w-[600px] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden shadow-2xl"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-outline)' }}
         onClick={(e) => e.stopPropagation()}
@@ -85,14 +92,19 @@ export default function SemanticSearchBox({ onPick, label = '语义搜索', enab
           <input
             ref={inpRef}
             value={q}
+            maxLength={200}
+            aria-label="搜索岗位"
             onChange={(e) => setQ(e.target.value)}
-            placeholder="输入自然语言,例如:AI 方向、Java 后端、应届生可投..."
+            placeholder="输入岗位名称或技能，例如 Python、Java、后端"
             className="flex-1 bg-transparent outline-none text-sm"
           />
           {busy && <span className="text-xs">搜索中...</span>}
+          <button onClick={() => setOpen(false)} aria-label="关闭岗位搜索"><X size={18} /></button>
         </div>
         <div className="max-h-[400px] overflow-auto">
-          {results.length === 0 && q && !busy && (
+          {error && <p role="alert" className="px-4 py-6 text-sm text-red-600">{error}<button onClick={() => setRevision(v => v + 1)} className="ml-2 underline">重试</button></p>}
+          {!q.trim() && <p className="px-4 py-6 text-sm">输入岗位名称或技能关键词，例如 Python、Java、后端。</p>}
+          {results.length === 0 && q.trim() && !busy && !error && (
             <div className="px-4 py-6 text-center text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>无结果</div>
           )}
           {results.map((r: any, i) => (

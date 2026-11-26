@@ -462,7 +462,7 @@ def search_job_catalog(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
         MATCH (j:Job)
         WHERE j.title IS NOT NULL AND trim(j.title) <> ''
         OPTIONAL MATCH (j)-[:REQUIRES]->(sk:Skill)
-        WITH j, collect(DISTINCT sk.canonical_name)[0..12] AS skills
+        WITH j, collect(DISTINCT coalesce(sk.canonical_name, sk.name))[0..12] AS skills
         WHERE any(term IN $terms WHERE
               toLower(coalesce(j.title, '')) CONTAINS term
               OR toLower(coalesce(j.job_description, '')) CONTAINS term
@@ -551,27 +551,25 @@ def get_personal_recommend(user_id: int, limit: int = 5) -> List[Dict[str, Any]]
 
 
 def get_gap_analysis(user_id: int, job_id: int) -> Dict[str, Any]:
-    """用户对目标 Job 的技能缺口分析。"""
+    """Compare current authenticated SQL profile with the selected graph job."""
+    from services.chat_profile import load_chat_profile
+    from services.skill_synonyms import canonical_name
+    profile = load_chat_profile(user_id)
     rows = _query(
-        """
-        MATCH (u:User {id: $uid})
-        OPTIONAL MATCH (u)-[:MASTERED]->(sk:Skill)
-        WITH u, collect(distinct sk.canonical_name) AS user_skills
-        MATCH (j:Job {id: $jid})-[:REQUIRES]->(req:Skill)
-        WITH j, req.canonical_name AS required, user_skills,
-             [(u)-[:MASTERED]->(sk:Skill {canonical_name: required}) | sk][0] AS mastered
-        RETURN required, mastered IS NOT NULL AS mastered
-        """,
-        {"uid": user_id, "jid": job_id},
+        "MATCH (j:Job {id:$jid}) OPTIONAL MATCH (j)-[:REQUIRES]->(req:Skill) "
+        "RETURN j.id AS id, collect(DISTINCT coalesce(req.canonical_name,req.name)) AS skills",
+        {"jid": job_id},
     )
-    have, lack = [], []
-    for r in rows:
-        if r["mastered"]:
-            have.append(r["required"])
-        else:
-            lack.append(r["required"])
-    return {"have": have, "need": lack,
-            "match_rate": round(len(have) / max(len(have) + len(lack), 1), 2)}
+    if not rows:
+        return {"error": "目标岗位不存在，请重新选择岗位"}
+    required = sorted({canonical_name(s) for s in rows[0]['skills'] if isinstance(s, str) and s.strip()})
+    known = {canonical_name(s) for s in profile.get('profile', {}).get('skills', [])}
+    have = [s for s in required if s in known]
+    need = [s for s in required if s not in known]
+    return {"have": have, "need": need,
+            "match_rate": round(len(have) / len(required), 2) if required and known else None,
+            "profile_status": profile['status'], "sources": profile.get('sources', []),
+            "interpretation": "基于用户填写和简历提及的技能比对；未填写不等于不会，不代表认证能力。"}
 
 
 # ────────────────────────────────────────────────────────────

@@ -321,6 +321,14 @@ async def semantic_search(body: SemanticSearchBody):
     return _ok(results)
 
 
+@router.post('/catalog-search')
+def catalog_search(body: SemanticSearchBody):
+    """Selecting a current job must not depend on embeddings or historical snapshots."""
+    if not body.query.strip() or len(body.query) > 200:
+        raise HTTPException(400, '请输入 1 至 200 字的岗位或技能关键词')
+    return _ok(kg_service.search_job_catalog(body.query, max(1, min(body.top_k, 30))))
+
+
 # ────────────────────────────────────────────────────────────
 # 个性化(需要登录)
 # ────────────────────────────────────────────────────────────
