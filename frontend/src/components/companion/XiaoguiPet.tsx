@@ -7,6 +7,7 @@ import PetMotionSurface, { displayPetAction, type PetCommand, type PetMotionAvai
 import type { MotionSnapshot } from '../../lib/companionMotion'
 import { useDesktopCompanion } from '../../lib/companionBridge'
 import './xiaogui.css'
+import CompanionChat from './CompanionChat'
 
 export function PetSprite({ action, animated = true }: { action: PetAction; animated?: boolean }) {
   const [failed, setFailed] = useState(false)
@@ -49,9 +50,8 @@ function clampToViewport(point: Point, size: number): Point {
 }
 
 function defaultPosition(size: number): Point {
-  // Leave room below the pet for the existing chat launcher.
   const view = petViewport()
-  return clampPetPosition({ x: view.width - size - 24, y: view.height - size - 88 }, view.width, view.height, size)
+  return clampPetPosition({ x: view.width - size - 24, y: view.height - size - 26 }, view.width, view.height, size)
 }
 
 export default function XiaoguiPet() {
@@ -64,8 +64,9 @@ export default function XiaoguiPet() {
   const [motion, setMotion] = useState<PetMotionAvailability>({ ready: false, error: null })
   const [retry, setRetry] = useState(0)
   const [queued, setQueued] = useState(false)
-  const [panelHeight, setPanelHeight] = useState(360)
+  const [panelHeight, setPanelHeight] = useState(490)
   const [open, setOpen] = useState(false)
+  const [panelMode, setPanelMode] = useState<'chat' | 'actions'>('chat')
   const [dragging, setDragging] = useState(false)
   const [bubble, setBubble] = useState('')
   const [paused, setPaused] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -149,7 +150,7 @@ export default function XiaoguiPet() {
     const observer = new ResizeObserver(measure)
     observer.observe(panel)
     return () => observer.disconnect()
-  }, [open])
+  }, [open, panelMode])
 
   useEffect(() => {
     if (!motion.ready || !preferences.wander || preferences.collapsed || !animated || dragging || open || action !== 'idle' || queued || !enabled) return
@@ -202,7 +203,7 @@ export default function XiaoguiPet() {
 
   if (!enabled) return null
   const view = petViewport()
-  const panelWidth = Math.min(286, view.width - 24)
+  const panelWidth = Math.min(360, view.width - 24)
   const panelLeft = Math.max(12, Math.min(position.x + effectiveSize / 2 - panelWidth / 2, view.width - panelWidth - 12)) - position.x
   const actualPanelHeight = Math.min(panelHeight, view.height - 24)
   const fitTop = (top: number) => Math.max(12, Math.min(top, view.height - actualPanelHeight - 12))
@@ -217,8 +218,14 @@ export default function XiaoguiPet() {
   return createPortal(<div ref={root} className={`xiaogui-pet${dragging ? ' is-dragging' : ''}${animated ? '' : ' is-paused'}`} style={{ left: position.x, top: position.y, width: effectiveSize, height: effectiveSize, '--pet-size': `${size}px` } as CSSProperties}>
     <div className="xiaogui-live" role="status" aria-live="polite">{bubble}</div>
     {bubble && !open && !preferences.collapsed && <div className={`xiaogui-bubble ${position.y < 100 ? 'below' : ''}`} aria-hidden="true" style={{ left: panelLeft, width: panelWidth }}>{bubble}</div>}
-    {open && !preferences.collapsed && <section id="xiaogui-panel-content" className="xiaogui-panel" aria-label="小星互动面板" style={{ position: 'fixed', left: panelX, top: panelTop, width: panelWidth, maxHeight: view.height - 24 }}>
+    <section id="xiaogui-panel-content" hidden={!open || preferences.collapsed} className={`xiaogui-panel${panelMode === 'chat' ? ' xiaogui-panel--chat' : ''}`} aria-label="小星互动面板" style={{ position: 'fixed', left: panelX, top: panelTop, width: panelWidth, maxHeight: view.height - 24 }}>
       <header><span className="xiaogui-avatar"><PetPortrait /></span><div><strong>小星</strong><span>{queued ? '等这个动作做完就来' : PET_LABELS[action]} · 你的星图伙伴</span></div><button aria-label="关闭互动面板" onClick={() => setOpen(false)}><X size={16} /></button></header>
+      <div className="xiaogui-tabs" role="tablist" aria-label="小星功能">
+        <button id="xiaogui-chat-tab" role="tab" aria-selected={panelMode === 'chat'} aria-controls="xiaogui-chat-content" onClick={() => setPanelMode('chat')}>和小星聊天</button>
+        <button id="xiaogui-actions-tab" role="tab" aria-selected={panelMode === 'actions'} aria-controls="xiaogui-actions-content" onClick={() => setPanelMode('actions')}>日常互动</button>
+      </div>
+      <div id="xiaogui-chat-content" role="tabpanel" aria-labelledby="xiaogui-chat-tab" hidden={panelMode !== 'chat'}><CompanionChat active={open && !preferences.collapsed && panelMode === 'chat'} /></div>
+      <div id="xiaogui-actions-content" role="tabpanel" aria-labelledby="xiaogui-actions-tab" hidden={panelMode !== 'actions'}>
       <div className="xiaogui-actions">
         {ACTIONS.map(item => <button key={item.action} disabled={!motion.ready} onClick={() => doAction(item.action, item.message)} aria-pressed={action === item.action}><item.icon size={19} /><span>{item.label}</span></button>)}
       </div>
@@ -229,7 +236,8 @@ export default function XiaoguiPet() {
       <label className="xiaogui-setting"><span>安静模式 · 暂停动画</span><input type="checkbox" checked={paused} onChange={event => setPaused(event.target.checked)} /></label>
       <footer><button onClick={() => { setPosition(defaultPosition(size)); setOpen(false) }}><RotateCcw size={14} />回到角落</button><button onClick={() => { setPreferences(p => ({ ...p, collapsed: true })); setOpen(false); setBubble('') }}><Minimize2 size={14} />收起</button></footer>
       <p>拖动换位置，也可聚焦后按方向键移动</p>
-    </section>}
+      </div>
+    </section>
     <button className={`xiaogui-character${preferences.collapsed ? ' is-collapsed' : ''}`} aria-label={preferences.collapsed ? '展开小星桌宠' : `小星：${PET_LABELS[action]}，点击互动，拖动可移动`} aria-expanded={open} aria-controls={open ? 'xiaogui-panel-content' : undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={() => { drag.current = null; setDragging(false) }} onLostPointerCapture={() => setDragging(false)} onClick={toggle} onKeyDown={keyboardMove}>
       {preferences.collapsed ? <><PetPortrait /><span>小星</span></> : <PetMotionSurface key={retry} command={command} paused={!animated || dragging} onState={motionState} onTravel={travel} onAvailability={setMotion} />}
     </button>

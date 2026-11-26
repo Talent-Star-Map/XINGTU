@@ -75,7 +75,7 @@ export default function LearningPath() {
   const [step, setStep] = useState(0)
   const [msg, setMsg] = useState('')
   const [chatLog, setChatLog] = useState<{ role: string; text: string }[]>([
-    { role: 'tutu', text: '你好呀！我是图图，你的 AI 学习助手。我已经了解了你的诊断结果，可以针对性地帮你学习~ 😊' },
+    { role: 'tutu', text: '你好呀！我是小星，你的 AI 学习助手。我已经了解了你的诊断结果，可以针对性地帮你学习~ 😊' },
   ])
   const [resources, setResources] = useState<{ name: string; type: string; url: string }[]>([])
   const [loadingResources, setLoadingResources] = useState(false)
@@ -192,7 +192,7 @@ export default function LearningPath() {
               <span className="text-xs font-bold mt-1" style={{ color: 'var(--accent-orange)' }}>星星</span>
             </motion.div>
             <div className="flex-1">
-              <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 图图</h1>
+              <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 小星</h1>
               <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>请先完成岗位诊断，再进入学习 🎯</p>
             </div>
             <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }} className="flex flex-col items-center gap-1">
@@ -202,7 +202,7 @@ export default function LearningPath() {
                 </div>
                 <motion.div className="absolute -top-1 -right-1 text-xs" animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}>💬</motion.div>
               </div>
-              <span className="text-xs font-bold mt-1" style={{ color: 'var(--color-primary)' }}>图图</span>
+              <span className="text-xs font-bold mt-1" style={{ color: 'var(--color-primary)' }}>小星</span>
             </motion.div>
           </div>
         </motion.div>
@@ -239,7 +239,7 @@ export default function LearningPath() {
               <span className="text-[9px]" style={{ color: 'var(--color-on-surface-variant)' }}>路径规划师</span>
             </motion.div>
             <div className="flex-1">
-              <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 图图</h1>
+              <h1 className="text-lg md:text-2xl font-extrabold gradient-text">星星 ✦ 小星</h1>
               <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-on-surface)' }}>目标：{targetJob.title} · {targetJob.company}</p>
               <div className="flex items-center gap-4 mt-2">
                 <span className="text-xs flex items-center gap-1" style={{ color: 'var(--color-primary)' }}><Target className="h-3.5 w-3.5" /> 匹配度 {diagnosis ? Math.round(diagnosis.overall) : '-'}{diagnosis?.grade && <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--color-primary)', color: 'white' }}>{diagnosis.grade}</span>}</span>
@@ -489,7 +489,7 @@ export default function LearningPath() {
           </AnimatePresence>
         </div>
 
-        {/* 右侧：图图聊天 */}
+        {/* 右侧：小星聊天 */}
         <div className="col-span-5">
           <div className="rounded-2xl border flex flex-col sticky top-24" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)', height: 480 }}>
             <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: 'var(--color-outline-variant)' }}>
@@ -497,7 +497,7 @@ export default function LearningPath() {
                 <MessageCircle className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>图图</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>小星</p>
                 <p className="text-[10px]" style={{ color: 'var(--color-on-surface-variant)' }}>AI 学习助手 · 已结合诊断结果</p>
               </div>
             </div>
@@ -511,7 +511,7 @@ export default function LearningPath() {
                       color: c.role === 'user' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
                       border: c.role === 'user' ? 'none' : '1px solid var(--color-outline-variant)',
                     }}>
-                    {c.role === 'tutu' && <span className="text-xs font-bold mr-1" style={{ color: 'var(--color-primary)' }}>图图</span>}
+                    {c.role === 'tutu' && <span className="text-xs font-bold mr-1" style={{ color: 'var(--color-primary)' }}>小星</span>}
                     <p className="text-xs leading-relaxed whitespace-pre-wrap">{c.text}</p>
                   </div>
                 </div>
@@ -520,7 +520,7 @@ export default function LearningPath() {
 
             <div className="p-3 border-t flex gap-2" style={{ borderColor: 'var(--color-outline-variant)' }}>
               <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMsg()}
-                placeholder="问问图图学习问题..." className="flex-1 rounded-xl border px-3 py-2 text-xs outline-none"
+                placeholder="问问小星学习问题..." className="flex-1 rounded-xl border px-3 py-2 text-xs outline-none"
                 style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface)', color: 'var(--color-on-surface)' }} />
               <button onClick={sendMsg} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>发送</button>
             </div>

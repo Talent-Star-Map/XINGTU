@@ -78,7 +78,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </div>
-      <XiaoguiPet />
+      <XiaoguiPet key={user?.token || 'guest'} />
     </div>
   )
 }

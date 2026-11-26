@@ -47,7 +47,6 @@ const JSProfileHome = lazy(() => import('../pages/jobseeker/ProfileHome'))
 const JSMySkillGraph = lazy(() => import('../pages/jobseeker/MySkillGraph'))
 const JSMessages = lazy(() => import('../pages/jobseeker/Messages'))
 const QualityDashboard = lazy(() => import('../pages/enterprise/QualityDashboard'))
-const TutuChat = lazy(() => import('./TutuChat'))
 
 const pages: Record<JSPage, ComponentType> = {
   dashboard: JSDashboard,
@@ -228,7 +227,6 @@ export default function JobseekerShell({ onLogout }: Props) {
           </LearningProvider>
         </div>
       </main>
-      {page !== 'ai-chat' && page !== 'interview' && <TutuChat />}
     </div>
   )
 }

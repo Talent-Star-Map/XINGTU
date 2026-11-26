@@ -21,7 +21,7 @@ export default function CompanionRoom() {
     </section>
     <section className="companion-room-gallery">
       <h2>小小日常，都有回应。</h2>
-      <p>点击小星打开互动面板；拖动换位置，选择大小，或收起让她安静待着。打招呼、吃饭、睡觉和散步都会自然衔接。</p>
+      <p>点击小星打开聊天或互动面板；拖动换位置，选择大小，或收起让她安静待着。打招呼、吃饭、睡觉和散步都会自然衔接。</p>
       <div className="companion-gallery-grid">{ACTIONS.map(item => <button key={item} onClick={() => setAction(item)} aria-pressed={action === item}><PetSprite action={item} animated={false} /><span>{PET_LABELS[item]}</span></button>)}</div>
     </section>
   </main>

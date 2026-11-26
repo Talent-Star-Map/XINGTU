@@ -37,6 +37,30 @@
 .xiaogui-panel footer button, .xiaogui-wake { display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: #f5f1fa; color: #746084; padding: 8px 10px; border-radius: 9px; font-size: 12px; }
 .xiaogui-wake { width: 100%; margin-top: 8px; }
 .xiaogui-panel p { font-size: 11px; color: #978ba4; margin: 10px 0 0; text-align: center; }
+.xiaogui-panel[hidden], .xiaogui-panel [hidden] { display: none !important; }
+.xiaogui-panel--chat { height: 490px; display: flex; flex-direction: column; overflow: hidden; }
+.xiaogui-panel--chat > header { flex-shrink: 0; }
+.xiaogui-tabs { display: flex; padding: 4px; background: #f5f1fa; border-radius: 12px; gap: 4px; margin-bottom: 12px; flex-shrink: 0; }
+.xiaogui-tabs button { flex: 1; padding: 8px 6px; border: 0; border-radius: 9px; background: transparent; color: #8b7c99; font-size: 13px; }
+.xiaogui-tabs button[aria-selected=true] { color: #72529a; background: #fff; box-shadow: 0 2px 8px #4d365312; font-weight: 600; }
+#xiaogui-chat-content { flex: 1; min-height: 0; display: flex; }
+.xiaogui-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.xiaogui-chat-messages { overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; padding: 2px 3px 12px 0; display: flex; flex-direction: column; gap: 12px; }
+.xiaogui-chat-message { max-width: 91%; align-self: flex-start; border-radius: 14px 14px 14px 4px; background: #f5f1fa; padding: 10px 12px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.xiaogui-chat-message.user { align-self: flex-end; background: #8871b3; color: #fff; border-radius: 14px 14px 4px 14px; }
+.xiaogui-chat-author { display: block; font-size: 11px; opacity: .7; margin-bottom: 3px; }
+.xiaogui-chat-message.failed { background: #f7ecf0; color: #86596b; }
+.xiaogui-chat-message button { border: 0; background: transparent; color: inherit; display: flex; align-items: center; gap: 4px; padding: 4px 0 0; font-size: 12px; }
+.xiaogui-chat-thinking { font-size: 13px; padding: 4px 10px; color: #8b779f; }
+.xiaogui-chat-form { display: flex; gap: 8px; align-items: flex-end; border-top: 1px solid #eee6f5; padding-top: 12px; flex-shrink: 0; }
+.xiaogui-chat-form textarea { border: 1px solid #e4d9ed; border-radius: 12px; background: #faf8fc; color: #42364f; font: inherit; font-size: 14px; line-height: 1.5; padding: 9px 11px; width: 100%; min-width: 0; resize: none; }
+.xiaogui-chat-form textarea:focus { outline: 2px solid #c6b0e0; outline-offset: 1px; }
+.xiaogui-chat-form textarea::placeholder { color: #a092ac; }
+.xiaogui-chat-send { border: 0; border-radius: 12px; background: #8871b3; color: #fff; padding: 12px; height: 42px; flex-shrink: 0; }
+.xiaogui-chat button:disabled { opacity: .45; cursor: not-allowed; }
+.xiaogui-chat-hint { flex-shrink: 0; font-size: 10px; color: #a092ac; margin-top: 8px; text-align: center; }
+.xiaogui-panel .xiaogui-chat-error { font-size: 12px; text-align: left; margin: 0 0 8px; color: #aa526d; }
+.xiaogui-panel .xiaogui-chat-notice { font-size: 12px; text-align: left; margin: 0 0 8px; color: #89709c; }
 @media print { .xiaogui-pet { display: none !important; } }
 
 .companion-room { height: 100%; overflow: auto; background: #f6f3fc; color: #30273e; font-family: Inter, 'Microsoft YaHei', sans-serif; }
