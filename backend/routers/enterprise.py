@@ -21,7 +21,7 @@ import bisect
 import json
 
 from auth_guard import require_enterprise, require_admin
-from services.enterprise_verification import VerificationSubmission, submit
+from services.enterprise_verification import VerificationSubmission, submit, require_approved_enterprise
 from database import get_session, Job, Jobseeker, MatchRecord, Message
 from database import get_neo4j_driver
 from sqlalchemy import func as _func
@@ -34,6 +34,8 @@ from services.match_engine import (
     calibrate_weights_from_feedback,
     get_active_weights,
     WEIGHTS,
+    match_one,
+    apply_pool_normalization,
 )
 
 router = APIRouter(prefix='/api/enterprise', tags=['enterprise'])
@@ -81,6 +83,7 @@ def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
     # 头像文字：优先 real_name 首字，其次 username 首字
     name = js.real_name or js.username or '匿名'
     av = name[0] if name else '?'
+    scores = match_one(job, js) if job else None
     return {
         'id': mr.id,
         'jobseeker_id': js.id,
@@ -91,15 +94,17 @@ def _candidate_dict(mr: MatchRecord, js: Jobseeker, job: Job):
         'salary': js.expected_salary or '',
         'education': js.education or '',           # 学历（新增，对比面板用）
         'city': js.target_city or js.city or '',    # 意向城市（新增，对比面板用）
-        'match': mr.match_score,
+        'match': scores['match_score'] if scores else None,
+        'score_version': scores['score_version'] if scores else None,
+        'recommendation_score': scores['ranking_score'] if scores else None,
         'av': av,
         # 五维度分数（可能为 None，前端按需展示）
         'match_breakdown': {
-            'skill': mr.skill_match,
-            'exp': mr.exp_match,
-            'edu': mr.edu_match,
-            'location': mr.location_match,
-            'salary': mr.salary_match,
+            'skill': scores['skill_match'] if scores else None,
+            'exp': scores['exp_match'] if scores else None,
+            'edu': scores['edu_match'] if scores else None,
+            'location': scores['location_match'] if scores else None,
+            'salary': scores['salary_match'] if scores else None,
         },
         'match_status': mr.status or 'pending',
         'job_title': job.title if job else '',
@@ -174,9 +179,21 @@ def list_candidates(
 
         total = q.count()
         # 分页
-        rows = q.offset((page - 1) * size).limit(size).all()
-
+        # Old stored scores have no version column. Recompute read-only before
+        # ranking/paging so old records cannot masquerade as the shared score.
+        rows = q.all()
         candidates = [_candidate_dict(mr, js, job) for mr, js, job in rows]
+        pools = {}
+        for candidate, (_, _, job) in zip(candidates, rows):
+            if candidate['match'] is not None:
+                pools.setdefault(job.id, []).append(candidate)
+        for pool in pools.values():
+            ranks = [{'match_score': c['match'], 'ranking_score': c['recommendation_score']} for c in pool]
+            apply_pool_normalization(ranks)
+            for candidate, rank in zip(pool, ranks):
+                candidate['recommendation_score'] = rank['ranking_score']
+        candidates.sort(key=lambda c: (-(c['recommendation_score'] if c['recommendation_score'] is not None else -1), c['id']))
+        candidates = candidates[(page - 1) * size:page * size]
 
         return {
             'success': True,
@@ -238,7 +255,7 @@ def get_match_weights(ent: dict = Depends(require_enterprise)):
             'active': get_active_weights(),        # 当前生效（校准后的学习值）
             'default': dict(WEIGHTS),              # 代码内置默认值
         },
-        'message': '当前五维匹配权重',
+        'message': '企业推荐排序权重；基础匹配分使用统一固定权重',
     }
 
 
@@ -252,7 +269,7 @@ def calibrate_match_weights(admin: dict = Depends(require_admin)):
         2. 分差大的维度权重上调，分差小的下调，学习率 λ=0.3
         3. 样本不足（两类各 <6 条）时不校准，返回当前权重
 
-    校准成功后建议重新执行 POST /api/enterprise/run-match 让新权重生效到分数。
+    校准仅改变企业推荐排序权重，不改变基础匹配分。
     """
     try:
         result = calibrate_weights_from_feedback()
@@ -833,6 +850,7 @@ def send_message(req: SendMessageReq, ent: dict = Depends(require_enterprise)):
     try:
         mr = _own_record(session, req.match_record_id, ent['user_id'])
 
+        require_approved_enterprise(session, ent['user_id'])
         msg = Message(
             match_record_id=req.match_record_id,
             sender_type='enterprise',   # 企业端发送

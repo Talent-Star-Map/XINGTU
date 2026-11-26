@@ -17,8 +17,10 @@ def get_company_public(company_name: str):
         matches = session.query(Enterprise).filter(Enterprise.company_name == company_name).order_by(Enterprise.id).limit(2).all()
         if not matches:
             raise HTTPException(404, '企业不存在')
+        if len(matches) != 1:
+            raise HTTPException(409, '同名企业账号存在歧义，暂无法展示企业名片')
         user = matches[0]
-        record = current_verification(session, user) if len(matches) == 1 else None
+        record = current_verification(session, user)
         return {
             'success': True,
             'data': {

@@ -15,35 +15,20 @@ import re, os, json, math
 from typing import Optional
 
 # ──────────────────────────────────────────────
-# 固定评分口径 — v2（2026-08-29 算法升级）
-# ──────────────────────────────────────────────
-# v2 变更：
-#   ① 修复 verified 倒挂 — 旧版 unverified 匹配只计 ×0.8，技能分天花板被压到 80；
-#      现在完全匹配即计满分，已通过交叉验证的技能额外 ×1.1
-#   ② 技能匹配分档：exact 1.0 / synonym 0.9 / containment 0.7；邻接技能不计分仅标注
-#      （旧版只有同义词一层，JD 写 ReactJS、用户会 React 也算 0 分）
-#   ③ 经验公式重写 — 旧版「JD 5年以上 → 10年经验 0 分」「3-5年 边缘仅 50 分」；
-#      新版区间内 85~100 梯度，「X年以上」≥X 饱和 90+，不足高斯衰减，超出缓衰减至 60
-#   ④ 薪资不重叠改高斯衰减（旧版差 20K 直接 0 分），支持「万」单位换算
-#   维度函数拆至 services/dimension_scores.py，解释层拆至 services/match_explain.py
-SCORE_VERSION = "v2.0.0"
-# 技能匹配分档系数（L1 exact = 1.0 固定）
-# 系数经离线扫参标定（2026-08-29，test_job_agent 100 简历 × 104 JD 排序召回，基线 MRR 0.9525）：
-#   adjacent=0.45 → MRR 0.9083（邻接得分会顶掉严格重合的正解）
-#   adjacent=0.2  → MRR 0.9508
-#   adjacent=0.0  → MRR 0.9575（反超基线）→ 定档 0.0：邻接技能仅用于建议文案标注，
-#   不参与计分；containment 是真实同义技能（ReactJS⊃React），扫参证明无损 MRR，保留 0.7
+# Shared fit contract; recommendations and enterprise priority remain separate.
+from services.match_contract import SCORE_VERSION, WEIGHTS, dimensions, location_score, salary_range_k
+# Match credits are bounded; provenance never multiplies any credit.
 CREDIT_SYNONYM = 0.9
 CREDIT_CONTAINMENT = 0.7
 CREDIT_ADJACENT = 0.0
 DIMENSION_FORMULA = {
-    "skill":        "Σ(weight × level_credit × verified_bonus) / Σ(jd_weights)；level: exact 1.0 / synonym 0.9 / containment 0.7（adjacent 不计分，仅标注）",
+    "skill":        "Σ(weight × level_credit) / Σ(jd_weights)；exact 1.0 / synonym 0.9 / containment 0.7；多源出现不加分",
+    "location":     "同城90，同省72，远程/不限75，信息缺失55，异地25",
     "experience":   "区间内 85~100 梯度；「X年以上」≥X 饱和 90+；不足高斯衰减(sigma=lo/3)；超出缓衰减至 60",
     "education":    {"博士": 1.0, "硕士": 0.9, "本科": 0.75, "大专": 0.5, "高中": 0.2, "其他": 0.3},
     "salary":       "有重叠: 50+覆盖率×50；无重叠: 50×exp(-(gap/15K)²/2)",
 }
 
-WEIGHTS = {"skill": 0.50, "experience": 0.20, "education": 0.15, "salary": 0.15}
 
 EDU_ORDER = {"博士": 4, "硕士": 3, "本科": 2, "大专": 1, "高中": 0}
 
@@ -60,12 +45,7 @@ from services.match_explain import (  # noqa: E402
 
 def _parse_salary(salary_str: str) -> tuple[int, int]:
     """兼容别名（旧私有接口）：'25K-40K' → (25, 40)"""
-    nums = re.findall(r'\d+', str(salary_str or ''))
-    if not nums:
-        return 0, 0
-    if len(nums) >= 2:
-        return int(nums[0]), int(nums[1])
-    return int(nums[0]), int(nums[0])
+    return salary_range_k(salary_str)
 
 
 # 兼容别名：routers/match_api.py 等外部仍在引用旧私有名
@@ -153,7 +133,7 @@ def compute_match_score(
     if quality_context is None:
         quality_context = {}
 
-    jd_skills = job.get("skills", [])
+    jd_skills = list(dict.fromkeys(s.strip() for s in job.get("skills", []) if isinstance(s, str) and s.strip()))
 
     # ── 技能匹配 ──
     have, miss, extra = [], [], []
@@ -181,15 +161,13 @@ def compute_match_score(
         matched_skill = best_match_in_profile(jd_skill, profile["skills"])
         q_info = quality_context.get(jd_skill, {})
         verified = q_info.get("verified", False)
-        # v2 修复 verified 倒挂：旧版 unverified 匹配只计 ×0.8（技能分天花板 80），
-        # 现在匹配即计满档分，已通过交叉验证的技能额外 ×1.1
-        verified_bonus = 1.1 if verified else 1.0
+        # Source corroboration describes provenance only.
 
         if matched_skill:
             # L1 直接匹配 → 1.0 / L2 同义词匹配 → 0.9（如 "Python3"↔"Python"）
             exact = normalize_preprocess(jd_skill) == normalize_preprocess(matched_skill)
             credit = 1.0 if exact else CREDIT_SYNONYM
-            weighted_score += weight * credit * verified_bonus
+            weighted_score += weight * credit
 
             have.append({
                 "skill": jd_skill,
@@ -204,7 +182,7 @@ def compute_match_score(
             # L3 子串包含（如 JD "ReactJS" ⊃ 用户 "React"）→ 0.7 部分得分
             contain_skill = containment_match(jd_skill, profile["skills"])
             if contain_skill:
-                weighted_score += weight * CREDIT_CONTAINMENT * verified_bonus
+                weighted_score += weight * CREDIT_CONTAINMENT
                 have.append({
                     "skill": jd_skill,
                     "matched_as": contain_skill,
@@ -252,12 +230,9 @@ def compute_match_score(
     )
 
     # ── 综合加权 ──
-    overall = (
-        skill_score * WEIGHTS["skill"]
-        + exp_score * WEIGHTS["experience"]
-        + edu_score * WEIGHTS["education"]
-        + salary_score * WEIGHTS["salary"]
-    )
+    dims, overall = dimensions({'skill': skill_score, 'experience': exp_score,
+                                'education': edu_score, 'salary': salary_score,
+                                'location': location_score(job.get('location', ''), profile.get('target_city', ''), profile.get('city', ''))})
 
     # ── 等级 ──
     grade = "S" if overall >= 90 else "A" if overall >= 80 else "B" if overall >= 70 else "C" if overall >= 60 else "D"
@@ -283,14 +258,16 @@ def compute_match_score(
     return {
         "score_version": SCORE_VERSION,
         "dimension_formula": DIMENSION_FORMULA,
-        "overall": round(min(overall, 100.0), 1),
+        "overall": overall,
         "grade": grade,
-        "dims": {
-            "skill":       {"score": round(skill_score, 1), "weight": WEIGHTS["skill"],    "weighted": round(skill_score * WEIGHTS["skill"], 2)},
-            "experience":  {"score": round(exp_score, 1),   "weight": WEIGHTS["experience"], "weighted": round(exp_score * WEIGHTS["experience"], 2)},
-            "education":   {"score": round(edu_score, 1),   "weight": WEIGHTS["education"],  "weighted": round(edu_score * WEIGHTS["education"], 2)},
-            "salary":      {"score": round(salary_score, 1),"weight": WEIGHTS["salary"],     "weighted": round(salary_score * WEIGHTS["salary"], 2)},
-        },
+        "dims": dims,
+        "score_kind": "person_job_fit",
+        "missing_information": [key for key, missing in {
+            'experience': profile.get('experience_years') is None,
+            'education': not profile.get('education'),
+            'salary': not profile.get('salary_min') and not profile.get('salary_max'),
+            'location': not (profile.get('target_city') or profile.get('city')),
+        }.items() if missing],
         "skills": {"have": have, "miss": miss, "extra": extra},
         "summary": summary,
         "recommendations": recommendations,
@@ -324,7 +301,7 @@ def calc_miss_priority(
     """
     from services.skill_synonyms import get_skill_popularity, has_adjacent_skill, normalize_preprocess
 
-    jd_skills = job.get("skills", [])
+    jd_skills = list(dict.fromkeys(s.strip() for s in job.get("skills", []) if isinstance(s, str) and s.strip()))
     idx = next((i for i, s in enumerate(jd_skills) if s == jd_skill), len(jd_skills))
     is_core = idx < max(len(jd_skills) // 3, 1)
 

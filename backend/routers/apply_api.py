@@ -1,10 +1,10 @@
 """投递接口 — 求职端岗位详情「去投递/联系」
 
 两类岗位两种投递方式：
-- 企业已入驻星图（enterprises.company_name 能对上爬虫岗位的 company_name）
+- 企业全称匹配唯一账号，且当前企业认证已通过
   → 站内投递：把爬虫岗位镜像进 enterprise_jobs，建 match_record 并落首条消息，
     企业端「消息」页立刻能看到这个对话（status=communicating）。
-- 未入驻 → 返回 source_url，前端弹窗后跳转原招聘网站。
+- 无有效认证企业 → 返回 source_url，前端弹窗后跳转原招聘网站。
 
 @owner: 张boy（人岗匹配模块）
 """
@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 from auth_guard import require_jobseeker
 from database import get_session, CrawledJob, Job, Jobseeker, Enterprise, MatchRecord, Message
+from services.enterprise_verification import current_verification
 
 router = APIRouter(prefix='/api/apply', tags=['apply'])
 
@@ -47,18 +48,19 @@ def _err(code: str, message: str, details=None):
     return {'success': False, 'error': {'code': code, 'message': message, 'details': details or {}}}
 
 
-def _find_enterprise(session, company_name: str):
-    """按公司名找入驻企业 — 精确匹配优先，双向包含兜底（如「字节跳动」vs「字节跳动有限公司」）"""
-    if not company_name:
+def _find_enterprise(session, company_name: str, *, lock: bool = False):
+    """匹配唯一同名企业，认证必须与当前公司名称一致且审核通过。"""
+    if not company_name or not company_name.strip():
         return None
-    ent = session.query(Enterprise).filter(Enterprise.company_name == company_name).first()
-    if ent:
-        return ent
-    like = f'%{company_name}%'
-    for e in session.query(Enterprise).filter(Enterprise.company_name.like(like)).all():
-        if e.company_name and (e.company_name in company_name or company_name in e.company_name):
-            return e
-    return None
+    query = session.query(Enterprise).filter(Enterprise.company_name == company_name).order_by(Enterprise.id)
+    if lock:
+        query = query.with_for_update()
+    matches = query.limit(2).all()
+    if len(matches) != 1:
+        return None
+    enterprise = matches[0]
+    record = current_verification(session, enterprise, lock=lock)
+    return enterprise if record is not None and record.status == 'approved' else None
 
 
 def _channel_payload(job: CrawledJob, ent: Optional[Enterprise]) -> dict:
@@ -78,7 +80,7 @@ def _channel_payload(job: CrawledJob, ent: Optional[Enterprise]) -> dict:
 
 @router.get('/channel/{job_id}')
 def get_apply_channel(job_id: int, me: dict = Depends(require_jobseeker)):
-    """投递渠道判定 — 企业入驻星图走站内投递，否则跳转原招聘网站"""
+    """投递渠道判定 — 唯一同名且认证有效的企业走站内投递。"""
     session = get_session()
     try:
         job = session.query(CrawledJob).filter(CrawledJob.id == job_id, CrawledJob.data_type == 1).first()
@@ -127,7 +129,7 @@ def _mirror_to_enterprise_job(session, job: CrawledJob, enterprise_id: int) -> J
 
 @router.post('/{job_id}')
 def apply_job(job_id: int, req: ApplyReq, me: dict = Depends(require_jobseeker)):
-    """站内投递 — 仅入驻企业可用；成功后企业端「消息」列表立即可见"""
+    """站内投递 — 仅认证有效的企业可接收，写入期间锁定企业。"""
     seeker_id = me['user_id']
     session = get_session()
     try:
@@ -135,10 +137,9 @@ def apply_job(job_id: int, req: ApplyReq, me: dict = Depends(require_jobseeker))
         if not job:
             return _err('JOB_NOT_FOUND', f'岗位不存在: id={job_id}')
 
-        ent = _find_enterprise(session, job.company_name or '')
+        ent = _find_enterprise(session, job.company_name or '', lock=True)
         if not ent:
-            # 未入驻：把原网站链接带回给前端做跳转
-            return _err('NOT_ONBOARDED', '该企业未入驻星图，请前往原招聘网站投递',
+            return _err('NOT_ONBOARDED', '该岗位未匹配到唯一且认证有效的企业，请前往原招聘网站投递',
                         {'source': job.source or '', 'source_url': job.source_url or '', 'jump_url': _jump_url(job)})
 
         seeker = session.query(Jobseeker).filter(Jobseeker.id == seeker_id).first()
@@ -189,16 +190,12 @@ def apply_status(job_id: int = Query(...), me: dict = Depends(require_jobseeker)
         job = session.query(CrawledJob).filter(CrawledJob.id == job_id).first()
         if not job:
             return {'success': True, 'data': {'applied': False}, 'message': 'ok'}
-        ent = _find_enterprise(session, job.company_name or '')
-        applied = False
-        if ent:
-            ent_job = (session.query(Job)
-                       .filter(Job.enterprise_id == ent.id, Job.title == (job.title or ''))
-                       .first())
-            if ent_job:
-                applied = session.query(MatchRecord).filter(
-                    MatchRecord.job_id == ent_job.id,
-                    MatchRecord.jobseeker_id == jobseeker_id).count() > 0
+        applied = (session.query(MatchRecord)
+                   .join(Job, MatchRecord.job_id == Job.id)
+                   .join(Enterprise, Job.enterprise_id == Enterprise.id)
+                   .filter(Enterprise.company_name == job.company_name,
+                           Job.title == (job.title or ''),
+                           MatchRecord.jobseeker_id == jobseeker_id).count() > 0)
         return {'success': True, 'data': {'applied': applied}, 'message': 'ok'}
     finally:
         session.close()

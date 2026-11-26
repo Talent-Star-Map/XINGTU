@@ -10,6 +10,7 @@ interface Props {
     experience: DimensionScore
     education: DimensionScore
     salary: DimensionScore
+    location?: DimensionScore
   }
   dimensions?: Record<string, any>
 }
@@ -19,6 +20,7 @@ const DIM_LABELS: Record<string, string> = {
   experience: '经验匹配',
   education: '学历匹配',
   salary: '薪资匹配',
+  location: '地域匹配',
 }
 
 const DIM_COLORS: Record<string, string> = {
@@ -26,6 +28,7 @@ const DIM_COLORS: Record<string, string> = {
   experience: 'var(--accent-purple)',
   education: 'var(--accent-green)',
   salary: 'var(--accent-orange)',
+  location: 'var(--accent-cyan)',
 }
 
 const DIM_TOOLTIP: Record<string, string> = {
@@ -36,7 +39,8 @@ const DIM_TOOLTIP: Record<string, string> = {
 子串包含    ×0.7
 
 核心技能权重 +0.2
-已交叉验证 ×1.1`,
+多源出现仅作来源说明，不加分`,
+  location: '同城90，同省72；远程/不限75；信息缺失55，异地25',
   experience: `区间内   85 ~ 100
 （中心 100，边缘 85）
 ───────────────
@@ -63,7 +67,7 @@ export default function DimensionBars({ dims }: Props) {
   return (
     <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-lowest)' }}>
       <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--color-on-surface)' }}>
-        四维度匹配分析
+        岗位要求符合度 · 维度分析
       </h3>
       <div className="grid grid-cols-2 gap-5">
         {(Object.entries(DIM_LABELS) as [string, string][]).map(([key, label]) => {

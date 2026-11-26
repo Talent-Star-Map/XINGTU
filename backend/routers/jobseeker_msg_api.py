@@ -18,6 +18,7 @@ from sqlalchemy import func as sa_func
 
 from auth_guard import require_jobseeker
 from database import get_session, Job, Enterprise, MatchRecord, Message
+from services.enterprise_verification import require_approved_enterprise
 # 库里存的是 UTC，返回前统一转北京时间，否则消息时间差 8 小时
 from time_util import fmt
 
@@ -151,6 +152,10 @@ def send_message(req: SeekerSendReq, me: dict = Depends(require_jobseeker)):
     session = get_session()
     try:
         mr = _own_record(session, req.match_record_id, me['user_id'])
+        job = session.get(Job, mr.job_id)
+        if job is None:
+            raise HTTPException(404, '会话岗位不存在')
+        require_approved_enterprise(session, job.enterprise_id)
         msg = Message(match_record_id=req.match_record_id, sender_type='jobseeker',
                       sender_id=me['user_id'], content=req.content, is_read=0)
         session.add(msg)

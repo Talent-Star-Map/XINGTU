@@ -142,11 +142,10 @@ export default function ApplyJobCard({ job }: { job: ApplyJob }) {
                 <>
                   <div className="flex items-center gap-2.5 mb-3">
                     <ExternalLink className="h-5 w-5" style={{ color: 'var(--accent-orange)' }} />
-                    <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>该企业未入驻星图</h3>
+                    <h3 className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>请前往原招聘网站投递</h3>
                   </div>
                   <p className="text-sm leading-relaxed mb-2" style={{ color: 'var(--color-on-surface-variant)' }}>
-                    「{modal.data.company || job.company || job.title}」尚未入驻星图招聘系统，暂时无法站内沟通。
-                    你可以前往原招聘网站完成投递：
+                    「{modal.data.company || job.company || job.title}」尚未匹配到唯一且认证有效的企业账号，请前往原招聘网站完成投递。
                   </p>
                   <div className="rounded-lg px-4 py-3 mb-4 text-xs space-y-1.5" style={{ background: 'var(--color-surface-container-low)', color: 'var(--color-on-surface-variant)' }}>
                     <p>岗位：{job.title}</p>

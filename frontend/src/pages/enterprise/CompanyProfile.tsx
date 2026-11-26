@@ -127,7 +127,7 @@ export default function CompanyProfile() {
   const verification = p.verification
   const verificationStatus = verification?.status
   const VerificationIcon = verificationStatus === 'approved' ? ShieldCheck : ShieldOff
-  const verificationLabel = verificationStatus === 'approved' ? '平台已核验' :
+  const verificationLabel = verificationStatus === 'approved' ? '平台人工核验' :
     verificationStatus === 'pending' ? '待审核' : verificationStatus === 'rejected' ? '未通过' : '未认证'
   const filledCount = requiredFields.filter(k => hasVal(p[k])).length
   const pct = Math.round((filledCount / requiredFields.length) * 100)
@@ -302,8 +302,8 @@ export default function CompanyProfile() {
               <h3 className="text-base font-medium uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>企业认证</h3>
               <div className="space-y-3">
                 <p className="text-sm" role="status">{verificationLabel}</p>
-                {verificationStatus === 'pending' && <p className="text-sm">已提交 {verification.credit_code}，请等待平台核对工商登记与企业授权。</p>}
-                {verificationStatus === 'approved' && <p className="text-sm">平台已核对工商登记和企业授权。</p>}
+                {verificationStatus === 'pending' && <p className="text-sm">已提交 {verification.credit_code}，请等待管理员人工核对工商登记与企业授权。</p>}
+                {verificationStatus === 'approved' && <p className="text-sm">平台管理员已人工核对工商登记和企业授权。</p>}
                 {verificationStatus === 'rejected' && <p className="text-sm">审核意见：{verification.review_note}</p>}
                 {verificationStatus !== 'pending' && verificationStatus !== 'approved' && (
                   <form onSubmit={submitVerification} className="space-y-3">
@@ -325,6 +325,7 @@ export default function CompanyProfile() {
               {/* 第三方查询入口 */}
               {p.company_name && (
                 <div className="mt-5 pt-5 border-t space-y-2" style={{ borderColor: 'var(--color-outline-variant)' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-on-surface-variant)' }}>可通过以下入口查询企业信息，认证由平台管理员人工审核。</p>
                   <a href={qichachaUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-between w-full px-4 py-2.5 rounded-md text-sm transition-colors hover:bg-[var(--color-surface-container-low)]"
                     style={{ color: 'var(--color-on-surface-variant)' }}>

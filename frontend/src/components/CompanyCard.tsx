@@ -9,7 +9,7 @@ interface Props {
 // 认证等级信息：使用主题变量，在亮/暗两种主题下自动适配
 const verifyInfo = [
   { level: 0, icon: ShieldOff, label: '未认证', color: 'var(--color-on-surface-variant)', bg: 'var(--color-neutral-dim)' },
-  { level: 1, icon: ShieldCheck, label: '平台已核验', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
+  { level: 1, icon: ShieldCheck, label: '平台人工核验', color: 'var(--color-primary)', bg: 'var(--color-primary-fixed)' },
 ]
 
 export default function CompanyCard({ companyName, onClose }: Props) {
@@ -17,10 +17,17 @@ export default function CompanyCard({ companyName, onClose }: Props) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/company/public/${encodeURIComponent(companyName)}`).then(r => r.json()).then(d => {
-      if (d.success) setData(d.data)
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    const controller = new AbortController()
+    setData(null)
+    setLoading(true)
+    fetch(`/api/company/public/${encodeURIComponent(companyName)}`, { signal: controller.signal })
+      .then(r => r.json()).then(d => {
+        if (!controller.signal.aborted) {
+          if (d.success) setData(d.data)
+          setLoading(false)
+        }
+      }).catch(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
   }, [companyName])
 
   if (loading) return (
@@ -31,7 +38,9 @@ export default function CompanyCard({ companyName, onClose }: Props) {
     </div>
   )
 
-  const v = verifyInfo.find(x => x.level === (data?.verified || 0)) || verifyInfo[0]
+  const v = data
+    ? verifyInfo.find(x => x.level === (data.verified || 0)) || verifyInfo[0]
+    : { ...verifyInfo[0], label: '认证信息暂不可用' }
   const VIcon = v.icon
 
   return (

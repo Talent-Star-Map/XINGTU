@@ -245,6 +245,8 @@ interface Candidate {
   education: string
   city: string
   match: number | null
+  recommendation_score?: number | null
+  score_version?: string
   av: string
   // 五维度匹配分数
   match_breakdown: {
@@ -546,8 +548,8 @@ export default function TalentSearch() {
 
   // 排序：匹配度高的在前
   const sorted = [...candidates].sort((a, b) => {
-    const av = a.match ?? -1
-    const bv = b.match ?? -1
+    const av = a.recommendation_score ?? a.match ?? -1
+    const bv = b.recommendation_score ?? b.match ?? -1
     return bv - av
   })
 
@@ -792,7 +794,7 @@ export default function TalentSearch() {
                           <div className="px-8 py-7 grid grid-cols-3 gap-10">
                             {/* 五维度匹配分数 */}
                             <div>
-                              <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>匹配维度（五维）</p>
+                              <p className="text-sm uppercase tracking-wider mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>岗位要求符合度（五维）</p>
                               <div className="space-y-4">
                                 {DIMENSION_BARS.map(item => (
                                   <div key={item.key} className="flex items-center gap-3">
@@ -807,6 +809,7 @@ export default function TalentSearch() {
                                   </div>
                                 ))}
                               </div>
+                              <p className="text-xs mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>基础匹配分反映岗位要求符合度；企业推荐排序分 {c.recommendation_score ?? '—'}，单独用于候选人排序，不改变基础分。</p>
                               {c.match === null && (
                                 <p className="text-sm mt-4" style={{ color: 'var(--color-on-surface-variant)' }}>匹配引擎尚未计算，点击右上角"重新匹配"</p>
                               )}

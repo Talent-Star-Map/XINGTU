@@ -22,7 +22,7 @@ from database import get_session, get_user_model_by_role
 # 跨模块引用：routers/services 已分目录
 from routers.jobs import load_all_jobs, load_job_by_id
 from services.match_analyzer import compute_match_score, extract_profile_features, SCORE_VERSION
-from services.quality_checker import cross_validate
+from services.match_contract import complete_profile, cache_fingerprint
 
 router = APIRouter(prefix='/api/match', tags=['match'])
 logger = logging.getLogger(__name__)
@@ -127,13 +127,9 @@ def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
     if not user:
         raise HTTPException(404, '用户不存在')
 
-    # 4. 构图 quality_context（交叉验证状态）
-    all_jobs_for_validation = load_all_jobs()
-    source_skills_map = defaultdict(list)
-    for j in all_jobs_for_validation:
-        source_skills_map[j['source']].extend(j.get('skills', []))
-    skills_per_source = [(src, skills) for src, skills in source_skills_map.items()]
-    quality_context = cross_validate(skills_per_source)
+    # Multi-source evidence is provenance, never a multiplier on this person's fit.
+    quality_context = {}
+    all_jobs_for_validation = []
 
     # 5. 提取 profile_features（按优先级）
     #    显式技能列表 > 简历原文 > 简历解析缓存 > 个人资料技能字段
@@ -175,32 +171,8 @@ def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
             if user_skills:
                 profile = extract_profile_features(user_skills, "skill_list")
                 profile["raw_source"] = "profile_field"
-                # 补全其他字段
-                if user.education:
-                    profile["education"] = user.education
-                if user.expected_salary:
-                    s = user.expected_salary
-                    import re as _re
-                    nums = _re.findall(r'\d+', s)
-                    if len(nums) >= 2:
-                        profile["salary_min"] = int(nums[0])
-                        profile["salary_max"] = int(nums[1])
-
-    # 6. 始终从数据库补全 education / salary / experience（确保用户填的数据被使用）
     if profile is not None:
-        if not profile.get("education") and user.education:
-            profile["education"] = user.education
-        if not profile.get("salary_min") and user.expected_salary:
-            import re as _re
-            nums = _re.findall(r'\d+', str(user.expected_salary))
-            if len(nums) >= 2:
-                profile["salary_min"] = int(nums[0])
-                profile["salary_max"] = int(nums[1])
-        if not profile.get("experience_years") and user.experience:
-            try:
-                from services.match_analyzer import _parse_experience
-                profile["experience_years"] = _parse_experience(user.experience)
-            except: pass
+        profile = complete_profile(profile, user)
 
     if profile is None:
         return {
@@ -211,7 +183,7 @@ def api_match_analyze(req: AnalyzeReq, token: str = Depends(request_token)):
         }
 
     # 6. 检查缓存（3 分钟有效）
-    cache_key = f"{user_id}_{req.job_id}"
+    cache_key = cache_fingerprint(profile, job, user_id=user_id)
     match_cache_path = os.path.join(MATCH_CACHE_DIR, f"{cache_key}.json")
     cache_hit = False
     from datetime import datetime, timezone
@@ -341,12 +313,19 @@ def api_match_recommend(
     if profile is None:
         return {'success': False, 'code': 'NO_PROFILE', 'data': [], 'message': '无可用技能数据'}
 
+    session = get_session()
+    try:
+        person = session.query(get_user_model_by_role(role)).filter(get_user_model_by_role(role).id == user_id).first()
+        if person:
+            profile = complete_profile(profile, person)
+    finally:
+        session.close()
+
     # 结果缓存（5 分钟）：同一用户同一技能组合重复点击秒出。
     # 岗位池是实时查的，但 5 分钟内爬虫新岗位不会丢失太多，体验优先
     from datetime import datetime, timezone, timedelta
-    cache_key = hashlib.md5(
-        f"{user_id}:{','.join(sorted(s.lower() for s in profile.get('skills', [])))}".encode()
-    ).hexdigest()
+    all_jobs = load_all_jobs()
+    cache_key = cache_fingerprint(profile, all_jobs, user_id=user_id, n=n or req.n)
     rec_cache_path = os.path.join(MATCH_CACHE_DIR, f"rec_{cache_key}.json")
     try:
         if os.path.exists(rec_cache_path):
@@ -363,8 +342,6 @@ def api_match_recommend(
         pass
 
     # 实时读取岗位池：用启动期快照会导致爬虫新写入的岗位永远不会被推荐
-    all_jobs = load_all_jobs()
-
     # 快速预筛选：只保留技能有重叠的岗位（避免全量计算）
     user_skills_lower = set(s.lower() for s in profile.get("skills", []) if s)
     candidate_jobs = []

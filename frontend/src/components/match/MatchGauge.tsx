@@ -48,7 +48,7 @@ export default function MatchGauge({ overall, grade, scoreVersion }: Props) {
         {/* 中心文字 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-3xl font-extrabold" style={{ color }}>{Math.round(overall)}</span>
-          <span className="text-[10px] mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>匹配度</span>
+          <span className="text-[10px] mt-0.5" style={{ color: 'var(--color-on-surface-variant)' }}>基础匹配分</span>
         </div>
       </div>
 

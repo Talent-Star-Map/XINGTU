@@ -226,6 +226,125 @@ class AllAPIAccessTests(unittest.TestCase):
         auth.update_profile(auth.ProfileUpdate(company_name='Verification Flow Fixture'), token)
         self.assertEqual(get_company_public('Verification Flow Fixture')['data']['verified'], 0)
 
+    def test_apply_requires_unique_current_approved_enterprise(self):
+        from uuid import uuid4
+
+        cases = [
+            ('unsubmitted', None), ('pending', 'pending'), ('rejected', 'rejected'),
+            ('revoked', 'revoked'), ('renamed', 'approved'), ('partial_name', 'approved'),
+            ('duplicate', 'approved'), ('approved', 'approved'),
+        ]
+        with database.get_session() as session:
+            seeker = database.Jobseeker(email='apply-verification@example.test', password='fixture')
+            session.add(seeker)
+            session.commit()
+            seeker_id = seeker.id
+
+        for label, status in cases:
+            with self.subTest(case=label):
+                company = f'Apply Verification {label}'
+                with database.get_session() as session:
+                    enterprise = database.Enterprise(email=f'apply-{label}@example.test',
+                        password='fixture', company_name=company, verified=2)
+                    session.add(enterprise)
+                    session.flush()
+                    if status:
+                        session.add(database.EnterpriseVerification(enterprise_id=enterprise.id,
+                            submission_id=uuid4().hex, company_name=company, credit_code='91110108551385082Q',
+                            status=status))
+                    if label == 'renamed':
+                        enterprise.company_name = company + ' Changed'
+                    if label == 'duplicate':
+                        session.add(database.Enterprise(email='apply-duplicate-2@example.test',
+                            password='fixture', company_name=company))
+                    job = database.CrawledJob(data_type=1, title='Verification Test Job',
+                        company_name=enterprise.company_name if label != 'partial_name' else company[:-4],
+                        skill_tags=['Python'], source_url='https://jobs.example.test/verification')
+                    session.add(job)
+                    session.commit()
+                    job_id, enterprise_id = job.id, enterprise.id
+                    counts = [session.query(model).count() for model in
+                              (database.Job, database.MatchRecord, database.Message)]
+
+                headers = header(uid=seeker_id)
+                channel = client.get(f'/api/apply/channel/{job_id}', headers=headers)
+                self.assertEqual(channel.status_code, 200, channel.text)
+                self.assertEqual(channel.json()['data']['onboarded'], label == 'approved')
+                company_card = client.get('/api/company/public/' + job.company_name, headers=headers)
+                if label == 'duplicate':
+                    self.assertEqual(company_card.status_code, 409, company_card.text)
+                elif label != 'partial_name':
+                    self.assertEqual(company_card.json()['data']['verified'], int(label == 'approved'))
+                response = client.post(f'/api/apply/{job_id}', json={}, headers=headers)
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(response.json()['success'], label == 'approved', response.text)
+                with database.get_session() as session:
+                    updated_counts = [session.query(model).count() for model in
+                                      (database.Job, database.MatchRecord, database.Message)]
+                    if label != 'approved':
+                        self.assertEqual(response.json()['error']['code'], 'NOT_ONBOARDED')
+                        self.assertEqual(updated_counts, counts)
+                    else:
+                        self.assertEqual(updated_counts, [count + 1 for count in counts])
+                        match = session.get(database.MatchRecord, response.json()['data']['match_record_id'])
+                        self.assertEqual(session.get(database.Job, match.job_id).enterprise_id, enterprise_id)
+                        self.assertEqual(match.jobseeker_id, seeker_id)
+                        record = session.get(database.EnterpriseVerification, enterprise_id)
+                        record.status = 'revoked'
+                        session.commit()
+                if label == 'approved':
+                    status_response = client.get(f'/api/apply/status?job_id={job_id}', headers=headers)
+                    self.assertTrue(status_response.json()['data']['applied'])
+                    repeated = client.post(f'/api/apply/{job_id}', json={}, headers=headers)
+                    self.assertEqual(repeated.json()['error']['code'], 'NOT_ONBOARDED')
+                    with database.get_session() as session:
+                        self.assertEqual([session.query(model).count() for model in
+                            (database.Job, database.MatchRecord, database.Message)], updated_counts)
+
+    def test_message_sending_rechecks_enterprise_verification(self):
+        from uuid import uuid4
+
+        with database.get_session() as session:
+            seeker = database.Jobseeker(email='message-verification@example.test', password='fixture')
+            enterprise = database.Enterprise(email='message-verification-enterprise@example.test',
+                password='fixture', company_name='Message Verification Company', verified=2)
+            session.add_all([seeker, enterprise])
+            session.flush()
+            job = database.Job(enterprise_id=enterprise.id, title='Message Test Job')
+            session.add(job)
+            session.flush()
+            match = database.MatchRecord(job_id=job.id, jobseeker_id=seeker.id, status='pending')
+            session.add(match)
+            session.commit()
+            seeker_id, enterprise_id, match_id = seeker.id, enterprise.id, match.id
+
+        for state in ('unsubmitted', 'pending', 'rejected', 'revoked', 'approved', 'renamed'):
+            with self.subTest(state=state):
+                with database.get_session() as session:
+                    record = session.get(database.EnterpriseVerification, enterprise_id)
+                    if state != 'unsubmitted':
+                        if record is None:
+                            record = database.EnterpriseVerification(enterprise_id=enterprise_id,
+                                submission_id=uuid4().hex, company_name='Message Verification Company',
+                                credit_code='91110108551385082Q')
+                            session.add(record)
+                        record.status = 'approved' if state == 'renamed' else state
+                    if state == 'renamed':
+                        session.get(database.Enterprise, enterprise_id).company_name = 'Changed Message Company'
+                    session.commit()
+                    before = session.query(database.Message).count()
+                for role, uid, path in (
+                    ('jobseeker', seeker_id, '/api/jobseeker/messages'),
+                    ('enterprise', enterprise_id, '/api/enterprise/messages'),
+                ):
+                    response = client.post(path, headers=header(role, uid),
+                        json={'match_record_id': match_id, 'content': 'verification regression'})
+                    self.assertEqual(response.status_code, 200 if state == 'approved' else 403, response.text)
+                with database.get_session() as session:
+                    self.assertEqual(session.query(database.Message).count(), before + (2 if state == 'approved' else 0))
+                history = client.get(f'/api/jobseeker/messages/{match_id}', headers=header(uid=seeker_id))
+                self.assertEqual(history.status_code, 200, history.text)
+
     def test_existing_ownership_regressions(self):
         spec=importlib.util.spec_from_file_location('ownership_suite',BACKEND/'tests'/'test_authz.py')
         suite=importlib.util.module_from_spec(spec);spec.loader.exec_module(suite)

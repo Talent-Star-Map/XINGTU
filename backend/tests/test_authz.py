@@ -31,7 +31,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from main import app  # noqa: E402
 from database import (  # noqa: E402
-    get_session, create_token, JWT_ALGO, JWT_SECRET,
+    get_session, create_token, JWT_ALGO, JWT_SECRET, EnterpriseVerification,
     Jobseeker, Enterprise, Job, CrawledJob, MatchRecord, Message, Resume, ResumeSection,
 )
 
@@ -90,6 +90,9 @@ def build_fixtures():
         session.commit()
         for obj in (a, b, e1, e2):
             session.refresh(obj)
+
+        session.add(EnterpriseVerification(enterprise_id=e1.id, submission_id=uuid.uuid4().hex,
+                    company_name=e1.company_name, credit_code='91110108551385082Q', status='approved'))
 
         job1 = Job(enterprise_id=e1.id, title='甲方的岗位', status='active',
                    skills_required='Python,MySQL', salary_min=15, salary_max=25)
@@ -161,6 +164,7 @@ def cleanup():
         for resid in created['resumes']:
             session.query(ResumeSection).filter(ResumeSection.resume_id == resid).delete()
         session.query(Resume).filter(Resume.id.in_(created['resumes'] or [-1])).delete()
+        session.query(EnterpriseVerification).filter(EnterpriseVerification.enterprise_id.in_(enterprise_ids)).delete()
         session.query(Enterprise).filter(Enterprise.id.in_(enterprise_ids)).delete()
         session.query(Jobseeker).filter(Jobseeker.id.in_(created['seekers'] or [-1])).delete()
         session.commit()

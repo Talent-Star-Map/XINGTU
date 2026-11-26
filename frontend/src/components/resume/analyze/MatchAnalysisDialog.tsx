@@ -44,6 +44,7 @@ const DIM_LABELS: Record<string, string> = {
   experience: '经验匹配',
   education: '学历匹配',
   salary: '薪资匹配',
+  location: '地域匹配',
 }
 
 const PRIORITY_COLOR: Record<string, string> = {

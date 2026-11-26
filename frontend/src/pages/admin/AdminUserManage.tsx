@@ -550,7 +550,7 @@ function EnterpriseReview({ enterprise }: { enterprise: EnterpriseItem }) {
   const [error, setError] = useState('')
   const verification = updated ?? enterprise.verification
   const status = verification?.status
-  const label = status === 'approved' ? '平台已核验' :
+  const label = status === 'approved' ? '平台人工核验' :
     status === 'pending' ? '审核申请' : status === 'rejected' ? '未通过' : '未认证'
   if (!verification || (status !== 'pending' && status !== 'approved')) return <span>{label}</span>
 
@@ -584,7 +584,7 @@ function EnterpriseReview({ enterprise }: { enterprise: EnterpriseItem }) {
   return <>
     <button type="button" className="text-blue-600 underline" onClick={() => setOpen(true)}>{label}</button>
     {open && (
-      <Modal title="企业核验" onClose={() => { if (!saving) setOpen(false) }}>
+      <Modal title="企业人工核验" onClose={() => { if (!saving) setOpen(false) }}>
         <div className="space-y-3 text-sm">
           <p>{verification.company_name} · {verification.credit_code}</p>
           <p>申请账号联系方式：{[enterprise.email, enterprise.phone].filter(Boolean).join(' · ') || '未填写'}</p>

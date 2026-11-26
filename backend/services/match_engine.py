@@ -1,43 +1,8 @@
-"""
-岗位-候选人匹配引擎 — 基于能力图谱的五维度匹配（2026-08 v3 全面优化版）
+"""Enterprise adapter for the shared person/job fit contract.
 
-输入: Job (岗位) + Jobseeker (求职者)
-输出: {match_score, skill_match, exp_match, edu_match, location_match, salary_match}
-
-五维度算法:
-    ① 技能匹配 (默认权重 0.40) — TF-IDF 加权 + 四级匹配分档 + 核心技能增益
-    ② 经验匹配 (默认权重 0.20) — 高斯衰减（落在区间内满分，偏离区间平滑衰减）
-    ③ 学历匹配 (默认权重 0.15) — 学历等级映射（博士>硕士>本科>大专>高中）
-    ④ 地域匹配 (默认权重 0.15) — 城市层级匹配（同城>同省>不限>异地）
-    ⑤ 薪资匹配 (默认权重 0.10) — 双向覆盖率 + 高斯衰减
-
-三阶段流水线（run_match_batch）:
-    阶段① 全量计算 — 五维度评分 + 严格化调整项（5 种），技能门槛过滤
-    阶段② 池内归一化 — 同岗位候选人池内 z-score/tanh 相对排位微调（±6分）
-    阶段③ 落库 — upsert match_records（pending 清理重建，accepted/rejected 保留状态）
-
-反馈闭环（calibrate_weights_from_feedback）:
-    从 HR 的 accept/reject 历史学习五维权重（维度区分度法），
-    样本充足时自动上调高区分度维度的权重。进程内生效，重启回默认。
-
-最终分数 = clamp(加权总分 + 调整项 + 池内微调, 15, 95)
-
-算法理论依据:
-    - TF-IDF (Term Frequency-Inverse Document Frequency): 稀有技能匹配价值更高
-    - Gaussian Decay: 经验/薪资偏差用高斯函数平滑衰减，避免硬截断
-    - Coverage Ratio: 薪资区间双向覆盖率（较小区间被覆盖的比例）
-    - Multi-Criteria Decision Making (MCDM): 多准则加权决策
-    - Z-score + tanh: 池内相对定位的有界归一化
-    - Discriminative Gap Method: 反馈数据驱动的权重校准
-
-运行模式:
-    - 批量计算: run_match_batch()  遍历所有 active 岗位 × 所有求职者，upsert match_records
-    - 单岗位计算: run_match_batch(job_id)  只算某个岗位
-    - 权重校准: calibrate_weights_from_feedback()  从 HR 反馈学习权重
-
-详细算法文档: docs/匹配算法说明.md
-
-@owner: 张东阳（人岗匹配+企业端人才星界面）
+match_one delegates all five fit dimensions to match_analyzer. Enterprise
+feedback weights and candidate-pool normalization affect ranking_score only.
+Historical scoring helpers below remain for compatibility, not pair scoring.
 """
 
 import re
@@ -579,7 +544,7 @@ _active_weights = dict(WEIGHTS)
 
 
 def get_active_weights() -> Dict[str, float]:
-    """获取当前生效的五维权重（默认 WEIGHTS，反馈校准后为学习值）"""
+    """Enterprise ranking weights; never the shared fit weights."""
     return dict(_active_weights)
 
 
@@ -748,13 +713,13 @@ def apply_pool_normalization(score_dicts: List[dict]) -> Optional[dict]:
           2分得到的归一化结果一样）
         - tanh(z): 有界 + 平滑 + 保留分差信息，兼顾两者
 
-    原地修改 score_dicts 中每个 dict 的 match_score，
+    仅修改 ranking_score，不改变 match_score，
     并附加 pool_z / pool_adjust 字段（前端展示与文档说明用）。
 
     返回池统计信息；池太小（<POOL_MIN_SIZE）或无区分度（stdev≈0）时
     不做调整，返回 None。
     """
-    totals = [m['match_score'] for m in score_dicts]
+    totals = [m.get('ranking_score', m['match_score']) for m in score_dicts]
     if len(totals) < POOL_MIN_SIZE:
         return None
     mean = statistics.mean(totals)
@@ -763,11 +728,11 @@ def apply_pool_normalization(score_dicts: List[dict]) -> Optional[dict]:
         return None  # 池内所有人同分，无区分度
 
     for m in score_dicts:
-        z = (m['match_score'] - mean) / stdev
+        z = (m.get('ranking_score', m['match_score']) - mean) / stdev
         adjust = math.tanh(z) * POOL_ADJUST_MAX
         m['pool_z'] = round(z, 2)
         m['pool_adjust'] = round(adjust, 1)
-        m['match_score'] = int(min(max(m['match_score'] + adjust, TOTAL_FLOOR), TOTAL_CEIL))
+        m['ranking_score'] = round(min(max(m.get('ranking_score', m['match_score']) + adjust, 0), 100), 2)
 
     return {'pool_size': len(totals), 'mean': round(mean, 1), 'stdev': round(stdev, 2)}
 
@@ -846,55 +811,42 @@ def calibrate_weights_from_feedback() -> dict:
             'default_weights': dict(WEIGHTS),
             'gaps': gaps,
             'samples': {'accepted': len(accepted), 'rejected': len(rejected)},
-            'message': '权重已根据 HR 反馈校准（维度区分度法），建议重新执行批量匹配',
+            'message': '企业推荐排序权重已校准；基础匹配分保持统一口径',
         }
     finally:
         session.close()
 
 
 def match_one(job: Job, seeker: Jobseeker, idf_weights: Optional[Dict[str, float]] = None) -> dict:
+    """Shared pair score plus a separate enterprise ranking policy.
+
+    idf_weights is retained for call compatibility; it never changes pair scores.
     """
-    对单个 岗位-求职者 计算五维度匹配分数（增强版 — 含严格化调整项）
-
-    流程:
-        1. 五维度基础评分（TF-IDF + 高斯 + 等级 + 层级 + IoU）
-        2. 计算调整项（核心技能硬门槛 + 生态链 + 一致性 + 红旗 + 均衡性）
-        3. 最终分数 = clamp(基础分 + 调整项, TOTAL_FLOOR, TOTAL_CEIL)
-
-    参数:
-        job: 岗位 ORM 对象
-        seeker: 求职者 ORM 对象
-        idf_weights: 技能 IDF 权重表（由 compute_idf_weights 预计算）
-    """
-    # ── 五维度基础评分 ──
-    skill_detail = calc_skill_match_detailed(job.skills_required, seeker.skills, idf_weights)
-    skill = skill_detail['score']
-    exp = calc_exp_match_gaussian(job.experience, seeker.experience)
-    edu = calc_edu_match(job.education, seeker.education)
-    location = calc_location_match(job.location, seeker.target_city, seeker.city)
-    salary = calc_salary_match(job.salary_range, job.salary_min, job.salary_max, seeker.expected_salary)
-
-    # ── 基础加权总分 ──
-    base_score = calc_total_score(skill, exp, edu, location, salary)
-
-    # ── 严格化调整项 ──
-    adjustments = calc_adjustments(skill_detail, exp, edu, location, salary, job, seeker)
-    adjustment_total = sum(adjustments.values())
-
-    # ── 最终分数：基础分 + 调整项，限制在 [TOTAL_FLOOR, TOTAL_CEIL] ──
-    final_score = int(min(max(base_score + adjustment_total, TOTAL_FLOOR), TOTAL_CEIL))
-
+    from services.match_analyzer import compute_match_score
+    from services.match_contract import complete_profile, salary_range_k, SCORE_VERSION
+    profile = complete_profile({'skills': split_skills(seeker.skills)}, seeker)
+    low, high = salary_range_k(job.salary_range)
+    # enterprise_jobs salary bounds are stored in K (see existing salary matcher).
+    low = job.salary_min if job.salary_min is not None else low
+    high = job.salary_max if job.salary_max is not None else high
+    salary = f'{low}K-{high}K' if low and high else job.salary_range or ''
+    required = {'title': job.title, 'skills': split_skills(job.skills_required),
+                'experience': job.experience or '', 'education': job.education or '',
+                'location': job.location or '', 'salary': salary}
+    result = compute_match_score(profile, required, {}, {}, [])
+    dims = result['dims']
+    # Ranking may use enterprise policy; the displayed pair score never does.
+    ranking = sum(dims[canonical]['score'] * _active_weights[key] for key, canonical in
+                  [('skill','skill'), ('exp','experience'), ('edu','education'),
+                   ('location','location'), ('salary','salary')])
     return {
-        'match_score': final_score,
-        'skill_match': skill,
-        'exp_match': exp,
-        'edu_match': edu,
-        'location_match': location,
-        'salary_match': salary,
-        'adjustments': adjustments,         # 调整项明细（调试/展示用）
-        'base_score': base_score,           # 基础分（调整前）
-        'adjustment_total': adjustment_total,  # 调整项合计
+        'match_score': result['overall'], 'score_version': SCORE_VERSION,
+        'skill_match': dims['skill']['score'], 'exp_match': dims['experience']['score'],
+        'edu_match': dims['education']['score'], 'location_match': dims['location']['score'],
+        'salary_match': dims['salary']['score'], 'ranking_score': round(ranking, 2),
+        'base_score': result['overall'], 'adjustments': {}, 'adjustment_total': 0,
     }
+
 
 
 # ─── 批量计算：写入 match_records 表 ──────────────────────────────────
@@ -929,7 +881,7 @@ def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True,
         jobs = job_q.all()
 
         # 预计算 IDF 权重（TF-IDF 算法核心步骤：稀有技能价值更高）
-        idf_weights = compute_idf_weights(jobs)
+        idf_weights = None  # Pair scores must not depend on the other jobs in this batch.
 
         # 拉取所有求职者
         seekers = session.query(Jobseeker).all()
@@ -1027,8 +979,9 @@ def run_match_batch(job_id: Optional[int] = None, apply_pool_norm: bool = True,
             'pool_stats': pool_stats[:5],                   # 池统计样例（最多展示5个）
             'sample': sample,
             'dimensions': 5,  # 标记当前使用五维度算法
-            'weights': dict(_active_weights),              # 本次计算使用的权重
-            'algorithm': 'TF-IDF + Gaussian + Coverage + Level Mapping + Strict Adjustments + PoolNorm (v3)',
+            'weights': dict(WEIGHTS),
+            'ranking_weights': dict(_active_weights),
+            'algorithm': 'shared person-job fit v3; enterprise ranking separate',
         }
     except Exception:
         session.rollback()

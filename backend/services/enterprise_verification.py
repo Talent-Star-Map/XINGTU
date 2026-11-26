@@ -35,8 +35,11 @@ def validate_credit_code(raw: str) -> str:
     return code
 
 
-def current_verification(session, enterprise):
-    record = session.get(EnterpriseVerification, enterprise.id)
+def current_verification(session, enterprise, *, lock=False):
+    record = session.get(
+        EnterpriseVerification, enterprise.id,
+        with_for_update=True if lock else None,
+    )
     return record if record and record.company_name == enterprise.company_name else None
 
 
@@ -54,6 +57,14 @@ def lock_enterprise(session, enterprise_id):
     enterprise = session.query(Enterprise).filter_by(id=enterprise_id).with_for_update().first()
     if enterprise is None:
         raise HTTPException(404, '企业不存在')
+    return enterprise
+
+
+def require_approved_enterprise(session, enterprise_id):
+    enterprise = lock_enterprise(session, enterprise_id)
+    record = current_verification(session, enterprise, lock=True)
+    if record is None or record.status != 'approved':
+        raise HTTPException(403, '企业尚未通过平台人工核验，暂时无法站内沟通')
     return enterprise
 
 

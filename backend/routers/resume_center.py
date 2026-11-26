@@ -531,6 +531,7 @@ def resume_analyze(resume_id: int, req: ResumeAnalyzeReq, token: str = Depends(r
     profile = extract_profile_features(skills, 'skill_list')
     profile['raw_source'] = 'resume_center'
     profile['education'] = str(personal.get('educationLevel') or '')
+    profile['target_city'] = str(personal.get('targetCity') or personal.get('city') or '')
     profile['salary_min'] = max(0, int(req.salary_min or 0))
     profile['salary_max'] = max(0, int(req.salary_max or 0))
     years_text = str(personal.get('yearsOfExperience') or '').strip()
