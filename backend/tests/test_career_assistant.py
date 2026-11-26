@@ -78,6 +78,19 @@ class StoreTests(unittest.TestCase):
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_assistant_graph_uses_bounded_direct_relations(self):
+        from services.career_context import retrieve_graph
+        from services import kg_service
+        with patch.object(kg_service,'semantic_search_jobs',return_value=[{'id':7}]), \
+             patch.object(kg_service,'get_job_detail',return_value={'id':7,'title':'Python'}), \
+             patch.object(kg_service,'get_job_neighbors') as visual, \
+             patch.object(kg_service,'_query',return_value=[{'name':'Python','relationship':'REQUIRES'}]) as query:
+            result=retrieve_graph('Python')
+        visual.assert_not_called()
+        self.assertIn('LIMIT 12',query.call_args.args[0])
+        self.assertNotIn('UNWIND',query.call_args.args[0])
+        self.assertEqual(result[1]['data'][0]['name'],'Python')
+
     def test_forged_quote_and_wish_cannot_be_auto_confirmed(self):
         self.assertEqual(validated_facts([{'kind':'skill','value':'Java','quote':'我会Java'}],'我想学Java'),[])
     def test_fact_guard_blocks_new_metrics_and_identity(self):

@@ -199,7 +199,16 @@ def retrieve_graph(query):
             if detail:
                 out.append({'type': 'graph_role_context', 'scope': 'role_group_aggregate',
                             'warning': '图谱关联用于职业解释，不能当作具体公司招聘事实或用户技能', 'data': detail})
-                neighbors=kg_service.get_job_neighbors(jid,depth=1,limit=12)
+                # The visual explorer expands two hops and builds every pair of
+                # nodes before applying its limit. An assistant needs only a few
+                # direct relations, never that full rendering graph.
+                neighbors=kg_service._query('''
+                    MATCH (j:Job {id:$id})-[r]-(n)
+                    WHERE n:Skill OR n:Industry OR n:Company
+                    RETURN type(r) AS relationship, labels(n) AS labels,
+                           coalesce(n.canonical_name,n.name,n.title) AS name
+                    ORDER BY relationship, name LIMIT 12
+                ''',{'id':jid})
                 out.append({'type':'graph_relationships','scope':'role_group_aggregate','data':neighbors})
     return out
 
