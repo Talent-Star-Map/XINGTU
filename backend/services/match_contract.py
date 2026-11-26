@@ -54,14 +54,15 @@ def complete_profile(profile, person):
 
 
 def location_score(location, target_city='', current_city=''):
-    from services.china_regions import province_for_city
+    from services.china_regions import province_for_city, LOOKUP
     target = target_city or current_city
     if any(word in str(value).lower() for value in (location, target) for word in ('远程', 'remote', '不限', '全国', 'anywhere')):
         return 75
     if not location or not target:
         return 55
     def cities(value):
-        return {part.strip().removesuffix('市') for part in re.split(r'[,，、/|;；\s]+', str(value)) if part.strip()}
+        known = {city.removesuffix('市') for city in LOOKUP if city in str(value)}
+        return known or {part.strip().removesuffix('市') for part in re.split(r'[,，、/|;；\s]+', str(value)) if part.strip()}
     left, right = cities(location), cities(target)
     if left & right:
         return 90

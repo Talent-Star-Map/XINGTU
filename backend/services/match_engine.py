@@ -571,15 +571,9 @@ def set_active_weights(new_weights: Dict[str, float]) -> Dict[str, float]:
 
 
 def calc_total_score(skill: int, exp: int, edu: int, location: int, salary: int) -> int:
-    """加权汇总五维度分数（MCDM 多准则加权决策，使用当前生效权重），返回 0-100"""
-    w = _active_weights
-    return int(
-        skill * w['skill']
-        + exp * w['exp']
-        + edu * w['edu']
-        + location * w['location']
-        + salary * w['salary']
-    )
+    """Compatibility aggregator, using the same fixed fit contract."""
+    from services.match_contract import dimensions
+    return dimensions({'skill':skill,'experience':exp,'education':edu,'location':location,'salary':salary})[1]
 
 
 def has_skill_overlap(job_skills_str: str, seeker_skills_str: str) -> bool:

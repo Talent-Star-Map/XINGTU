@@ -452,9 +452,13 @@ def dashboard(ent: dict = Depends(require_enterprise)):
         total_candidates = (session.query(MatchRecord.jobseeker_id)
                             .filter(MatchRecord.job_id.in_(own_job_ids))
                             .distinct().count())
-        # 高匹配度候选人数（match_score >= 85）
-        high_match = (session.query(MatchRecord)
-                      .filter(MatchRecord.match_score >= 85, MatchRecord.job_id.in_(own_job_ids)).count())
+        # Compute current shared scores read-only, including pre-upgrade records.
+        score_rows = (session.query(Job, Jobseeker)
+                      .join(MatchRecord, MatchRecord.job_id == Job.id)
+                      .join(Jobseeker, Jobseeker.id == MatchRecord.jobseeker_id)
+                      .filter(Job.enterprise_id == eid).all())
+        fit_scores = [match_one(job, seeker)['match_score'] for job, seeker in score_rows]
+        high_match = sum(score >= 85 for score in fit_scores)
         # 待处理沟通：独立候选人数（去重 jobseeker_id）
         # 注：同一求职者匹配多个岗位会产生多条 pending 记录，但对 HR 而言"待联系的人"才是有意义的指标
         pending_count = (session.query(MatchRecord.jobseeker_id)
@@ -480,13 +484,8 @@ def dashboard(ent: dict = Depends(require_enterprise)):
         } for j in recent_jobs_rows]
 
         # ── 匹配度分布（high 已在上面算过 high_match，复用）──
-        mid = session.query(MatchRecord).filter(
-            MatchRecord.match_score >= 60, MatchRecord.match_score < 85,
-            MatchRecord.job_id.in_(own_job_ids),
-        ).count()
-        low = session.query(MatchRecord).filter(
-            MatchRecord.match_score < 60, MatchRecord.job_id.in_(own_job_ids),
-        ).count()
+        mid = sum(60 <= score < 85 for score in fit_scores)
+        low = sum(score < 60 for score in fit_scores)
 
         return {
             'success': True,
@@ -1029,7 +1028,7 @@ def get_conversations(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le
                 'candidate_name': name,
                 'candidate_av': av,
                 'job_title': job.title if job else '',
-                'match_score': mr.match_score,
+                'match_score': match_one(job, js)['match_score'] if job and js else None,
                 'last_message': last_msg or '',
                 'last_time': fmt(last_time) or fmt(mr.updated_at),
                 'unread_count': unread,

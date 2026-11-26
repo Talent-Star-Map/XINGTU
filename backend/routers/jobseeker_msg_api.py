@@ -17,7 +17,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func as sa_func
 
 from auth_guard import require_jobseeker
-from database import get_session, Job, Enterprise, MatchRecord, Message
+from database import get_session, Job, Jobseeker, Enterprise, MatchRecord, Message
+from services.match_engine import match_one
 from services.enterprise_verification import require_approved_enterprise
 # 库里存的是 UTC，返回前统一转北京时间，否则消息时间差 8 小时
 from time_util import fmt
@@ -84,6 +85,7 @@ def get_conversations(
                         .scalar()) or 0
 
         conversations = []
+        seeker = session.query(Jobseeker).filter(Jobseeker.id == jobseeker_id).first()
         for mr, job, ent, last_time, last_msg_id in rows:
             company = (ent.company_name if ent else '') or ''
             last_msg = None
@@ -100,7 +102,7 @@ def get_conversations(
                 'job_title': job.title if job else '',
                 'company': company,
                 'company_av': (company or '企')[0],
-                'match_score': mr.match_score,
+                'match_score': match_one(job, seeker)['match_score'] if job and seeker else None,
                 'last_message': last_msg or '',
                 'last_time': fmt(last_time) or fmt(mr.updated_at),
                 'unread_count': unread,
