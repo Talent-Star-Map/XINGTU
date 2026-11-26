@@ -25,7 +25,7 @@ DIMENSION_FORMULA = {
     "skill":        "Σ(weight × level_credit) / Σ(jd_weights)；exact 1.0 / synonym 0.9 / containment 0.7；多源出现不加分",
     "location":     "同城90，同省72，远程/不限75，信息缺失55，异地25",
     "experience":   "区间内 85~100 梯度；「X年以上」≥X 饱和 90+；不足高斯衰减(sigma=lo/3)；超出缓衰减至 60",
-    "education":    {"博士": 1.0, "硕士": 0.9, "本科": 0.75, "大专": 0.5, "高中": 0.2, "其他": 0.3},
+    "education":    "达到岗位学历要求100；每差一级减25；用户未填写60，岗位无明确要求80",
     "salary":       "有重叠: 50+覆盖率×50；无重叠: 50×exp(-(gap/15K)²/2)",
 }
 

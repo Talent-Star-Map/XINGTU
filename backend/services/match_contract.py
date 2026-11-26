@@ -4,7 +4,7 @@ import json
 import math
 import re
 
-SCORE_VERSION = 'v3.0.0-shared'
+SCORE_VERSION = 'v3.0.1-shared'
 WEIGHTS = {'skill': .40, 'experience': .20, 'education': .15, 'location': .15, 'salary': .10}
 
 

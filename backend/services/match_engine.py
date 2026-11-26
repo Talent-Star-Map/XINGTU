@@ -531,13 +531,11 @@ def compute_idf_weights(jobs: List[Job]) -> Dict[str, float]:
 # ─── 加权汇总 ────────────────────────────────────────────────────────
 
 # 五维度默认权重 — 技能最重要，经验/学历/地域次之，薪资最后
-WEIGHTS = {
-    'skill': 0.40,       # 技能匹配（TF-IDF 加权 + 四级分档 + 核心技能增益）
-    'exp': 0.20,         # 经验匹配（高斯衰减）
-    'edu': 0.15,         # 学历匹配（等级映射）
-    'location': 0.15,    # 地域匹配（层级匹配）
-    'salary': 0.10,      # 薪资匹配（双向覆盖率 + 高斯衰减）
-}
+from services.match_contract import WEIGHTS as FIT_WEIGHTS
+WEIGHTS = {key: FIT_WEIGHTS[canonical] for key, canonical in
+           [('skill','skill'), ('exp','experience'), ('edu','education'),
+            ('location','location'), ('salary','salary')]}
+
 
 # 当前生效权重（反馈闭环校准后会更新；进程内生效，服务重启回到默认 WEIGHTS）
 _active_weights = dict(WEIGHTS)

@@ -84,6 +84,22 @@ class SharedMatchingTests(unittest.TestCase):
         with patch('services.match_contract.SCORE_VERSION','new-version'):
             self.assertNotEqual(key,cache_fingerprint(profile,job,n=5))
 
+    def test_old_candidate_record_does_not_leak_old_scores(self):
+        from routers.enterprise import _candidate_dict
+        person,job,_,_=fixtures()
+        person.real_name='Fixture';person.username='fixture';person.target_position='Python开发'
+        record=SimpleNamespace(id=9,status='pending',match_score=999,skill_match=110)
+        payload=_candidate_dict(record,person,job)
+        self.assertEqual(payload['match'],match_one(job,person)['match_score'])
+        self.assertLessEqual(payload['match_breakdown']['skill'],100)
+        self.assertEqual(payload['score_version'],SCORE_VERSION)
+        self.assertIn('recommendation_score',payload)
+
+    def test_location_with_district_uses_same_city(self):
+        from services.match_contract import location_score
+        self.assertEqual(location_score('北京市海淀区','北京'),90)
+        self.assertEqual(location_score('广东省深圳市南山区','深圳'),90)
+
     def test_profile_completion_keeps_zero_experience_and_salary_units(self):
         person,_,_,_=fixtures()
         self.assertEqual(complete_profile({'experience_years':0},person)['experience_years'],0)
