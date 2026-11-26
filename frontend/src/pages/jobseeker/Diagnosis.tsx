@@ -19,9 +19,6 @@ interface MatchResult {
   recommendations: string[]
 }
 
-/** 诊断结果缓存有效期，与学习中心保持一致 */
-const RESULT_TTL = 24 * 60 * 60 * 1000
-
 type ErrorCode = 'AUTH_EXPIRED' | 'NO_PROFILE' | 'NOT_FOUND' | 'NETWORK' | 'SERVER'
 
 interface ErrorState { code: ErrorCode; message: string }
@@ -138,11 +135,14 @@ export default function Diagnosis() {
       const resultRaw = localStorage.getItem('jt_diagnosis_result')
       if (resultRaw) {
         const data = JSON.parse(resultRaw)
-        const age = Date.now() - (data.timestamp || 0)
-        if (data.job && data.result && age < RESULT_TTL) {
+        if (data.job) {
+          // Stored results can belong to an old algorithm/profile. Ask the
+          // backend, whose cache is keyed by full inputs and score version.
+          const skillsRaw = localStorage.getItem('jt_diagnosis_skills')
+          let skills: string[] = []
+          try { skills = skillsRaw ? JSON.parse(skillsRaw) : [] } catch { skills = [] }
           setJob(data.job)
-          setResult(data.result)
-          setResultAt(data.timestamp)
+          runAnalyze(data.job, skills)
           return
         }
         // 过期或结构不完整，清掉避免读到陈旧数据
